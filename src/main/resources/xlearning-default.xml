@@ -1,0 +1,180 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+    <property>
+        <name>xlearning.staging.dir</name>
+        <value>/tmp/XLearning/staging</value>
+    </property>
+    <property>
+        <name>xlearning.cleanup.enable</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>xlearning.execute.node.limit</name>
+        <value>200</value>
+    </property>
+    <property>
+        <name>xlearning.log.pull.interval</name>
+        <value>1000</value>
+    </property>
+    <property>
+        <name>xlearning.am.memory</name>
+        <value>1024</value>
+    </property>
+    <property>
+        <name>xlearning.am.cores</name>
+        <value>1</value>
+    </property>
+    <property>
+        <name>xlearning.worker.memory</name>
+        <value>1024</value>
+    </property>
+    <property>
+        <name>xlearning.worker.cores</name>
+        <value>1</value>
+    </property>
+    <property>
+        <name>xlearning.worker.num</name>
+        <value>1</value>
+    </property>
+    <property>
+        <name>xlearning.ps.memory</name>
+        <value>1024</value>
+    </property>
+    <property>
+        <name>xlearning.ps.cores</name>
+        <value>1</value>
+    </property>
+    <property>
+        <name>xlearning.ps.num</name>
+        <value>0</value>
+    </property>
+    <property>
+        <name>xlearning.app.queue</name>
+        <value>DEFAULT</value>
+    </property>
+    <property>
+        <name>xlearning.app.priority</name>
+        <value>3</value>
+    </property>
+    <property>
+        <name>xlearning.container.extra.java.opts</name>
+        <value></value>
+    </property>
+    <property>
+        <name>xlearning.allocate.interval</name>
+        <value>1000</value>
+    </property>
+    <property>
+        <name>xlearning.status.update.interval</name>
+        <value>1000</value>
+    </property>
+    <property>
+        <name>xlearning.task.timeout</name>
+        <value>300000</value>
+    </property>
+    <property>
+        <name>xlearning.task.timeout.check.interval</name>
+        <value>3000</value>
+    </property>
+    <property>
+        <name>xlearning.messages.len.max</name>
+        <value>10000</value>
+    </property>
+    <property>
+        <name>xlearning.inputfile.rename</name>
+        <value>false</value>
+    </property>
+    <property>
+        <name>xlearning.download.file.retry</name>
+        <value>3</value>
+    </property>
+    <property>
+        <name>xlearning.download.file.thread.nums</name>
+        <value>10</value>
+    </property>
+    <property>
+        <name>xlearning.container.heartbeat.interval</name>
+        <value>10000</value>
+    </property>
+    <property>
+        <name>xlearning.container.heartbeat.retry</name>
+        <value>3</value>
+    </property>
+    <property>
+        <name>xlearning.container.update.appstatus.interval</name>
+        <value>3000</value>
+    </property>
+    <property>
+        <name>xlearning.container.auto.create.output.dir</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>xlearning.container.maxFailures.rate</name>
+        <value>0.5</value>
+    </property>
+    <property>
+        <name>xlearning.tf.board.history.dir</name>
+        <value>/tmp/XLearning/eventLog</value>
+    </property>
+    <property>
+        <name>xlearning.history.log.dir</name>
+        <value>/tmp/XLearning/history</value>
+    </property>
+    <property>
+        <name>xlearning.history.log.max-age-ms</name>
+        <value>604800000</value>
+    </property>
+    <property>
+        <name>xlearning.history.log.delete-monitor-time-interval</name>
+        <value>86400000</value>
+    </property>
+    <property>
+        <name>xlearning.history.address</name>
+        <value>0.0.0.0:10021</value>
+    </property>
+    <property>
+        <name>xlearning.history.port</name>
+        <value>10021</value>
+    </property>
+    <property>
+        <name>xlearning.history.webapp.address</name>
+        <value>0.0.0.0:19886</value>
+    </property>
+    <property>
+        <name>xlearning.history.webapp.port</name>
+        <value>19886</value>
+    </property>
+    <property>
+        <name>xlearning.history.webapp.https.address</name>
+        <value>0.0.0.0:19885</value>
+    </property>
+    <property>
+        <name>xlearning.history.webapp.https.port</name>
+        <value>19885</value>
+    </property>
+    <property>
+        <name>xlearning.history.client.thread-count</name>
+        <value>10</value>
+    </property>
+    <property>
+        <name>xlearning.history.recovery.enable</name>
+        <value>false</value>
+    </property>
+</configuration>

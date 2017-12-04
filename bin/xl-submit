@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+set -e
+
+export XLEARNING_HOME="$(cd "`dirname "$0"`"/..; pwd)"
+
+. "$XLEARNING_HOME"/conf/xlearning-env.sh
+
+# Find the java binary
+if [ -n "${JAVA_HOME}" ]; then
+  RUNNER="${JAVA_HOME}/bin/java"
+else
+  if [ `command -v java` ]; then
+    RUNNER="java"
+  else
+    echo "JAVA_HOME is not set" >&2
+    exit 1
+  fi
+fi
+
+XLEARNING_LIB_DIR=$XLEARNING_HOME/lib
+
+num_jars="$(ls -1 "$XLEARNING_LIB_DIR" | grep "^xlearning.*hadoop.*\.jar$" | wc -l)"
+if [ "$num_jars" -eq "0" ]; then
+  echo "Failed to find XLearning jar in $XLEARNING_LIB_DIR." 1>&2
+  exit 1
+fi
+XLEARNING_JARS="$(ls -1 "$XLEARNING_LIB_DIR" | grep "^xlearning.*hadoop.*\.jar$" || true)"
+if [ "$num_jars" -gt "1" ]; then
+  echo "Found multiple XLearning jars in $XLEARNING_LIB_DIR:" 1>&2
+  echo "$XLEARNING_LIB_DIR" 1>&2
+  echo "Please remove all but one jar." 1>&2
+  exit 1
+fi
+
+XLEARNING_JAR="${XLEARNING_LIB_DIR}/${XLEARNING_JARS}"
+LAUNCH_CLASSPATH=$XLEARNING_CLASSPATH
+
+exec "$RUNNER" -cp "$LAUNCH_CLASSPATH" org.apache.hadoop.util.RunJar "$XLEARNING_JAR" "$@"
+
