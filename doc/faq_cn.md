@@ -1,7 +1,7 @@
 ## XLearning常见问题
-<br>
+
 [**English Document**](./faq.md)
-<br>
+
 ### 1. 如何使用自定义版本或与集群安装版本不一致的框架执行作业？  
 在XLearning客户端提交作业时，可通过`--file`、`--cacheFile`或`--cacheArchive`指定框架对应版本、依赖库等文件，并根据需求在运行脚本中指定PYTHONPATH环境变量，如`export PYTHONPATH=./:$PYTHONPATH`。用户可以此来使用自己所需的框架版本或依赖库，而不受限于计算机器所提供的依赖环境。  
 ### 2. 如何查看作业执行进度？  

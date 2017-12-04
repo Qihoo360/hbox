@@ -1,7 +1,7 @@
 ## Configuration
-<br>
+
 [**中文文档**](./configure_cn.md)
-<br>
+
 The default value of each configuration can be modified by setting the corresponding properties in the `$XLEARNING_HOME/conf/xlearning-site.xml` at the XLearning client or the parameter of `--conf` when submitting the application.    
 
 ### Application Configuration
@@ -29,7 +29,7 @@ xlearning.outputformat.class | TextMultiOutputFormat.class | which outputformat 
 xlearning.interresult.dir | /interResult_ | specify the HDFS subdirectory that the intermediate output file upload to  
 xlearning.interresult.upload.timeout | 30 * 60 * 1000 | upload timeout to save the intermediate output (in milliseconds) 
 
-<br>
+
 
 ### TensorFlow Application Configuration  
 The type of the application is "TENSORFLOW"  
@@ -42,7 +42,7 @@ xlearning.tf.board.reload.interval | 1 | how often the backend should load more 
 xlearning.tf.board.log.dir | eventLog | the directory saving TensorBoard event log  
 xlearning.tf.board.history.dir | /tmp/XLearning/eventLog | specify the HDFS path which the TensorBoard event log upload to
 
-<br>
+
 
 ### System Configuration
 
@@ -66,7 +66,7 @@ xlearning.container.update.appstatus.interval | 3 * 1000 | how often the contain
 xlearning.container.auto.create.output.dir | true | If set to true, the containers create the local output path automatically  
 xlearning.log.pull.interval | 10000 | interval between the client get the log output of the AM (in milliseconds)  
 
-<br>
+
 
 ### History Configuration  
 
@@ -83,4 +83,3 @@ xlearning.history.webapp.https.port | 19885 | port for the history https web ser
 xlearning.history.webapp.https.address | 0.0.0.0:19885 | address for the history https web service  
 
 
-<br>

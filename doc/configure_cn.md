@@ -1,7 +1,7 @@
 ## 系统配置参数
-<br>
+
 [**English Document**](./configure.md)
-<br>
+
 系统配置可在XLearning系统客户端`$XLEARNING_HOME/conf/xlearning-site.xml`中添加配置项进行默认值修改或在作业提交时通过`--conf`参数进行修改。
 
 ### 应用配置
@@ -29,7 +29,7 @@ xlearning.outputformat.class | TextMultiOutputFormat.class | STREAM模式下，�
 xlearning.interresult.dir | /interResult_ | 指定模型中间结果上传至HDFS子路径  
 xlearning.interresult.upload.timeout | 30 * 60 * 1000 | 模型中间结果上传至HDFS超时时长设置，单位为毫秒  
 
-<br>
+
 
 ### TensorFlow应用配置  
 以下配置项仅用于应用类型为TENSORFLOW时  
@@ -42,7 +42,7 @@ xlearning.tf.board.reload.interval | 1 | 指定TensorBoard数据加载时间间�
 xlearning.tf.board.log.dir | eventLog | 指定TensorBoard日志存放路径，默认为本地路径./eventLog  
 xlearning.tf.board.history.dir | /tmp/XLearning/eventLog | 指定TensorBoard日志上传至HDFS路径  
 
-<br>
+
 
 ### 系统配置
 
@@ -66,7 +66,7 @@ xlearning.container.update.appstatus.interval | 3 * 1000 | container获取作业
 xlearning.container.auto.create.output.dir | true | container是否自动创建本地输出路径  
 xlearning.log.pull.interval | 10000 | client获取AM日志输出时间间隔，单位为毫秒  
 
-<br>
+
 
 ### History配置  
 
@@ -83,4 +83,3 @@ xlearning.history.webapp.https.port | 19885 | history服务web应用https开放�
 xlearning.history.webapp.https.address | 0.0.0.0:19885 | history服务web应用https开放地址  
 
 
-<br>

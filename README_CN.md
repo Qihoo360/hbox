@@ -11,12 +11,12 @@
 
 
 **XLearning**是一款支持多种机器学习、深度学习框架调度系统。基于Hadoop Yarn完成了对TensorFlow、MXNet、Caffe、Theano、PyTorch、Keras、XGBoost等常用框架的集成，同时具备良好的扩展性和兼容性。  
-<br>
+
 [**English Document**](./README.md)
 
 ## 架构设计
 ![architecture](./doc/img/xlearning.png)
-<br>
+
 
 XLearning系统包括三种组件：  
 
@@ -24,13 +24,12 @@ XLearning系统包括三种组件：
 - **ApplicationMaster（AM）**：负责输入数据分片、启动及管理Container、执行日志保存等；    
 - **Container**：作业的实际执行者，负责启动Worker或PS（Parameter Server）进程，监控并向AM汇报进程状态，上传作业的输出等。对于TensorFlow类型作业，还负责启动TensorBoard服务。
 
-<br>
 
 ## 功能特性
 ### 1 支持多种深度学习框架  
 支持TensorFlow、MXNet分布式和单机模式，支持所有的单机模式的深度学习框架，如Caffe、Theano、PyTorch等。对于同一个深度学习框架支持多版本和自定义版本。
 
-<br>
+
 ### 2 基于HDFS的统一数据管理  
 训练数据和模型结果统一采用HDFS进行存储，用户可通过`--input-strategy`或`xlearning.input.strategy`指定输入数据所采用的读取方式。目前，XLearning支持如下三种HDFS输入数据读取方式：  
 - **Download**： AM根据用户在提交脚本中所指定的输入数据参数，遍历对应HDFS路径下所有文件，以文件为单位将输入数据平均分配给不同Worker。在Worker中的执行程序对应进程启动之前，Worker会根据对应的文件分配信息将需要读取的HDFS文件下载到本地指定路径； 
@@ -41,7 +40,7 @@ XLearning系统包括三种组件：
 - **Upload**： 执行程序结束后，Worker根据提交脚本中输出数据参数，将本地输出路径保存文件上传至对应HDFS路径。为方便用户在训练过程中随时将本地输出上传至HDFS，XLearning系统在作业执行Web界面提供对输出模型的当前状态主动保存的功能，详情请见“可视化界面”说明部分；  
 - **OutputFormat**： XLearning集成有MapReduce中的OutputFormat功能。在训练过程中，Worker根据指定的OutputFormat类，将结果输出至HDFS。  
 
-<br>
+
 ### 3 可视化界面  
 作业运行界面大致分为三部分：  
 
@@ -50,14 +49,14 @@ XLearning系统包括三种组件：
 - **Save Model**：当作业提交脚本中“--output”参数不为空时，用户可通过`Save Model`按钮，在作业执行过程中，将本地输出当前模型训练结果上传至HDFS。上传成功后，显示目前已上传的模型列表。
   
 如下图所示：
-<br>  
+  
 ![yarn1](./doc/img/yarn1.jpg) 
 
-<br>
+
 ### 4 原生框架代码的兼容性  
   TensorFlow分布式模式支持“ClusterSpec”自动分配构建，单机模式和其他深度学习框架代码不用做任何修改即可迁移到XLearning上。
 
-<br>
+
 
 
 ## 编译&部署指南
@@ -70,9 +69,9 @@ XLearning系统包括三种组件：
 ### 2 编译方法  
 
 在源码根目录下，执行:  
-<br>
+
 `mvn package`
-<br>  
+
 完成编译后，在源码根目录下的target目录中会生成发布包`xlearning-1.0-dist.tar.gz`。该发布包解压后的主要目录结构如下：  
 
 - bin：作业提交脚本  
@@ -100,13 +99,13 @@ XLearning系统包括三种组件：
 - xlearning-site.xml：详细系统配置说明请见[**配置参数**](./doc/configure_cn.md)部分。
   
 - log4j.properties：配置日志级别  
-<br>
+
 
 ### 5 XLearning History Server启动方法    
 
 - 执行`$XLEARNING_HOME/sbin/start-history-server.sh`
 
-<br>
+
 
 ## 运行示例
 
@@ -156,17 +155,17 @@ ps-cores | parameterServer使用CPU核数为2
 
 更多相关参数详细说明请见[**运行提交参数**](./doc/submit_cn.md)部分。  
 
-<br>
+
 
 ## FAQ
 [**XLearning常见问题**](./doc/faq_cn.md)
 
-<br>
+
 
 
 ## 联系我们
 Mail： <g-xlearning-dev@360.cn>     
-QQ群：588356340
+QQ群：588356340  
 ![qq](./doc/img/qq.jpg)
 
-<br>
+

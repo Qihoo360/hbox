@@ -1,7 +1,7 @@
 ## FAQ
-<br>
+
 [**中文文档**](./faq_cn.md)
-<br>
+
 ### 1. How to use the custom version framework or the different version of the cluster installation to execute the program?  
 Specify the required files for the related version of framework and dependent libraries by the submit parameters such as `--file`,`--cacheFile` or `--cacheArchive`. Furthermore, setting the environment variables `PYTHONPATH` as `export PYTHONPATH=./:$PYTHONPATH` if necessary.
 
