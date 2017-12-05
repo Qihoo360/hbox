@@ -50,7 +50,7 @@ XLearning系统包括三种组件：
   
 如下图所示：
   
-![yarn1](./doc/img/yarn1.jpg) 
+![yarn1](./doc/img/yarn1.png) 
 
 
 ### 4 原生框架代码的兼容性  

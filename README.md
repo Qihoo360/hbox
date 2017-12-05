@@ -49,7 +49,7 @@ The application interface can be divided into three parts:
 - **Save Model**：If the application has the output, user can upload the intermediate output to specified HDFS path during the execution of the application through the button of "Save Model". After the upload finished, display the list of the intermediate saved path.   
 As shown below:   
 
-![yarn1](./doc/img/yarn1.jpg) 
+![yarn1](./doc/img/yarn1.png) 
 
 
 ### 4 Compatible With The Code At Native Frameworks  
