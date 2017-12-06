@@ -13,6 +13,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
@@ -40,6 +41,11 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
+import org.apache.hadoop.yarn.webapp.WebAppException;
+
+import org.mortbay.jetty.servlet.DefaultServlet;
+import org.mortbay.jetty.servlet.FilterHolder;
+import org.mortbay.jetty.webapp.WebAppContext;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -107,7 +113,35 @@ public class HistoryClientService extends AbstractService {
             XLearningConfiguration.XLEARNING_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
         .withHttpSpnegoPrincipalKey(
             XLearningConfiguration.XLEARNING_WEBAPP_SPNEGO_USER_NAME_KEY)
-        .at(NetUtils.getHostPortString(bindAddress)).start(webApp);
+        .at(NetUtils.getHostPortString(bindAddress)).build(webApp);
+
+
+    HttpServer2 httpServer = webApp.httpServer();
+
+    WebAppContext webAppContext = httpServer.getWebAppContext();
+    WebAppContext appWebAppContext = new WebAppContext();
+    appWebAppContext.setContextPath("/xlWebApp");
+    String appDir = getClass().getClassLoader().getResource("xlWebApp").toString();
+    appWebAppContext.setResourceBase(appDir + "/static");
+    appWebAppContext.addServlet(DefaultServlet.class, "/*");
+    final String[] ALL_URLS = {"/*"};
+    FilterHolder[] filterHolders =
+        webAppContext.getServletHandler().getFilters();
+    for (FilterHolder filterHolder : filterHolders) {
+      if (!"guice".equals(filterHolder.getName())) {
+        HttpServer2.defineFilter(appWebAppContext, filterHolder.getName(),
+            filterHolder.getClassName(), filterHolder.getInitParameters(),
+            ALL_URLS);
+      }
+    }
+    httpServer.addContext(appWebAppContext, true);
+    try {
+      httpServer.start();
+      LOG.info("Web app " + webApp.name() + " started at "
+          + httpServer.getConnectorAddress(0).getPort());
+    } catch (IOException e) {
+      throw new WebAppException("Error starting http server", e);
+    }
 
     String connectHost = XLearningWebAppUtil.getJHSWebappURLWithoutScheme(conf).split(":")[0];
     XLearningWebAppUtil.setJHSWebappURLWithoutScheme(conf,

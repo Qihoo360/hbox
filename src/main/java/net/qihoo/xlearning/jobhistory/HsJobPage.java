@@ -31,4 +31,9 @@ public class HsJobPage extends TwoColumnLayout implements AMParams {
     }
   }
 
+  @Override
+  protected  Class<? extends SubView> header() {
+    return HeaderBlock.class;
+  }
+
 }

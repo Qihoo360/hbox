@@ -27,4 +27,10 @@ public class InfoPage extends TwoColumnLayout implements AMParams {
     return NavBlock.class;
   }
 
+ @Override
+  protected  Class<? extends SubView> header() {
+    return HeaderBlock.class;
+  }
+
+
 }
