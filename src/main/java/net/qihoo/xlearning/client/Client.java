@@ -588,10 +588,10 @@ public class Client {
       if (isRunning.get()) {
         LOG.info("Application submitAndMonitor succeed");
       } else {
-        throw new RuntimeException("Application submitAndMonitor failed!");
+        throw new RuntimeException("Application submitAndMonitor failed!  Application Not Running.");
       }
     } catch (YarnException e) {
-      throw new RuntimeException("Application submitAndMonitor failed!");
+      throw new RuntimeException("Application submitAndMonitor failed! Exception: " + e);
     }
 
     boolean isApplicationSucceed = waitCompleted();
