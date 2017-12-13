@@ -101,7 +101,7 @@ XLearning系统包括三种组件：
 - log4j.properties：配置日志级别  
 
 
-### 5 XLearning History Server启动方法    
+### 5 XLearning History Server启动方法 [可选]    
 
 - 执行`$XLEARNING_HOME/sbin/start-history-server.sh`
 
@@ -131,7 +131,8 @@ XLearning系统包括三种组件：
        --worker-cores 3 \
        --ps-memory 1G \
        --ps-num 1 \
-       --ps-cores 2
+       --ps-cores 2 \
+       --queue default \
        
 
 
@@ -151,6 +152,7 @@ worker-cores | worker使用CPU核数为3
 ps-memory | parameterServer内存使用为1G  
 ps-num | parameterServer数目为1  
 ps-cores | parameterServer使用CPU核数为2  
+queue | 作业提交队列    
 
 
 更多相关参数详细说明请见[**运行提交参数**](./doc/submit_cn.md)部分。  

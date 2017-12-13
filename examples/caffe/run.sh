@@ -10,3 +10,4 @@ $XLEARNING_HOME/bin/xl-submit \
    --launch-cmd "./caffe/build/tools/caffe train --solver=./lenet_solver.prototxt" \
    --worker-memory 10G \
    --worker-cores 2 \
+   --queue default \

@@ -100,7 +100,7 @@ Under the "conf" directory of the unpacking distribution package "$XLEARNING_HOM
 - log4j.properties：configure the log level  
 
 
-### 5 Start Method of XLearning History Service    
+### 5 Start Method of XLearning History Service [Optional]     
 
 - run `$XLEARNING_HOME/sbin/start-history-server.sh`.  
 
@@ -129,7 +129,8 @@ upload the "data" directory under the root of unpacking distribution package to 
        --worker-cores 3 \
        --ps-memory 1G \
        --ps-num 1 \
-       --ps-cores 2
+       --ps-cores 2 \
+       --queue default \
 
 
 The meaning of the parameters are as follows:  
@@ -148,6 +149,7 @@ worker-cores | number of cores to use for the worker process is 3
 ps-memory | amount of memory to use for the ps process is 1GB  
 ps-num | number of ps containers to use for the application is 1  
 ps-cores | number of cores to use for the ps process is 2  
+queue | the queue that application submit to  
 
 
 For more details, set the [**Submit Parameter**](./doc/submit.md) part。  
