@@ -1,6 +1,8 @@
 package net.qihoo.xlearning.webapp;
 
 import org.apache.hadoop.yarn.webapp.SubView;
+import org.apache.hadoop.yarn.webapp.WebApp;
+import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML;
 import org.apache.hadoop.yarn.webapp.view.TwoColumnLayout;
 
@@ -29,8 +31,15 @@ public class InfoPage extends TwoColumnLayout implements AMParams {
 
  @Override
   protected  Class<? extends SubView> header() {
-    return HeaderBlock.class;
+    try {
+      if (WebApps.Builder.class.getMethod("build", WebApp.class) != null) {
+        return HeaderBlock.class;
+      }
+    } catch (NoSuchMethodException e) {
+      LOG.warn("current hadoop version don't have the method build of Class " + WebApps.class.toString() + ". For More Detail: " + e);
+      return org.apache.hadoop.yarn.webapp.view.HeaderBlock.class;
+    }
+    return null;
   }
-
 
 }

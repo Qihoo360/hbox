@@ -23,12 +23,15 @@ import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.RoundingMode;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -106,6 +109,7 @@ public class ApplicationMaster extends CompositeService {
 
     conf = new XLearningConfiguration();
     conf.addResource(new Path(XLearningConstants.XLEARNING_JOB_CONFIGURATION));
+    System.setProperty(XLearningConstants.Environment.HADOOP_USER_NAME.toString(), conf.get("hadoop.job.ugi").split(",")[0]);
     outputInfos = new ArrayList<>();
     input2FileStatus = new ConcurrentHashMap<>();
     containerId2InputInfo = new ConcurrentHashMap<>();
@@ -229,7 +233,8 @@ public class ApplicationMaster extends CompositeService {
     Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
       @Override
       public void run() {
-        XLearningConfiguration xlearningConf = new XLearningConfiguration();
+        System.clearProperty(XLearningConstants.Environment.HADOOP_USER_NAME.toString());
+        YarnConfiguration xlearningConf = new YarnConfiguration();
         if (xlearningConf.getBoolean(XLearningConfiguration.XLEARNING_CLEANUP_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_CLEANUP_ENABLE)) {
           Path stagingDir = new Path(envs.get(XLearningConstants.Environment.XLEARNING_STAGING_LOCATION.toString()));
           try {
@@ -242,7 +247,7 @@ public class ApplicationMaster extends CompositeService {
 
         try {
           FsPermission LOG_FILE_PERMISSION = FsPermission.createImmutable((short) 0777);
-          Path jobLogPath = new Path(conf.get(XLearningConfiguration.XLEARNING_HISTORY_LOG_DIR,
+          Path jobLogPath = new Path(xlearningConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_HISTORY_LOG_DIR,
               XLearningConfiguration.DEFAULT_XLEARNING_HISTORY_LOG_DIR) + "/" + applicationAttemptID.getApplicationId().toString()
               + "/" + applicationAttemptID.getApplicationId().toString());
           LOG.info("jobLogPath:" + jobLogPath.toString());
@@ -670,6 +675,7 @@ public class ApplicationMaster extends CompositeService {
   private Map<String, String> buildContainerEnv(String role) {
     LOG.info("Seting environments for the Container");
     Map<String, String> containerEnv = new HashMap<>();
+    containerEnv.put(XLearningConstants.Environment.HADOOP_USER_NAME.toString(), conf.get("hadoop.job.ugi").split(",")[0]);
     containerEnv.put(XLearningConstants.Environment.XLEARNING_TF_ROLE.toString(), role);
     containerEnv.put(XLearningConstants.Environment.XLEARNING_EXEC_CMD.toString(), xlearningCommand);
     containerEnv.put(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString(), xlearningAppType);
@@ -813,7 +819,16 @@ public class ApplicationMaster extends CompositeService {
     while (rmCallbackHandler.getAllocatedPsContainerNumber() < psNum) {
       List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
       List<String> blackHosts = rmCallbackHandler.getBlackHosts();
-      amrmAsync.updateBlacklist(blackHosts, null);
+      try {
+        Method updateBlacklist = amrmAsync.getClass().getMethod("updateBlacklist", List.class, List.class);
+        updateBlacklist.invoke(amrmAsync, blackHosts);
+      } catch (NoSuchMethodException e) {
+        LOG.warn("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
+      } catch (InvocationTargetException e){
+        LOG.error("InvocationTargetException : " +e);
+      } catch (IllegalAccessException e){
+        LOG.error("IllegalAccessException : " + e);
+      }
       if (cancelContainers.size() != 0) {
         for (Container container : cancelContainers) {
           LOG.info("Canceling container: " + container.getId().toString());
@@ -840,7 +855,16 @@ public class ApplicationMaster extends CompositeService {
     while (rmCallbackHandler.getAllocatedWorkerContainerNumber() < workerNum) {
       List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
       List<String> blackHosts = rmCallbackHandler.getBlackHosts();
-      amrmAsync.updateBlacklist(blackHosts, null);
+      try {
+        Method updateBlacklist = amrmAsync.getClass().getMethod("updateBlacklist", List.class, List.class);
+        updateBlacklist.invoke(amrmAsync, blackHosts, null);
+      } catch (NoSuchMethodException e) {
+        LOG.warn("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
+      } catch (InvocationTargetException e) {
+        LOG.error("invoke the method updateBlacklist of Class " + amrmAsync.getClass().toString() + " InvocationTargetException Error : " + e);
+      } catch (IllegalAccessException e) {
+        LOG.error("invoke the method updateBlacklist of Class " + amrmAsync.getClass().toString() + " IllegalAccessException Error : " + e);
+      }
       if (cancelContainers.size() != 0) {
         for (Container container : cancelContainers) {
           LOG.info("Canceling container: " + container.getId().toString());

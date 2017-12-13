@@ -15,6 +15,7 @@ import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.webapp.WebAppContext;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 
 
 public class ApplicationWebService extends AbstractService {
@@ -32,7 +33,8 @@ public class ApplicationWebService extends AbstractService {
   public void start() {
     LOG.info("Starting application web server");
     try {
-      webApp = WebApps.$for("proxy", ApplicationContext.class, applicationContext, null).with(getConfig()).build(new AMWebApp());
+      Method webAppBuild = WebApps.Builder.class.getMethod("build", WebApp.class);
+      webApp = (WebApp) webAppBuild.invoke(WebApps.$for("proxy", ApplicationContext.class, applicationContext, null).with(getConfig()), new AMWebApp());
       HttpServer2 httpServer = webApp.httpServer();
 
       WebAppContext webAppContext = httpServer.getWebAppContext();
@@ -59,6 +61,9 @@ public class ApplicationWebService extends AbstractService {
       } catch (IOException e) {
         throw new WebAppException("Error starting http server", e);
       }
+    } catch (NoSuchMethodException e) {
+      LOG.warn("current hadoop version don't have the method build of Class " + WebApps.class.toString() + ". For More Detail: " + e);
+      webApp = WebApps.$for("proxy", ApplicationContext.class, applicationContext, null).with(getConfig()).start(new AMWebApp());
     } catch (Exception e) {
       LOG.error("Error starting application web server!", e);
     }

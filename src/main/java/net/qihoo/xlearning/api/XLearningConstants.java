@@ -22,6 +22,8 @@ public interface XLearningConstants {
   String STREAM_OUTPUT_DIR = "mapreduce.output.fileoutputformat.outputdir";
 
   enum Environment {
+    HADOOP_USER_NAME("HADOOP_USER_NAME"),
+
     XLEARNING_APP_TYPE("XLEARNING_APP_TYPE"),
 
     XLEARNING_TF_ROLE("TF_ROLE"),
