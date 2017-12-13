@@ -179,7 +179,7 @@ public class Client {
       for (String pathdir : StringUtils.split(inputRemote, ",")) {
         Path path = new Path(pathdir);
         if (!path.getFileSystem(conf).exists(path)) {
-          throw new IOException("Input path " + path + "not existed!");
+          throw new IOException("Input path " + path + " not existed!");
         }
       }
       if (inputPaths.containsKey(inputLocal)) {
