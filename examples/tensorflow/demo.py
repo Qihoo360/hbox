@@ -106,10 +106,10 @@ def main(_):
                 " Time: %3.2fms" % float(elapsed_time*1000))
         sys.stderr.write("reporter progress:%0.4f\n"%(float(epoch+1)/(training_epochs)))
   
-      print "Train Completed."
+      print("Train Completed.")
       if(FLAGS.task_index == 0):
         train_writer.close()
-        print "saving model..."
+        print("saving model...")
         saver.save(sess, FLAGS.save_path+"/model.ckpt")
     print("done")       
 
