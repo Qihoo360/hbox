@@ -821,7 +821,7 @@ public class ApplicationMaster extends CompositeService {
       List<String> blackHosts = rmCallbackHandler.getBlackHosts();
       try {
         Method updateBlacklist = amrmAsync.getClass().getMethod("updateBlacklist", List.class, List.class);
-        updateBlacklist.invoke(amrmAsync, blackHosts);
+        updateBlacklist.invoke(amrmAsync, blackHosts, null);
       } catch (NoSuchMethodException e) {
         LOG.warn("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
       } catch (InvocationTargetException e){
