@@ -761,7 +761,7 @@ public class XLearningContainer {
     chiefListNew.add(workerListOld.get(0));
     if (workerLen == 1)
     {
-      cluster.setWorker(null);
+      workerListNew.add(null);
     }
     else if (workerLen > 1){
       for (int i = 1; i < workerLen; i++)
