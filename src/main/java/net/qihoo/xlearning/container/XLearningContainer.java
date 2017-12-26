@@ -761,20 +761,20 @@ public class XLearningContainer {
     chiefListNew.add(workerListOld.get(0));
     if (workerLen == 1)
     {
-      workerListNew.add(null);
+      cluster.setWorker(null);
     }
     else if (workerLen > 1){
       for (int i = 1; i < workerLen; i++)
       {
         workerListNew.add(workerListOld.get(i));
       }
+      cluster.setWorker(workerListNew);
     }
     else {
       LOG.error("number of workers is error!");
     }
     // set cluster in TFConfig
     cluster.setChief(chiefListNew);
-    cluster.setWorker(workerListNew);
     cluster.setPs(psListOld);
     tfConfig.setCluster(cluster);
 
