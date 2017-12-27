@@ -16,3 +16,24 @@ XLearning通过环境变量 TF\_CLUSTER\_DEF 、 TF\_ROLE 、 TF\_INDEX 对应�
     job_name = os.environ["TF_ROLE"]
     task_index = int(os.environ["TF_INDEX"])
 
+### 4. 作业提交后，出现报错信息：java.lang.NoClassDefFoundError: org/apache/hadoop/mapred/JobConf, 如何解决？   
+默认 yarn.application.classpath 配置中未包含mapreduce相关的lib包，需要修改客户端的yarn-site.xml中添加，如：
+
+    <property>
+        <name>yarn.application.classpath</name>    
+        <value>$HADOOP_CLIENT_CONF_DIR,$HADOOP_CONF_DIR,$HADOOP_COMMON_HOME/*,$HADOOP_COMMON_HOME/lib/*,$HADOOP_HDFS_HOME/*,$HADOOP_HDFS_HOME/lib/*,$HADOOP_YARN_HOME/*,$HADOOP_YARN_HOME/lib/*,$HADOOP_MAPRED_HOME/*,$HADOOP_MAPRED_HOME/lib/*</value>  
+    </property>  
+
+
+### 5. 如何使用cacheArchive参数上传python模块包，如tensorflow？  
+例如，若集群未事先装有tensorflow模块，可利用cacheArchive参数特性进行配置，方法如下：  
+- 进入本地tensorflow模块安装所在的目录，如：/usr/lib/python2.7/site-packages/tensorflow/  
+- 将路径内的所有文件记性打包，如： tar -zcvf  tensorflow.tgz ./*  
+- 上传该压缩包至hdfs，如放置在hdfs的/tmp/tensorflow.tgz  
+- xlearning提交脚本中，添加cacheArchive参数，如：  --cacheArchive /tmp/tensorflow.tgz#tensorflow  
+- 在launch-cmd中所执行的脚本中，添加环境变量设置：export PYTHONPATH=./:$PYTHONPATH  
+
+
+### 6. 示例中数据集来源于mnist  
+
+

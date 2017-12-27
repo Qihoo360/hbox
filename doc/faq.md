@@ -18,3 +18,25 @@ In the distributed mode of TensorFlow application, ClusterSpec is defined by set
     job_name = os.environ["TF_ROLE"]
     task_index = int(os.environ["TF_INDEX"])
 
+
+### 4. Report the error：" java.lang.NoClassDefFoundError: org/apache/hadoop/mapred/JobConf" after submit the application.       
+Default that the "yarn.application.classpath" setted in the "yarn-site.xml" not contains the related lib package about mapreduce，try to add the related lib path, such:    
+
+    <property>
+        <name>yarn.application.classpath</name>    
+        <value>$HADOOP_CLIENT_CONF_DIR,$HADOOP_CONF_DIR,$HADOOP_COMMON_HOME/*,$HADOOP_COMMON_HOME/lib/*,$HADOOP_HDFS_HOME/*,$HADOOP_HDFS_HOME/lib/*,$HADOOP_YARN_HOME/*,$HADOOP_YARN_HOME/lib/*,$HADOOP_MAPRED_HOME/*,$HADOOP_MAPRED_HOME/lib/*</value>  
+    </property>  
+
+
+### 5. How to use the "--cacheArchive" to upload the python module package such as tensorflow？   
+For example, if there is not the tensorflow module on the node of the cluster, user can set the module by the "--cacheArchive". More detail:  
+- In the local path that tensorflow module installed, such "/usr/lib/python2.7/site-packages/tensorflow/"  
+- under the directory of the module, package all files in the directory,like " tar -zcvf  tensorflow.tgz ./*"    
+- upload the package to hdfs   
+- add the cacheArchive on the submit script, such "--cacheArchive /tmp/tensorflow.tgz#tensorflow"   
+- set the environment variable for program: "export PYTHONPATH=./:$PYTHONPATH"   
+
+
+### 6. The mnist data set used in the example. 
+
+ 
