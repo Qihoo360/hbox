@@ -131,8 +131,8 @@ public class XLearningConfiguration extends YarnConfiguration {
       "$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*",
       "$HADOOP_YARN_HOME/share/hadoop/yarn/*",
       "$HADOOP_YARN_HOME/share/hadoop/yarn/lib/*",
-      "$HADOOP_YARN_HOME/share/hadoop/mapreduce/*",
-      "$HADOOP_YARN_HOME/share/hadoop/mapreduce/lib/*"
+      "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*",
+      "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*"
   };
   public static final String XLEARNING_TF_BOARD_WORKER_INDEX = "xlearning.tf.board.worker.index";
   public static final int DEFAULT_XLEARNING_TF_BOARD_WORKER_INDEX = 0;
