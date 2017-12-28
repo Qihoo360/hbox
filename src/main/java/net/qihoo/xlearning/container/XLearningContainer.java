@@ -9,6 +9,10 @@ import net.qihoo.xlearning.common.OutputInfo;
 import net.qihoo.xlearning.common.XLearningContainerStatus;
 import net.qihoo.xlearning.common.TextMultiOutputFormat;
 import net.qihoo.xlearning.conf.XLearningConfiguration;
+import net.qihoo.xlearning.domain.Cluster;
+import net.qihoo.xlearning.domain.ClusterDef;
+import net.qihoo.xlearning.domain.TFConfig;
+import net.qihoo.xlearning.domain.Task;
 import net.qihoo.xlearning.util.Utilities;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -393,6 +397,7 @@ public class XLearningContainer {
         /**
          * set TF_CLUSTER_DEF in env
          * python script can load cluster def use "json.loads(os.environ["CLUSTER_DEF"])"
+         * set TF_CONFIG in env for new api in distributed tensorflow(Estimator API)
          */
         env = new String[]{
             "PATH=" + System.getenv("PATH"),
@@ -406,7 +411,8 @@ public class XLearningContainer {
             XLearningConstants.Environment.XLEARNING_TF_CLUSTER_DEF.toString() + "=" + this.clusterDef,
             XLearningConstants.Environment.XLEARNING_TF_INDEX.toString() + "=" + this.index,
             XLearningConstants.Environment.XLEARNING_TF_ROLE.toString() + "=" + this.role,
-            XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList
+            XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList,
+            "TF_CONFIG=" + getTFConfig()
         };
       }
     } else if (xlearningAppType.equals("MXNET")) {
@@ -725,6 +731,77 @@ public class XLearningContainer {
     heartbeatThread.setContainerStatus(XLearningContainerStatus.SUCCEEDED);
     Utilities.sleep(heartbeatInterval);
     System.exit(-1);
+  }
+
+  /**
+   TF_CONFIG='{
+   "cluster": {
+   "chief": ["host0:2222"],
+   "worker": ["host1:2222", "host2:2222", "host3:2222"],
+   "ps": ["host4:2222", "host5:2222"]
+   },
+   "task": {"type": "ps", "index": 0}
+   }'
+   */
+  // get env value: TF_CONFIG
+  private String getTFConfig()
+  {
+    // get old ClusterDef
+    ClusterDef clusterDefOld = new Gson().fromJson(this.clusterDef, ClusterDef.class);
+    List<String> psListOld = clusterDefOld.getPs();
+    List<String> workerListOld = clusterDefOld.getWorker();
+    int workerLen = workerListOld.size();
+
+    // create TFConfig Json Object
+    TFConfig tfConfig = new TFConfig();
+    Cluster cluster = new Cluster();
+    Task task = new Task();
+    List<String> chiefListNew = new ArrayList<>();
+    List<String> workerListNew = new ArrayList<>();
+    chiefListNew.add(workerListOld.get(0));
+    if (workerLen == 1)
+    {
+      cluster.setWorker(null);
+    }
+    else if (workerLen > 1){
+      for (int i = 1; i < workerLen; i++)
+      {
+        workerListNew.add(workerListOld.get(i));
+      }
+      cluster.setWorker(workerListNew);
+    }
+    else {
+      LOG.error("number of workers is error!");
+    }
+    // set cluster in TFConfig
+    cluster.setChief(chiefListNew);
+    cluster.setPs(psListOld);
+    tfConfig.setCluster(cluster);
+
+    // set task in TFConfig
+    if (this.role.equals(XLearningConstants.PS)){
+      task.setType("ps");
+      task.setIndex(this.index);
+    }
+    else if(this.role.equals(XLearningConstants.WORKER)){
+      if (this.index == 0){
+        task.setType("chief");
+        task.setIndex(this.index);
+      }
+      else if (this.index > 0)
+      {
+        task.setType("worker");
+        task.setIndex(this.index - 1);
+      }
+    }
+    else {
+      LOG.error("Role " + this.role + "Not Found!");
+    }
+    tfConfig.setTask(task);
+
+    String tfConfigStr = new Gson().toJson(tfConfig);
+    LOG.info("TF_CONF: " + tfConfigStr);
+    return tfConfigStr;
   }
 
   public static void main(String[] args) {
