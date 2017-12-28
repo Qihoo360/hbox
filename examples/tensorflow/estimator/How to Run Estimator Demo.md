@@ -1,11 +1,11 @@
-# Estimator Demo 
+# How to Run Estimator Demo 
 ## 第一步： 上传数据到HDFS
 ```bash
 # hdfs dfs -put $XLEARNING_HOME/data/tensorflow/tensorflow/iris /tmp/data
 ``` 
-## 第二步： 修改 `runEstimatorDemo.sh`
+## 第二步： 修改 `runEstimatorDemo.sh` 中的 IP
 ```bash
-# cd XLEARNING_HOME/examples/tensorflow/estimator
+# cd $XLEARNING_HOME/examples/tensorflow/estimator
 # vi runEstimatorDemo.sh
 ```
 ```bash
@@ -21,7 +21,7 @@ $XLEARNING_HOME/bin/xl-submit \
    --ps-memory 2G \
    --ps-num 1 \
    --ps-cores 2 \
-   --queue default \
+   --queue default
 ```
 将localhost修改为自己的 Hadoop IP
 
@@ -30,3 +30,12 @@ $XLEARNING_HOME/bin/xl-submit \
 ```bash
 # sh runEstimatorDemo.sh
 ```
+
+## 第四步： tensorboard
+
+[How to run TensorFlow on Hadoop](https://tensorflow.google.cn/deploy/hadoop)
+
+```bash
+# tensorboard --logdir=hdfs://localhost:9000/tmp/model/estimatorDemo
+```
+
