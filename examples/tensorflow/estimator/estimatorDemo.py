@@ -5,11 +5,6 @@ from __future__ import print_function
 import argparse
 import numpy as np
 import tensorflow as tf
-import sys
-import os
-import json
-
-sys.path.append(os.getcwd())
 
 FLAGS = None
 
@@ -76,7 +71,7 @@ if __name__ == "__main__":
         "--data_path",
         type=str,
         default="./",
-        help="The path for train file"
+        help="The path for data"
     )
     parser.add_argument(
         "--model_path",

@@ -1,7 +1,7 @@
 # How to Run Estimator Demo 
 ## 第一步： 上传数据到HDFS
 ```bash
-# hdfs dfs -put $XLEARNING_HOME/data/tensorflow/tensorflow/iris /tmp/data
+# hdfs dfs -put $XLEARNING_HOME/data/tensorflow/iris /tmp/data
 ``` 
 ## 第二步： 修改 `runEstimatorDemo.sh` 中的 IP
 ```bash
@@ -38,4 +38,10 @@ $XLEARNING_HOME/bin/xl-submit \
 ```bash
 # tensorboard --logdir=hdfs://localhost:9000/tmp/model/estimatorDemo
 ```
+
+> 因使用 Estimator API 进行 TensorFlow 分布式训练，单机和分布式的代码是一样的，
+> 即单机的代码不需要修改即可在分布式集群上进行训练，所以 PS Server 同样需要加载
+> 数据，故需要采用 HDFS 等共享文件作为输入文件和输出文件。 
+
+> 另，本人刚参加工作还不到半年，可能代码写的比较 Low, 提交 pull request 只希望抛砖引玉，希望经过你们的修改后加入 TF_CONFIG 环境变量，以便兼容 Estimator API 的 TensorFlow 分布式训练。
 
