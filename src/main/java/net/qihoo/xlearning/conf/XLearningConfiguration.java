@@ -39,6 +39,10 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final int DEFAULT_XLEARNING_LOG_PULL_INTERVAL = 10000;
 
+  public static final String XLEARNING_USER_CLASSPATH_FIRST = "xlearning.user.classpath.first";
+
+  public static final boolean DEFAULT_XLEARNING_USER_CLASSPATH_FIRST = true;
+
   public static final String XLEARNING_AM_MEMORY = "xlearning.am.memory";
 
   public static final int DEFAULT_XLEARNING_AM_MEMORY = 1024;

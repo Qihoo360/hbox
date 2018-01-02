@@ -68,6 +68,8 @@ public class ApplicationMaster extends CompositeService {
   private Path appConfRemoteLocation;
   // location of files on HDFS
   private String appFilesRemoteLocation;
+  // location of lib jars on HDFS
+  private String appLibJarsRemoteLocation;
   // location of cacheFiles on HDFS
   private String appCacheFilesRemoteLocation;
   // location of cacheArchive on HDFS
@@ -174,6 +176,11 @@ public class ApplicationMaster extends CompositeService {
     if (envs.containsKey(XLearningConstants.Environment.XLEARNING_FILES_LOCATION.toString())) {
       appFilesRemoteLocation = envs.get(XLearningConstants.Environment.XLEARNING_FILES_LOCATION.toString());
       LOG.info("Application files location: " + appFilesRemoteLocation);
+    }
+
+    if (envs.containsKey(XLearningConstants.Environment.XLEARNING_LIBJARS_LOCATION.toString())) {
+      appLibJarsRemoteLocation = envs.get(XLearningConstants.Environment.XLEARNING_LIBJARS_LOCATION.toString());
+      LOG.info("Application lib Jars location: " + appLibJarsRemoteLocation);
     }
 
     if (envs.containsKey(XLearningConstants.Environment.XLEARNING_CACHE_FILE_LOCATION.toString())) {
@@ -687,13 +694,25 @@ public class ApplicationMaster extends CompositeService {
                   LocalResourceType.FILE));
         }
       }
+
+      if(appLibJarsRemoteLocation != null) {
+        String[] jarFiles = StringUtils.split(appLibJarsRemoteLocation, ",");
+        for (String file : jarFiles) {
+          Path path = new Path(file);
+          containerLocalResource.put(path.getName(),
+              Utilities.createApplicationResource(path.getFileSystem(conf),
+                  path,
+                  LocalResourceType.FILE));
+        }
+      }
+
     } catch (IOException e) {
       throw new RuntimeException("Error while build container local resource", e);
     }
   }
 
   private Map<String, String> buildContainerEnv(String role) {
-    LOG.info("Seting environments for the Container");
+    LOG.info("Setting environments for the Container");
     Map<String, String> containerEnv = new HashMap<>();
     containerEnv.put(XLearningConstants.Environment.HADOOP_USER_NAME.toString(), conf.get("hadoop.job.ugi").split(",")[0]);
     containerEnv.put(XLearningConstants.Environment.XLEARNING_TF_ROLE.toString(), role);
