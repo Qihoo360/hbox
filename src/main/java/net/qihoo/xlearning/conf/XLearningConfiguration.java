@@ -71,6 +71,18 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final int DEFAULT_XLEARNING_PS_NUM = 0;
 
+  public static final String XLEARNING_WORKER_MEM_AUTO_SCALE = "xlearning.worker.mem.autoscale";
+
+  public static final Double DEFAULT_XLEARNING_WORKER_MEM_AUTO_SCALE = 0.5;
+
+  public static final String XLEARNING_PS_MEM_AUTO_SCALE = "xlearning.ps.mem.autoscale";
+
+  public static final Double DEFAULT_XLEARNING_PS_MEM_AUTO_SCALE = 0.2;
+
+  public static final String XLEARNING_APP_MAX_ATTEMPTS = "xlearning.app.max.attempts";
+
+  public static final int DEFAULT_XLEARNING_APP_MAX_ATTEMPTS = 1;
+
   public static final String XLEARNING_TF_MODE_SINGLE = "xlearning.tf.mode.single";
 
   public static Boolean DEFAULT_XLEARNING_TF_MODE_SINGLE = false;

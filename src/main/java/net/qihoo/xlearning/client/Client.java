@@ -542,6 +542,7 @@ public class Client {
     }
 
     appMasterEnv.put("CLASSPATH", classPathEnv.toString());
+    appMasterEnv.put(XLearningConstants.Environment.XLEARNING_CONTAINER_MAX_MEMORY.toString(), String.valueOf(newAppResponse.getMaximumResourceCapability().getMemory()));
 
     if (clientArguments.userPath != null && !clientArguments.userPath.equals("")) {
       appMasterEnv.put(XLearningConstants.Environment.USER_PATH.toString(), clientArguments.userPath);

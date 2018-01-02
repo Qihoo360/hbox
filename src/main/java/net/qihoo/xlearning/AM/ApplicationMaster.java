@@ -99,6 +99,8 @@ public class ApplicationMaster extends CompositeService {
   private Boolean lastSavingStatus;
   private List<Long> savingModelList;
 
+  private Thread cleanApplication;
+
   /**
    * Constructor, connect to Resource Manager
    *
@@ -151,6 +153,23 @@ public class ApplicationMaster extends CompositeService {
         + ", clustertimestamp="
         + applicationAttemptID.getApplicationId().getClusterTimestamp()
         + ", attemptId=" + applicationAttemptID.getAttemptId());
+
+    if (applicationAttemptID.getAttemptId() > 1 && (conf.getInt(XLearningConfiguration.XLEARNING_APP_MAX_ATTEMPTS, XLearningConfiguration.DEFAULT_XLEARNING_APP_MAX_ATTEMPTS) > 1)) {
+      int maxMem = Integer.valueOf(envs.get(XLearningConstants.Environment.XLEARNING_CONTAINER_MAX_MEMORY.toString()));
+      LOG.info("maxMem : " + maxMem);
+      workerMemory = workerMemory + (applicationAttemptID.getAttemptId() - 1) * (int) Math.ceil(workerMemory * conf.getDouble(XLearningConfiguration.XLEARNING_WORKER_MEM_AUTO_SCALE, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEM_AUTO_SCALE));
+      LOG.info("Auto Scale the Worker Memory from " + conf.getInt(XLearningConfiguration.XLEARNING_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY) + " to " + workerMemory);
+      if (workerMemory > maxMem) {
+        workerMemory = maxMem;
+      }
+      if (psNum > 0) {
+        psMemory = psMemory + (applicationAttemptID.getAttemptId() - 1) * (int) Math.ceil(psMemory * conf.getDouble(XLearningConfiguration.XLEARNING_PS_MEM_AUTO_SCALE, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEM_AUTO_SCALE));
+        LOG.info("Auto Scale the Ps Memory from " + conf.getInt(XLearningConfiguration.XLEARNING_PS_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEMORY) + " to " + psMemory);
+        if (psMemory > maxMem) {
+          psMemory = maxMem;
+        }
+      }
+    }
 
     if (envs.containsKey(XLearningConstants.Environment.XLEARNING_FILES_LOCATION.toString())) {
       appFilesRemoteLocation = envs.get(XLearningConstants.Environment.XLEARNING_FILES_LOCATION.toString());
@@ -230,7 +249,7 @@ public class ApplicationMaster extends CompositeService {
     LOG.info("master tracking url:" + applicationMasterTrackingUrl);
     LOG.info("history url: " + applicationHistoryUrl);
 
-    Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+    cleanApplication = new Thread(new Runnable() {
       @Override
       public void run() {
         System.clearProperty(XLearningConstants.Environment.HADOOP_USER_NAME.toString());
@@ -390,7 +409,8 @@ public class ApplicationMaster extends CompositeService {
           LOG.error("Writing the history log file Error." + e);
         }
       }
-    }));
+    });
+    Runtime.getRuntime().addShutdownHook(cleanApplication);
   }
 
   private void buildInputFileStatus() {
@@ -824,9 +844,9 @@ public class ApplicationMaster extends CompositeService {
         updateBlacklist.invoke(amrmAsync, blackHosts, null);
       } catch (NoSuchMethodException e) {
         LOG.warn("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
-      } catch (InvocationTargetException e){
-        LOG.error("InvocationTargetException : " +e);
-      } catch (IllegalAccessException e){
+      } catch (InvocationTargetException e) {
+        LOG.error("InvocationTargetException : " + e);
+      } catch (IllegalAccessException e) {
         LOG.error("IllegalAccessException : " + e);
       }
       if (cancelContainers.size() != 0) {
@@ -880,8 +900,8 @@ public class ApplicationMaster extends CompositeService {
     acquiredWorkerContainers = rmCallbackHandler.getAcquiredWorkerContainer();
 
     int totalNumAllocatedWorkers = rmCallbackHandler.getAllocatedWorkerContainerNumber();
-    if(totalNumAllocatedWorkers > workerNum) {
-      while(acquiredWorkerContainers.size() > workerNum) {
+    if (totalNumAllocatedWorkers > workerNum) {
+      while (acquiredWorkerContainers.size() > workerNum) {
         Container releaseContainer = acquiredWorkerContainers.remove(0);
         amrmAsync.releaseAssignedContainer(releaseContainer.getId());
         LOG.info("Release container " + releaseContainer.getId().toString());
@@ -1129,6 +1149,17 @@ public class ApplicationMaster extends CompositeService {
       this.appendMessage("Some error occurs"
           + org.apache.hadoop.util.StringUtils.stringifyException(e), true);
       diagnostics = e.getMessage();
+    }
+
+    int appAttempts = conf.getInt(XLearningConfiguration.XLEARNING_APP_MAX_ATTEMPTS, XLearningConfiguration.DEFAULT_XLEARNING_APP_MAX_ATTEMPTS);
+
+    if (appAttempts > conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS)) {
+      appAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    }
+
+    if (!finalSuccess && applicationAttemptID.getAttemptId() < appAttempts) {
+      Runtime.getRuntime().removeShutdownHook(cleanApplication);
+      throw new RuntimeException("Application Failed, retry starting. Note that container memory will auto scale if user config the setting.");
     }
 
     this.appendMessage("Unregistered Application", true);
