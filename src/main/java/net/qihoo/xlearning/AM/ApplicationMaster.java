@@ -836,6 +836,9 @@ public class ApplicationMaster extends CompositeService {
       LOG.info("Try to allocate " + psNum + " ps/server containers");
     }
 
+    Boolean startAllocatedContainer = false;
+    Long startAllocatedTimeStamp = Long.MIN_VALUE;
+    String failMessage = "Container waiting except the allocated expiry time. Maybe the Cluster available resources are not satisfied the user need. Please resubmit !";
     while (rmCallbackHandler.getAllocatedPsContainerNumber() < psNum) {
       List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
       List<String> blackHosts = rmCallbackHandler.getBlackHosts();
@@ -856,6 +859,17 @@ public class ApplicationMaster extends CompositeService {
           amrmAsync.addContainerRequest(psContainerRequest);
         }
         cancelContainers.clear();
+      }
+      if (rmCallbackHandler.getAllocatedPsContainerNumber() > 0 && !startAllocatedContainer) {
+        startAllocatedContainer = true;
+        startAllocatedTimeStamp = System.currentTimeMillis();
+      }
+      if (startAllocatedContainer && (System.currentTimeMillis() - startAllocatedTimeStamp) > conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
+        LOG.info(failMessage);
+        this.appendMessage(failMessage, true);
+        this.appendMessage("Unregister  Application", true);
+        unregisterApp(FinalApplicationStatus.FAILED, failMessage);
+        return false;
       }
       Utilities.sleep(allocateInterval);
     }
@@ -892,6 +906,17 @@ public class ApplicationMaster extends CompositeService {
           amrmAsync.addContainerRequest(workerContainerRequest);
         }
         cancelContainers.clear();
+      }
+      if (rmCallbackHandler.getAllocatedWorkerContainerNumber() > 0 && !startAllocatedContainer) {
+        startAllocatedContainer = true;
+        startAllocatedTimeStamp = System.currentTimeMillis();
+      }
+      if (startAllocatedContainer && (System.currentTimeMillis() - startAllocatedTimeStamp) > conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
+        LOG.info(failMessage);
+        this.appendMessage(failMessage, true);
+        this.appendMessage("Unregister  Application", true);
+        unregisterApp(FinalApplicationStatus.FAILED, failMessage);
+        return false;
       }
       Utilities.sleep(allocateInterval);
     }
