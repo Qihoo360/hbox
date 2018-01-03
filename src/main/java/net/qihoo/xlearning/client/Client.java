@@ -490,7 +490,8 @@ public class Client {
 
     if (clientArguments.xlearningCacheFiles != null && !clientArguments.xlearningCacheFiles.equals("")) {
       appMasterEnv.put(XLearningConstants.Environment.XLEARNING_CACHE_FILE_LOCATION.toString(), clientArguments.xlearningCacheFiles);
-      if (clientArguments.appType.equals("MXNET") && !conf.getBoolean(XLearningConfiguration.XLEARNING_MXNET_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MXNET_MODE_SINGLE)) {
+      if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(XLearningConfiguration.XLEARNING_MXNET_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MXNET_MODE_SINGLE))
+          || clientArguments.appType.equals("DISTXGBOOST")) {
         URI defaultUri = new Path(conf.get("fs.defaultFS")).toUri();
         LOG.info("default URI is " + defaultUri.toString());
         String appCacheFilesRemoteLocation = appMasterEnv.get(XLearningConstants.Environment.XLEARNING_CACHE_FILE_LOCATION.toString());

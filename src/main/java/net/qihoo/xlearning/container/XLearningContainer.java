@@ -84,6 +84,10 @@ public class XLearningContainer {
       }
       LOG.info("MXNet role is:" + this.role);
     }
+    if (xlearningAppType.equals("DISTXGBOOST")) {
+      LOG.info("Dist Xgboost role is:" + this.role);
+    }
+
     this.index = Integer.valueOf(envs.get(XLearningConstants.Environment.XLEARNING_TF_INDEX.toString()));
     if ("TENSORFLOW".equals(xlearningAppType)) {
       LOG.info("TensorFlow index is:" + this.index);
@@ -91,6 +95,10 @@ public class XLearningContainer {
     if (xlearningAppType.equals("MXNET")) {
       LOG.info("MXNet index is:" + this.index);
     }
+    if (xlearningAppType.equals("DISTXGBOOST")) {
+      LOG.info("Dist Xgboost index is:" + this.index);
+    }
+
     this.single = conf.getBoolean(XLearningConfiguration.XLEARNING_TF_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_MODE_SINGLE);
     this.singleMx = conf.getBoolean(XLearningConfiguration.XLEARNING_MXNET_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MXNET_MODE_SINGLE);
     heartbeatInterval = this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_HEARTBEAT_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_HEARTBEAT_INTERVAL);
@@ -191,7 +199,6 @@ public class XLearningContainer {
       }
     }
   }
-
 
   @SuppressWarnings("deprecation")
   private void prepareInputFiles() throws IOException, InterruptedException,
@@ -420,6 +427,23 @@ public class XLearningContainer {
                 "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
             "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
             "PYTHONUNBUFFERED=1",
+            XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList
+        };
+      } else if (xlearningAppType.equals("DISTXGBOOST")) {
+        env = new String[]{
+            "PATH=" + System.getenv("PATH"),
+            "JAVA_HOME=" + System.getenv("JAVA_HOME"),
+            "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
+            "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
+            "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+                "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
+            "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
+            "DMLC_TRACKER_URI=" + System.getenv("DMLC_TRACKER_URI"),
+            "DMLC_TRACKER_PORT=" + System.getenv("DMLC_TRACKER_PORT"),
+            "DMLC_NUM_WORKER=" + System.getenv("DMLC_NUM_WORKER"),
+            "PYTHONUNBUFFERED=1",
+            "DMLC_TASK_ID=" + this.index,
+            "DMLC_ROLE=" + this.role,
             XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList
         };
       } else {

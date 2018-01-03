@@ -77,6 +77,8 @@ public class ApplicationMaster extends CompositeService {
   private String xlearningCommand;
   private String dmlcPsRootUri;
   private int dmlcPsRootPort;
+  private String dmlcTrackerUri;
+  private int dmlcTrackerPort;
   private String xlearningAppType;
   private List<Container> acquiredWorkerContainers;
   private List<Container> acquiredPsContainers;
@@ -140,6 +142,8 @@ public class ApplicationMaster extends CompositeService {
     acquiredPsContainers = new ArrayList<>();
     dmlcPsRootUri = null;
     dmlcPsRootPort = 0;
+    dmlcTrackerUri = null;
+    dmlcTrackerPort = 0;
 
     if (envs.containsKey(ApplicationConstants.Environment.CONTAINER_ID.toString())) {
       ContainerId containerId = ConverterUtils
@@ -695,7 +699,7 @@ public class ApplicationMaster extends CompositeService {
         }
       }
 
-      if(appLibJarsRemoteLocation != null) {
+      if (appLibJarsRemoteLocation != null) {
         String[] jarFiles = StringUtils.split(appLibJarsRemoteLocation, ",");
         for (String file : jarFiles) {
           Path path = new Path(file);
@@ -724,6 +728,13 @@ public class ApplicationMaster extends CompositeService {
       containerEnv.put("DMLC_PS_ROOT_URI", dmlcPsRootUri);
       containerEnv.put("DMLC_PS_ROOT_PORT", String.valueOf(dmlcPsRootPort));
     }
+
+    if (xlearningAppType.equals("DISTXGBOOST")) {
+      containerEnv.put("DMLC_NUM_WORKER", String.valueOf(workerNum));
+      containerEnv.put("DMLC_TRACKER_URI", dmlcTrackerUri);
+      containerEnv.put("DMLC_TRACKER_PORT", String.valueOf(dmlcTrackerPort));
+    }
+
     containerEnv.put("CLASSPATH", System.getenv("CLASSPATH"));
     containerEnv.put(XLearningConstants.Environment.APP_ATTEMPTID.toString(), applicationAttemptID.toString());
     containerEnv.put(XLearningConstants.Environment.APP_ID.toString(), applicationAttemptID.getApplicationId().toString());
@@ -998,7 +1009,7 @@ public class ApplicationMaster extends CompositeService {
               reader = new BufferedReader(new InputStreamReader(mxnetSchedulerProcess.getInputStream()));
               String mxnetSchedulerStdoutLog;
               while ((mxnetSchedulerStdoutLog = reader.readLine()) != null) {
-                LOG.debug(mxnetSchedulerStdoutLog);
+                LOG.info(mxnetSchedulerStdoutLog);
               }
             } catch (Exception e) {
               LOG.warn("Exception in thread mxnetSchedulerRedirectThread");
@@ -1031,6 +1042,83 @@ public class ApplicationMaster extends CompositeService {
       }
 
     }
+
+    //launch dist xgboost scheduler
+    if (xlearningAppType.equals("DISTXGBOOST")) {
+      LOG.info("Seting environments for the dist xgboost scheduler");
+      dmlcTrackerUri = applicationMasterHostname;
+      Socket schedulerReservedSocket = new Socket();
+      try {
+        schedulerReservedSocket.bind(new InetSocketAddress("127.0.0.1", 0));
+      } catch (IOException e) {
+        LOG.error("Can not get available port");
+      }
+      dmlcTrackerPort = schedulerReservedSocket.getLocalPort();
+      String[] schedulerEnv = new String[]{
+          "PATH=" + System.getenv("PATH"),
+          "JAVA_HOME=" + System.getenv("JAVA_HOME"),
+          "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
+          "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
+          "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+              "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
+          "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
+          "PYTHONUNBUFFERED=1"
+      };
+      String distXgboostSchedulerCmd = "python xgboost/self-define/rabitTracker.py --num-workers=" + workerNum
+          + " --host-ip=" + dmlcTrackerUri + " --port=" + dmlcTrackerPort;
+      LOG.info("Dist xgboost scheduler executing command:" + distXgboostSchedulerCmd);
+      LOG.info("DMLC_TRACKER_URI is " + dmlcTrackerUri);
+      LOG.info("DMLC_TRACKER_PORT is " + dmlcTrackerPort);
+      LOG.info("DMLC_NUM_WORKER=" + workerNum);
+
+      try {
+        Runtime rt = Runtime.getRuntime();
+        schedulerReservedSocket.close();
+        final Process xgboostSchedulerProcess = rt.exec(distXgboostSchedulerCmd, schedulerEnv);
+        LOG.info("Starting thread to redirect stdout of xgboost scheduler process");
+        Thread xgboostSchedulerRedirectThread = new Thread(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              BufferedReader reader;
+              reader = new BufferedReader(new InputStreamReader(xgboostSchedulerProcess.getInputStream()));
+              String xgboostSchedulerStdoutLog;
+              while ((xgboostSchedulerStdoutLog = reader.readLine()) != null) {
+                LOG.info(xgboostSchedulerStdoutLog);
+              }
+            } catch (Exception e) {
+              LOG.warn("Exception in thread xgboostSchedulerRedirectThread");
+              e.printStackTrace();
+            }
+          }
+        });
+        xgboostSchedulerRedirectThread.start();
+
+        LOG.info("Starting thread to redirect stderr of xgboost scheduler process");
+        Thread xgboostSchedulerStderrRedirectThread = new Thread(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              BufferedReader reader;
+              reader = new BufferedReader(new InputStreamReader(xgboostSchedulerProcess.getErrorStream()));
+              String xgboostSchedulerStderrLog;
+              while ((xgboostSchedulerStderrLog = reader.readLine()) != null) {
+                LOG.info(xgboostSchedulerStderrLog);
+              }
+            } catch (Exception e) {
+              LOG.warn("Error in thread xgboostSchedulerStderrRedirectThread");
+              e.printStackTrace();
+            }
+          }
+        });
+        xgboostSchedulerStderrRedirectThread.start();
+
+      } catch (Exception e) {
+        LOG.info("start xgboost scheduler error " + e);
+      }
+
+    }
+
 
     if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).equals("STREAM")) {
       allocateInputStreamSplits();
