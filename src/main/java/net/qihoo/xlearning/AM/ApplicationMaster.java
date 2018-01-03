@@ -735,6 +735,10 @@ public class ApplicationMaster extends CompositeService {
       containerEnv.put("DMLC_TRACKER_PORT", String.valueOf(dmlcTrackerPort));
     }
 
+    if(xlearningAppType.equals("DISTLIGHTGBM")) {
+      containerEnv.put(XLearningConstants.Environment.XLEARNING_LIGHTGBM_WORKER_NUM.toString(), String.valueOf(workerNum));
+    }
+
     containerEnv.put("CLASSPATH", System.getenv("CLASSPATH"));
     containerEnv.put(XLearningConstants.Environment.APP_ATTEMPTID.toString(), applicationAttemptID.toString());
     containerEnv.put(XLearningConstants.Environment.APP_ID.toString(), applicationAttemptID.getApplicationId().toString());

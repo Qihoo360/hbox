@@ -40,6 +40,8 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   private final Map<String, List<ContainerHostPair>> clusterDef;
 
+  private final Map<XLearningContainerId, String> lightGBMIpPortMap;
+
   private final Map<XLearningContainerId, String> reporterProgress;
 
   private final Map<XLearningContainerId, String> mapedTaskID;
@@ -49,6 +51,8 @@ public class ApplicationContainerListener extends AbstractService implements App
   private final Map<XLearningContainerId, String> containersAppFinishTimeMap;
 
   private String clusterDefStr;
+
+  private String lightGBMIpPortStr;
 
   private final Clock clock;
 
@@ -85,6 +89,8 @@ public class ApplicationContainerListener extends AbstractService implements App
     this.clusterDef.put(XLearningConstants.WORKER, Collections.synchronizedList(new ArrayList<ContainerHostPair>()));
     this.clusterDef.put(XLearningConstants.PS, Collections.synchronizedList(new ArrayList<ContainerHostPair>()));
     this.clusterDefStr = null;
+    this.lightGBMIpPortMap = new ConcurrentHashMap<>();
+    this.lightGBMIpPortStr = null;
     this.applicationContext = applicationContext;
     this.clock = new SystemClock();
     this.runningContainers = new ConcurrentHashMap<>();
@@ -253,6 +259,10 @@ public class ApplicationContainerListener extends AbstractService implements App
       if (failedNum > 0) {
         return true;
       }
+    } else if ("DISTLIGHTGBM".equals(xlearningAppType)) {
+      if (failedNum > 0) {
+        return true;
+      }
     } else {
       Double jobFailedNum = containerId2Status.size() * this.getConfig().getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MAX_FAILURES_RATE, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_FAILURES_RATE);
       if (failedNum > jobFailedNum) {
@@ -315,6 +325,21 @@ public class ApplicationContainerListener extends AbstractService implements App
     } else {
       LOG.warn("Unknow role " + role + " reported from " + host);
     }
+  }
+
+  @Override
+  public void reportLightGbmIpPort(XLearningContainerId containerId, String lightGbmIpPort) {
+    this.lightGBMIpPortMap.put(containerId, lightGbmIpPort);
+    LOG.info("From container " + containerId.toString() + "Received reported lightGBM ip port: " + lightGbmIpPort);
+  }
+
+  @Override
+  public synchronized String getLightGbmIpPortStr() {
+    if(this.lightGBMIpPortMap.size() == applicationContext.getWorkerNum()) {
+      LOG.info("Sending lightGBM ip port list \"" + new Gson().toJson(lightGBMIpPortMap) + "\"to container");
+      this.lightGBMIpPortStr = new Gson().toJson(lightGBMIpPortMap);
+    }
+    return this.lightGBMIpPortStr;
   }
 
   @Override

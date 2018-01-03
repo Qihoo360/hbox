@@ -11,6 +11,10 @@ public interface ApplicationContainerProtocol extends VersionedProtocol {
 
   void reportReservedPort(String host, int port, String role, int index);
 
+  void reportLightGbmIpPort(XLearningContainerId containerId, String lightGbmIpPort);
+
+  String getLightGbmIpPortStr();
+
   String getClusterDef();
 
   HeartbeatResponse heartbeat(XLearningContainerId containerId, HeartbeatRequest heartbeatRequest);

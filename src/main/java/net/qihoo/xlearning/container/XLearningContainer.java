@@ -2,6 +2,7 @@ package net.qihoo.xlearning.container;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import net.qihoo.xlearning.api.ApplicationContainerProtocol;
 import net.qihoo.xlearning.api.XLearningConstants;
 import net.qihoo.xlearning.common.InputInfo;
@@ -25,8 +26,11 @@ import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import java.io.*;
+import java.lang.reflect.Type;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.text.SimpleDateFormat;
@@ -54,6 +58,8 @@ public class XLearningContainer {
   private final int downloadRetry;
 
   private final Socket reservedSocket;
+
+  private int lightGBMLocalPort;
 
   private String role;
 
@@ -87,6 +93,9 @@ public class XLearningContainer {
     if (xlearningAppType.equals("DISTXGBOOST")) {
       LOG.info("Dist Xgboost role is:" + this.role);
     }
+    if (xlearningAppType.equals("DISTLIGHTGBM")) {
+      LOG.info("Dist lightGBM role is:" + this.role);
+    }
 
     this.index = Integer.valueOf(envs.get(XLearningConstants.Environment.XLEARNING_TF_INDEX.toString()));
     if ("TENSORFLOW".equals(xlearningAppType)) {
@@ -97,6 +106,9 @@ public class XLearningContainer {
     }
     if (xlearningAppType.equals("DISTXGBOOST")) {
       LOG.info("Dist Xgboost index is:" + this.index);
+    }
+    if (xlearningAppType.equals("DISTLIGHTGBM")) {
+      LOG.info("Dist lightGBM index is:" + this.index);
     }
 
     this.single = conf.getBoolean(XLearningConfiguration.XLEARNING_TF_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_MODE_SINGLE);
@@ -124,7 +136,7 @@ public class XLearningContainer {
     heartbeatThread.start();
     heartbeatThread.setContainerStatus(XLearningContainerStatus.INITIALIZING);
 
-    if ("TENSORFLOW".equals(xlearningAppType) && !single) {
+    if (("TENSORFLOW".equals(xlearningAppType) && !single) || xlearningAppType.equals("DISTLIGHTGBM")) {
       try {
         reservedSocket.bind(new InetSocketAddress("127.0.0.1", 0));
       } catch (IOException e) {
@@ -380,6 +392,39 @@ public class XLearningContainer {
       }
     }
 
+    if (xlearningAppType.equals("DISTLIGHTGBM")) {
+      LOG.info("Reserved available port: " + reservedSocket.getLocalPort());
+      this.lightGBMLocalPort = reservedSocket.getLocalPort();
+      InetAddress address = null;
+      try {
+        address = InetAddress.getByName(envs.get(ApplicationConstants.Environment.NM_HOST.toString()));
+      } catch (UnknownHostException e) {
+        LOG.info("acquire host ip failed " + e);
+        reportFailedAndExit();
+      }
+      String ipPortStr = address.getHostAddress() + " " + reservedSocket.getLocalPort();
+      LOG.info("lightGBM ip port string is: " + ipPortStr);
+      amClient.reportLightGbmIpPort(containerId, ipPortStr);
+      String lightGBMIpPortStr;
+      while (true) {
+        //TODO may be need encode use Base64 while used in Env
+        lightGBMIpPortStr = amClient.getLightGbmIpPortStr();
+        if (lightGBMIpPortStr != null) {
+          LOG.info("lightGBM IP PORT list is: " + lightGBMIpPortStr);
+          break;
+        }
+        Utilities.sleep(this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL));
+      }
+      Type type = new TypeToken<ConcurrentHashMap<String, String>>() {
+      }.getType();
+      ConcurrentHashMap<String, String> map = new Gson().fromJson(lightGBMIpPortStr, type);
+      PrintWriter writer = new PrintWriter("lightGBMlist.txt", "UTF-8");
+      for (String str : map.keySet()) {
+        writer.println(map.get(str));
+      }
+      writer.close();
+    }
+
     String[] env = null;
     if ("TENSORFLOW".equals(xlearningAppType)) {
       if (single) {
@@ -444,6 +489,21 @@ public class XLearningContainer {
             "PYTHONUNBUFFERED=1",
             "DMLC_TASK_ID=" + this.index,
             "DMLC_ROLE=" + this.role,
+            XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList
+        };
+      } else if (xlearningAppType.equals("DISTLIGHTGBM")) {
+        env = new String[]{
+            "PATH=" + System.getenv("PATH"),
+            "JAVA_HOME=" + System.getenv("JAVA_HOME"),
+
+            "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
+            "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
+            "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+                "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
+            "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
+            "LIGHTGBM_NUM_MACHINE=" + System.getenv(XLearningConstants.Environment.XLEARNING_LIGHTGBM_WORKER_NUM.toString()),
+            "LIGHTGBM_LOCAL_LISTEN_PORT=" + this.lightGBMLocalPort,
+            "PYTHONUNBUFFERED=1",
             XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList
         };
       } else {
