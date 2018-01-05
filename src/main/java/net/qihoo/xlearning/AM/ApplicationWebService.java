@@ -39,9 +39,9 @@ public class ApplicationWebService extends AbstractService {
 
       WebAppContext webAppContext = httpServer.getWebAppContext();
       WebAppContext appWebAppContext = new WebAppContext();
-      appWebAppContext.setContextPath("/xlWebApp");
+      appWebAppContext.setContextPath("/static/xlWebApp");
       String appDir = getClass().getClassLoader().getResource("xlWebApp").toString();
-      appWebAppContext.setResourceBase(appDir + "/static");
+      appWebAppContext.setResourceBase(appDir);
       appWebAppContext.addServlet(DefaultServlet.class, "/*");
       final String[] ALL_URLS = {"/*"};
       FilterHolder[] filterHolders =

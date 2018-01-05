@@ -1,6 +1,7 @@
 package net.qihoo.xlearning.AM;
 
-import com.google.gson.Gson;
+import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import net.qihoo.xlearning.api.*;
 import net.qihoo.xlearning.common.*;
 import net.qihoo.xlearning.conf.XLearningConfiguration;
@@ -19,11 +20,13 @@ import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.mapred.InputSplit;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.LinkedBlockingDeque;
 
 public class ApplicationContainerListener extends AbstractService implements ApplicationContainerProtocol,
     ContainerListener {
@@ -49,6 +52,8 @@ public class ApplicationContainerListener extends AbstractService implements App
   private final Map<XLearningContainerId, String> containersAppStartTimeMap;
 
   private final Map<XLearningContainerId, String> containersAppFinishTimeMap;
+
+  private final Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> containersCpuMetrics;
 
   private String clusterDefStr;
 
@@ -101,6 +106,7 @@ public class ApplicationContainerListener extends AbstractService implements App
     this.isSaveInnerModel = false;
     this.interResultTimeStamp = Long.MIN_VALUE;
     this.containerId2InnerModel = new ConcurrentHashMap<>();
+    this.containersCpuMetrics = new ConcurrentHashMap<>();
     if (System.getenv().containsKey(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString())) {
       xlearningAppType = System.getenv(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString()).toUpperCase();
     } else {
@@ -150,6 +156,10 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   public Map<XLearningContainerId, String> getMapedTaskID() {
     return this.mapedTaskID;
+  }
+
+  public Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics() {
+    return this.containersCpuMetrics;
   }
 
   public int getServerPort() {
@@ -202,6 +212,7 @@ public class ApplicationContainerListener extends AbstractService implements App
     reporterProgress.put(containerId, "");
     containersAppStartTimeMap.put(containerId, "");
     containersAppFinishTimeMap.put(containerId, "");
+    containersCpuMetrics.put(containerId, new ConcurrentHashMap<String, LinkedBlockingDeque<Object>>());
     if (role.equals(XLearningConstants.WORKER.toString())) {
       containerId2InnerModel.put(containerId, new InnerModelSavedPair());
     }
@@ -335,7 +346,7 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   @Override
   public synchronized String getLightGbmIpPortStr() {
-    if(this.lightGBMIpPortMap.size() == applicationContext.getWorkerNum()) {
+    if (this.lightGBMIpPortMap.size() == applicationContext.getWorkerNum()) {
       LOG.info("Sending lightGBM ip port list \"" + new Gson().toJson(lightGBMIpPortMap) + "\"to container");
       this.lightGBMIpPortStr = new Gson().toJson(lightGBMIpPortMap);
     }
@@ -352,6 +363,78 @@ public class ApplicationContainerListener extends AbstractService implements App
   public void reportMapedTaskID(XLearningContainerId containerId, String taskid) {
     this.mapedTaskID.put(containerId, taskid);
     LOG.info("STREAM containerId is:" + containerId.toString() + " taskid is:" + taskid);
+  }
+
+  @Override
+  public void reportCpuMetrics(XLearningContainerId containerId, String cpuMetrics) {
+    if (this.containersCpuMetrics.get(containerId).size() == 0) {
+      Gson gson = new GsonBuilder()
+          .registerTypeAdapter(
+              new TypeToken<ConcurrentHashMap<String, Object>>() {
+              }.getType(),
+              new JsonDeserializer<ConcurrentHashMap<String, Object>>() {
+                @Override
+                public ConcurrentHashMap<String, Object> deserialize(
+                    JsonElement json, Type typeOfT,
+                    JsonDeserializationContext context) throws JsonParseException {
+
+                  ConcurrentHashMap<String, Object> treeMap = new ConcurrentHashMap<>();
+                  JsonObject jsonObject = json.getAsJsonObject();
+                  Set<Map.Entry<String, JsonElement>> entrySet = jsonObject.entrySet();
+                  for (Map.Entry<String, JsonElement> entry : entrySet) {
+                    treeMap.put(entry.getKey(), entry.getValue());
+                  }
+                  return treeMap;
+                }
+              }).create();
+
+      Type type = new TypeToken<ConcurrentHashMap<String, Object>>() {
+      }.getType();
+      ConcurrentHashMap<String, Object> map = gson.fromJson(cpuMetrics, type);
+      for (String str : map.keySet()) {
+        LinkedBlockingDeque<Object> queue = new LinkedBlockingDeque<>();
+        queue.add(map.get(str));
+        this.containersCpuMetrics.get(containerId).put(str, queue);
+      }
+    } else {
+      Gson gson = new GsonBuilder()
+          .registerTypeAdapter(
+              new TypeToken<ConcurrentHashMap<String, Object>>() {
+              }.getType(),
+              new JsonDeserializer<ConcurrentHashMap<String, Object>>() {
+                @Override
+                public ConcurrentHashMap<String, Object> deserialize(
+                    JsonElement json, Type typeOfT,
+                    JsonDeserializationContext context) throws JsonParseException {
+
+                  ConcurrentHashMap<String, Object> treeMap = new ConcurrentHashMap<>();
+                  JsonObject jsonObject = json.getAsJsonObject();
+                  Set<Map.Entry<String, JsonElement>> entrySet = jsonObject.entrySet();
+                  for (Map.Entry<String, JsonElement> entry : entrySet) {
+                    treeMap.put(entry.getKey(), entry.getValue());
+                  }
+                  return treeMap;
+                }
+              }).create();
+
+      Type type = new TypeToken<ConcurrentHashMap<String, Object>>() {
+      }.getType();
+      ConcurrentHashMap<String, Object> map = gson.fromJson(cpuMetrics, type);
+      for (String str : map.keySet()) {
+        if (this.containersCpuMetrics.get(containerId).keySet().contains(str)) {
+          if (this.containersCpuMetrics.get(containerId).get(str).size() < 1800) {
+            this.containersCpuMetrics.get(containerId).get(str).add(map.get(str));
+          } else {
+            this.containersCpuMetrics.get(containerId).get(str).poll();
+            this.containersCpuMetrics.get(containerId).get(str).add(map.get(str));
+          }
+        } else {
+          LinkedBlockingDeque<Object> queue = new LinkedBlockingDeque<>();
+          queue.add(map.get(str));
+          this.containersCpuMetrics.get(containerId).put(str, queue);
+        }
+      }
+    }
   }
 
   @Override

@@ -29,6 +29,8 @@ public interface ApplicationContainerProtocol extends VersionedProtocol {
 
   void reportMapedTaskID(XLearningContainerId containerId, String taskId);
 
+  void reportCpuMetrics(XLearningContainerId containerId, String cpuMetrics);
+
   Long interResultTimeStamp();
 
 }

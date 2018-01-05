@@ -1,5 +1,7 @@
 package net.qihoo.xlearning.webapp;
 
+import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
 import net.qihoo.xlearning.api.XLearningConstants;
 import net.qihoo.xlearning.common.OutputInfo;
@@ -11,10 +13,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.webapp.Controller;
 
+import java.lang.reflect.Type;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
@@ -63,6 +69,7 @@ public class AppController extends Controller implements AMParams {
     Map<XLearningContainerId, String> containersAppStartTime = app.context.getContainersAppStartTime();
     Map<XLearningContainerId, String> containersAppFinishTime = app.context.getContainersAppFinishTime();
     set(CONTAINER_NUMBER, String.valueOf(workerContainers.size() + psContainers.size()));
+    set(WORKER_NUMBER, String.valueOf(workerContainers.size()));
     set(USER_NAME, StringUtils.split(conf.get("hadoop.job.ugi"), ',')[0]);
     int i = 0;
     for (Container container : workerContainers) {
@@ -74,6 +81,13 @@ public class AppController extends Controller implements AMParams {
         set(CONTAINER_STATUS + i, "-");
       }
       set(CONTAINER_ROLE + i, "worker");
+
+      ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
+      if(cpuMetrics.size() != 0) {
+        set("cpuMemMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUMEM")));
+        set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
+      }
+
       if (reporterProgress.get(new XLearningContainerId(container.getId())) != null && !reporterProgress.get(new XLearningContainerId(container.getId())).equals("")) {
         String progressLog = reporterProgress.get(new XLearningContainerId(container.getId()));
         String[] progress = progressLog.toString().split(":");

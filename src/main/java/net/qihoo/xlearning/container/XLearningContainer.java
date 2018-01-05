@@ -26,6 +26,7 @@ import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import java.io.*;
+import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -69,7 +70,11 @@ public class XLearningContainer {
 
   private Heartbeat heartbeatThread;
 
+  private ContainerReporter containerReporter;
+
   private int heartbeatInterval;
+
+  private String xlearningCmdProcessId;
 
   private XLearningContainer() {
     this.conf = new XLearningConfiguration();
@@ -81,6 +86,7 @@ public class XLearningContainer {
     this.envs = System.getenv();
     this.xlearningAppType = envs.get(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString()).toUpperCase();
     this.role = envs.get(XLearningConstants.Environment.XLEARNING_TF_ROLE.toString());
+    this.xlearningCmdProcessId = "";
     if ("TENSORFLOW".equals(xlearningAppType)) {
       LOG.info("TensorFlow role is:" + this.role);
     }
@@ -135,6 +141,8 @@ public class XLearningContainer {
     heartbeatThread.setDaemon(true);
     heartbeatThread.start();
     heartbeatThread.setContainerStatus(XLearningContainerStatus.INITIALIZING);
+
+    containerReporter = null;
 
     if (("TENSORFLOW".equals(xlearningAppType) && !single) || xlearningAppType.equals("DISTLIGHTGBM")) {
       try {
@@ -358,6 +366,21 @@ public class XLearningContainer {
         LOG.info("User appoint the tensorboard log dir : " + this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR));
       }
     }
+  }
+
+  private static synchronized String getPidOfProcess(Process p) {
+    long pid = -1;
+    try {
+      if (p.getClass().getName().equals("java.lang.UNIXProcess")) {
+        Field f = p.getClass().getDeclaredField("pid");
+        f.setAccessible(true);
+        pid = f.getLong(p);
+        f.setAccessible(false);
+      }
+    } catch (Exception e) {
+      pid = -1;
+    }
+    return Long.toString(pid);
   }
 
   private Boolean run() throws IOException {
@@ -756,6 +779,14 @@ public class XLearningContainer {
     }
 
     int updateAppStatusInterval = this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL);
+
+    if(this.role.equals(XLearningConstants.WORKER)) {
+      this.xlearningCmdProcessId = getPidOfProcess(xlearningProcess);
+      LOG.info("xlearningCmdProcessId is:" + this.xlearningCmdProcessId);
+      containerReporter = new ContainerReporter(amClient, conf, containerId, this.xlearningCmdProcessId);
+      containerReporter.setDaemon(true);
+      containerReporter.start();
+    }
 
     int code = -1;
     while (code == -1 && !heartbeatThread.isXLearningTrainCompleted()) {

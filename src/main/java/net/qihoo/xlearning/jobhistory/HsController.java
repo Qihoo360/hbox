@@ -4,12 +4,16 @@ package net.qihoo.xlearning.jobhistory;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
-import com.google.gson.Gson;
+import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -65,6 +69,7 @@ public class HsController extends Controller implements AMParams {
       Map<String, Object> readLog = new TreeMap<>();
       readLog = (Map) gson.fromJson(line, readLog.getClass());
       int i = 0;
+      int workeri = 0;
       set(OUTPUT_TOTAL, String.valueOf(0));
       set(TIMESTAMP_TOTAL, String.valueOf(0));
       for (String info : readLog.keySet()) {
@@ -131,8 +136,41 @@ public class HsController extends Controller implements AMParams {
             set(CONTAINER_FINISH_TIME + i, containerMessage.get(AMParams.CONTAINER_FINISH_TIME));
             set(CONTAINER_REPORTER_PROGRESS + i, containerMessage.get(AMParams.CONTAINER_REPORTER_PROGRESS));
             set(CONTAINER_LOG_ADDRESS + i, containerMessage.get(AMParams.CONTAINER_LOG_ADDRESS));
+            if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
+              String cpuMetrics = containerMessage.get(AMParams.CONTAINER_CPU_METRICS);
+              if (cpuMetrics != null) {
+                Gson gson2 = new GsonBuilder()
+                    .registerTypeAdapter(
+                        new TypeToken<ConcurrentHashMap<String, Object>>() {
+                        }.getType(),
+                        new JsonDeserializer<ConcurrentHashMap<String, Object>>() {
+                          @Override
+                          public ConcurrentHashMap<String, Object> deserialize(
+                              JsonElement json, Type typeOfT,
+                              JsonDeserializationContext context) throws JsonParseException {
+                            ConcurrentHashMap<String, Object> treeMap = new ConcurrentHashMap<>();
+                            JsonObject jsonObject = json.getAsJsonObject();
+                            Set<Map.Entry<String, JsonElement>> entrySet = jsonObject.entrySet();
+                            for (Map.Entry<String, JsonElement> entry : entrySet) {
+                              treeMap.put(entry.getKey(), entry.getValue());
+                            }
+                            return treeMap;
+                          }
+                        }).create();
+
+                Type type = new TypeToken<ConcurrentHashMap<String, Object>>() {
+                }.getType();
+                ConcurrentHashMap<String, Object> map = gson2.fromJson(cpuMetrics, type);
+                set("cpuMemMetrics" + workeri, new Gson().toJson(map.get("CPUMEM")));
+                set("cpuUtilMetrics" + workeri, new Gson().toJson(map.get("CPUUTIL")));
+              }
+              set("WORKER_CONTAINER_ID" + workeri, info);
+              workeri++;
+            }
             i++;
           }
+        } else if (info.equals(AMParams.WORKER_NUMBER)){
+          set(WORKER_NUMBER, String.valueOf(readLog.get(info)));
         }
       }
       set(CONTAINER_NUMBER, String.valueOf(i));

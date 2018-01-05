@@ -7,6 +7,8 @@ public interface AMParams {
 
   public static final String USER_NAME = "user.name";
 
+  public static final String WORKER_NUMBER = "worker.number";
+
   public static final String CONTAINER_HTTP_ADDRESS = "container.address";
 
   public static final String CONTAINER_ID = "container.id";
@@ -18,6 +20,8 @@ public interface AMParams {
   public static final String CONTAINER_ROLE = "container.role";
 
   public static final String CONTAINER_LOG_ADDRESS = "container.log.address";
+
+  public static final String CONTAINER_CPU_METRICS = "container.cpu.metrics";
 
   public static final String BOARD_INFO = "board.info";
 

@@ -40,6 +40,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class ApplicationMaster extends CompositeService {
@@ -329,6 +330,10 @@ public class ApplicationMaster extends CompositeService {
             } else {
               containerMessage.put(AMParams.CONTAINER_FINISH_TIME, "N/A");
             }
+
+            ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
+            containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
+
             if (reporterProgress.get(new XLearningContainerId(container.getId())) != null && !reporterProgress.get(new XLearningContainerId(container.getId())).equals("")) {
               String progressLog = reporterProgress.get(new XLearningContainerId(container.getId()));
               String[] progress = progressLog.toString().split(":");
@@ -372,6 +377,7 @@ public class ApplicationMaster extends CompositeService {
             } else {
               containerMessage.put(AMParams.CONTAINER_STATUS, "-");
             }
+
             if (containersAppStartTime.get(new XLearningContainerId(container.getId())) != null && !containersAppStartTime.get(new XLearningContainerId(container.getId())).equals("")) {
               String localStartTime = containersAppStartTime.get(new XLearningContainerId(container.getId()));
               containerMessage.put(AMParams.CONTAINER_START_TIME, localStartTime);
@@ -411,6 +417,7 @@ public class ApplicationMaster extends CompositeService {
           }
           logMessage.put(AMParams.TIMESTAMP_LIST, savedTimeStamp);
           logMessage.put(AMParams.OUTPUT_PATH, outputList);
+          logMessage.put(AMParams.WORKER_NUMBER, String.valueOf(workerNum));
 
           out.writeBytes(new Gson().toJson(logMessage));
           out.close();
@@ -735,7 +742,7 @@ public class ApplicationMaster extends CompositeService {
       containerEnv.put("DMLC_TRACKER_PORT", String.valueOf(dmlcTrackerPort));
     }
 
-    if(xlearningAppType.equals("DISTLIGHTGBM")) {
+    if (xlearningAppType.equals("DISTLIGHTGBM")) {
       containerEnv.put(XLearningConstants.Environment.XLEARNING_LIGHTGBM_WORKER_NUM.toString(), String.valueOf(workerNum));
     }
 
@@ -899,7 +906,6 @@ public class ApplicationMaster extends CompositeService {
         startAllocatedTimeStamp = System.currentTimeMillis();
       }
       if (startAllocatedContainer && (System.currentTimeMillis() - startAllocatedTimeStamp) > conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
-        LOG.info(failMessage);
         this.appendMessage(failMessage, true);
         this.appendMessage("Unregister  Application", true);
         unregisterApp(FinalApplicationStatus.FAILED, failMessage);
@@ -946,7 +952,6 @@ public class ApplicationMaster extends CompositeService {
         startAllocatedTimeStamp = System.currentTimeMillis();
       }
       if (startAllocatedContainer && (System.currentTimeMillis() - startAllocatedTimeStamp) > conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
-        LOG.info(failMessage);
         this.appendMessage(failMessage, true);
         this.appendMessage("Unregister  Application", true);
         unregisterApp(FinalApplicationStatus.FAILED, failMessage);
@@ -1391,6 +1396,11 @@ public class ApplicationMaster extends CompositeService {
     @Override
     public Map<XLearningContainerId, String> getMapedTaskID() {
       return containerListener.getMapedTaskID();
+    }
+
+    @Override
+    public Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics() {
+      return containerListener.getContainersCpuMetrics();
     }
 
     @Override
