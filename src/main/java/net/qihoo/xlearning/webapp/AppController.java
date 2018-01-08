@@ -129,7 +129,11 @@ public class AppController extends Controller implements AMParams {
     for (Container container : psContainers) {
       set(CONTAINER_HTTP_ADDRESS + i, container.getNodeHttpAddress());
       set(CONTAINER_ID + i, container.getId().toString());
-      set(CONTAINER_STATUS + i, app.context.getContainerStatus(new XLearningContainerId(container.getId())).toString());
+      if (app.context.getContainerStatus(new XLearningContainerId(container.getId())) != null) {
+        set(CONTAINER_STATUS + i, app.context.getContainerStatus(new XLearningContainerId(container.getId())).toString());
+      } else {
+        set(CONTAINER_STATUS + i, "-");
+      }
       if ($(APP_TYPE).equals("Tensorflow")) {
         set(CONTAINER_ROLE + i, "ps");
       } else if ($(APP_TYPE).equals("Mxnet")) {
