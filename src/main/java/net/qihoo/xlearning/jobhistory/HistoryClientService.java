@@ -137,7 +137,7 @@ public class HistoryClientService extends AbstractService {
         throw new WebAppException("Error starting http server", e);
       }
     } catch (NoSuchMethodException e) {
-      LOG.warn("current hadoop version don't have the method build of Class " + WebApps.class.toString() + ". For More Detail: " + e);
+      LOG.debug("current hadoop version don't have the method build of Class " + WebApps.class.toString() + ". For More Detail: " + e);
       WebApps
           .$for("jobhistory", HistoryClientService.class, this, "ws")
           .with(conf)

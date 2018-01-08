@@ -887,7 +887,7 @@ public class ApplicationMaster extends CompositeService {
         Method updateBlacklist = amrmAsync.getClass().getMethod("updateBlacklist", List.class, List.class);
         updateBlacklist.invoke(amrmAsync, blackHosts, null);
       } catch (NoSuchMethodException e) {
-        LOG.warn("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
+        LOG.debug("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
       } catch (InvocationTargetException e) {
         LOG.error("InvocationTargetException : " + e);
       } catch (IllegalAccessException e) {
@@ -933,7 +933,7 @@ public class ApplicationMaster extends CompositeService {
         Method updateBlacklist = amrmAsync.getClass().getMethod("updateBlacklist", List.class, List.class);
         updateBlacklist.invoke(amrmAsync, blackHosts, null);
       } catch (NoSuchMethodException e) {
-        LOG.warn("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
+        LOG.debug("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
       } catch (InvocationTargetException e) {
         LOG.error("invoke the method updateBlacklist of Class " + amrmAsync.getClass().toString() + " InvocationTargetException Error : " + e);
       } catch (IllegalAccessException e) {
