@@ -180,115 +180,117 @@ public class InfoBlock extends HtmlBlock implements AMParams {
         tbodySave._()._();
       }
       html.div().$style("margin:20px 2px;")._(" ")._();
-      for (int i = 0; i < numWorkers; i++) {
-        if (!$("cpuMemMetrics" + i).equals("") && $("cpuMemMetrics" + i) != null) {
-          html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px")._(String.format($(CONTAINER_ID + i)) + " metrics:")._();
+      if (Boolean.parseBoolean($(CONTAINER_CPU_METRICS_ENABLE))) {
+        for (int i = 0; i < numWorkers; i++) {
+          if (!$("cpuMemMetrics" + i).equals("") && $("cpuMemMetrics" + i) != null) {
+            html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px")._(String.format($(CONTAINER_ID + i)) + " metrics:")._();
+          }
+
+          html.script().$src("/proxy/" + $(APP_ID) + "/static/xlWebApp/jquery-3.1.1.min.js")._();
+          html.script().$src("/proxy/" + $(APP_ID) + "/static/xlWebApp/highstock.js")._();
+          html.script().$src("/proxy/" + $(APP_ID) + "/static/xlWebApp/exporting.js")._();
+
+          String containerCpuMemID = "containerCpuMem" + i;
+          String containerCpuUtilID = "containerCpuUtil" + i;
+          String containerClass = "container" + i;
+          String seriesCpuMemOptions = "[{\n" +
+              "            name: 'cpu mem used',\n" +
+              "            data: " + $("cpuMemMetrics" + i) + "\n" +
+              "        }]";
+          String seriesCpuUtilOptions = "[{\n" +
+              "            name: 'cpu util',\n" +
+              "            data: " + $("cpuUtilMetrics" + i) + "\n" +
+              "        }]";
+          html.div()
+              .div().$id(containerCpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
+              .div().$id(containerCpuUtilID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
+              ._();
+          String css = "." + containerClass + "{\n" +
+              "    display:inline-block;\n" +
+              "}";
+          html.style().$type("text/css")._(css)._();
+          String striptHead = "Highcharts.setOptions({\n" +
+              "    global: {\n" +
+              "        useUTC: false\n" +
+              "    }\n" +
+              "});\n" +
+              "// Create the chart\n";
+          String striptBody = "Highcharts.stockChart(" + containerCpuMemID + ", {\n" +
+              "    chart: {\n" +
+              "        width: 600\n" +
+              "    },\n" +
+              "\n" +
+              "    rangeSelector: {\n" +
+              "        buttons: [{\n" +
+              "            count: 1,\n" +
+              "            type: 'minute',\n" +
+              "            text: '1M'\n" +
+              "        }, {\n" +
+              "            count: 5,\n" +
+              "            type: 'minute',\n" +
+              "            text: '5M'\n" +
+              "        }, {\n" +
+              "            type: 'all',\n" +
+              "            text: 'All'\n" +
+              "        }],\n" +
+              "        inputEnabled: false,\n" +
+              "        selected: 0\n" +
+              "    },\n" +
+              "\n" +
+              "    title: {\n" +
+              "        text: 'cpu memory used( GB )'\n" +
+              "    },\n" +
+              "\n" +
+              "    credits: {\n" +
+              "        enabled: false\n" +
+              "    },\n" +
+              "\n" +
+              "    exporting: {\n" +
+              "        enabled: false\n" +
+              "    },\n" +
+              "\n" +
+              "    series: " + seriesCpuMemOptions + "\n" +
+              "});\n" +
+              "Highcharts.stockChart(" + containerCpuUtilID + ", {\n" +
+              "    chart: {\n" +
+              "        width: 600\n" +
+              "    },\n" +
+              "\n" +
+              "    rangeSelector: {\n" +
+              "        buttons: [{\n" +
+              "            count: 1,\n" +
+              "            type: 'minute',\n" +
+              "            text: '1M'\n" +
+              "        }, {\n" +
+              "            count: 5,\n" +
+              "            type: 'minute',\n" +
+              "            text: '5M'\n" +
+              "        }, {\n" +
+              "            type: 'all',\n" +
+              "            text: 'All'\n" +
+              "        }],\n" +
+              "        inputEnabled: false,\n" +
+              "        selected: 0\n" +
+              "    },\n" +
+
+              "\n" +
+              "    title: {\n" +
+              "        text: 'cpu utilization( % )'\n" +
+              "    },\n" +
+              "\n" +
+              "    credits: {\n" +
+              "        enabled: false\n" +
+              "    },\n" +
+              "\n" +
+              "    exporting: {\n" +
+              "        enabled: false\n" +
+              "    },\n" +
+              "\n" +
+              "    series: " + seriesCpuUtilOptions + "\n" +
+              "});\n";
+
+          html.script().$type("text/javascript")._(striptHead + striptBody)._();
         }
-
-        html.script().$src("/proxy/" + $(APP_ID) + "/static/xlWebApp/jquery-3.1.1.min.js")._();
-        html.script().$src("/proxy/" + $(APP_ID) + "/static/xlWebApp/highstock.js")._();
-        html.script().$src("/proxy/" + $(APP_ID) + "/static/xlWebApp/exporting.js")._();
-
-        String containerCpuMemID = "containerCpuMem" + i;
-        String containerCpuUtilID = "containerCpuUtil" + i;
-        String containerClass = "container" + i;
-        String seriesCpuMemOptions = "[{\n" +
-            "            name: 'cpu mem used',\n" +
-            "            data: " + $("cpuMemMetrics" + i) + "\n" +
-            "        }]";
-        String seriesCpuUtilOptions = "[{\n" +
-            "            name: 'cpu util',\n" +
-            "            data: " + $("cpuUtilMetrics" + i) + "\n" +
-            "        }]";
-        html.div()
-            .div().$id(containerCpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
-            .div().$id(containerCpuUtilID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
-            ._();
-        String css = "." + containerClass + "{\n" +
-            "    display:inline-block;\n" +
-            "}";
-        html.style().$type("text/css")._(css)._();
-        String striptHead = "Highcharts.setOptions({\n" +
-            "    global: {\n" +
-            "        useUTC: false\n" +
-            "    }\n" +
-            "});\n" +
-            "// Create the chart\n";
-        String striptBody = "Highcharts.stockChart(" + containerCpuMemID + ", {\n" +
-            "    chart: {\n" +
-            "        width: 600\n" +
-            "    },\n" +
-            "\n" +
-            "    rangeSelector: {\n" +
-            "        buttons: [{\n" +
-            "            count: 1,\n" +
-            "            type: 'minute',\n" +
-            "            text: '1M'\n" +
-            "        }, {\n" +
-            "            count: 5,\n" +
-            "            type: 'minute',\n" +
-            "            text: '5M'\n" +
-            "        }, {\n" +
-            "            type: 'all',\n" +
-            "            text: 'All'\n" +
-            "        }],\n" +
-            "        inputEnabled: false,\n" +
-            "        selected: 0\n" +
-            "    },\n" +
-            "\n" +
-            "    title: {\n" +
-            "        text: 'cpu memory used( GB )'\n" +
-            "    },\n" +
-            "\n" +
-            "    credits: {\n" +
-            "        enabled: false\n" +
-            "    },\n" +
-            "\n" +
-            "    exporting: {\n" +
-            "        enabled: false\n" +
-            "    },\n" +
-            "\n" +
-            "    series: " + seriesCpuMemOptions + "\n" +
-            "});\n" +
-            "Highcharts.stockChart(" + containerCpuUtilID + ", {\n" +
-            "    chart: {\n" +
-            "        width: 600\n" +
-            "    },\n" +
-            "\n" +
-            "    rangeSelector: {\n" +
-            "        buttons: [{\n" +
-            "            count: 1,\n" +
-            "            type: 'minute',\n" +
-            "            text: '1M'\n" +
-            "        }, {\n" +
-            "            count: 5,\n" +
-            "            type: 'minute',\n" +
-            "            text: '5M'\n" +
-            "        }, {\n" +
-            "            type: 'all',\n" +
-            "            text: 'All'\n" +
-            "        }],\n" +
-            "        inputEnabled: false,\n" +
-            "        selected: 0\n" +
-            "    },\n" +
-
-            "\n" +
-            "    title: {\n" +
-            "        text: 'cpu utilization( % )'\n" +
-            "    },\n" +
-            "\n" +
-            "    credits: {\n" +
-            "        enabled: false\n" +
-            "    },\n" +
-            "\n" +
-            "    exporting: {\n" +
-            "        enabled: false\n" +
-            "    },\n" +
-            "\n" +
-            "    series: " + seriesCpuUtilOptions + "\n" +
-            "});\n";
-
-        html.script().$type("text/javascript")._(striptHead + striptBody)._();
       }
     } else {
       html.div().$style("font-size:20px;")._("Waiting for all containers allocated......")._();

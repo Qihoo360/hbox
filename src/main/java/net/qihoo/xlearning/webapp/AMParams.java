@@ -21,6 +21,8 @@ public interface AMParams {
 
   public static final String CONTAINER_LOG_ADDRESS = "container.log.address";
 
+  public static final String CONTAINER_CPU_METRICS_ENABLE = "container.cpu.metrics.enable";
+
   public static final String CONTAINER_CPU_METRICS = "container.cpu.metrics";
 
   public static final String BOARD_INFO = "board.info";

@@ -12,6 +12,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.webapp.Controller;
+import org.apache.hadoop.yarn.webapp.WebApp;
+import org.apache.hadoop.yarn.webapp.WebApps;
 
 import java.lang.reflect.Type;
 import java.math.RoundingMode;
@@ -83,7 +85,7 @@ public class AppController extends Controller implements AMParams {
       set(CONTAINER_ROLE + i, "worker");
 
       ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
-      if(cpuMetrics.size() != 0) {
+      if (cpuMetrics.size() != 0) {
         set("cpuMemMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUMEM")));
         set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
       }
@@ -169,6 +171,17 @@ public class AppController extends Controller implements AMParams {
       set(TIMESTAMP_LIST + j, String.valueOf(app.context.getModelSavingList().get(i - 1)));
       j++;
     }
+
+    try {
+      WebApps.Builder.class.getMethod("build", WebApp.class);
+      set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(true));
+    } catch (NoSuchMethodException e) {
+      if (Controller.class.getClassLoader().getResource("webapps/static/xlWebApp") == null) {
+        LOG.debug("Don't have the xlWebApp Resource.");
+        set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(false));
+      }
+    }
+
   }
 
   @Override

@@ -28,6 +28,8 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 import org.apache.hadoop.fs.FSDataInputStream;
 import net.qihoo.xlearning.conf.XLearningConfiguration;
 import net.qihoo.xlearning.webapp.AMParams;
+import org.apache.hadoop.yarn.webapp.WebApp;
+import org.apache.hadoop.yarn.webapp.WebApps;
 
 public class HsController extends Controller implements AMParams {
   private final App app;
@@ -137,43 +139,59 @@ public class HsController extends Controller implements AMParams {
             set(CONTAINER_REPORTER_PROGRESS + i, containerMessage.get(AMParams.CONTAINER_REPORTER_PROGRESS));
             set(CONTAINER_LOG_ADDRESS + i, containerMessage.get(AMParams.CONTAINER_LOG_ADDRESS));
             if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
-              String cpuMetrics = containerMessage.get(AMParams.CONTAINER_CPU_METRICS);
-              if (cpuMetrics != null) {
-                Gson gson2 = new GsonBuilder()
-                    .registerTypeAdapter(
-                        new TypeToken<ConcurrentHashMap<String, Object>>() {
-                        }.getType(),
-                        new JsonDeserializer<ConcurrentHashMap<String, Object>>() {
-                          @Override
-                          public ConcurrentHashMap<String, Object> deserialize(
-                              JsonElement json, Type typeOfT,
-                              JsonDeserializationContext context) throws JsonParseException {
-                            ConcurrentHashMap<String, Object> treeMap = new ConcurrentHashMap<>();
-                            JsonObject jsonObject = json.getAsJsonObject();
-                            Set<Map.Entry<String, JsonElement>> entrySet = jsonObject.entrySet();
-                            for (Map.Entry<String, JsonElement> entry : entrySet) {
-                              treeMap.put(entry.getKey(), entry.getValue());
+              if (containerMessage.containsKey(AMParams.CONTAINER_CPU_METRICS)) {
+                set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(true));
+                String cpuMetrics = containerMessage.get(AMParams.CONTAINER_CPU_METRICS);
+                if (cpuMetrics != null) {
+                  Gson gson2 = new GsonBuilder()
+                      .registerTypeAdapter(
+                          new TypeToken<ConcurrentHashMap<String, Object>>() {
+                          }.getType(),
+                          new JsonDeserializer<ConcurrentHashMap<String, Object>>() {
+                            @Override
+                            public ConcurrentHashMap<String, Object> deserialize(
+                                JsonElement json, Type typeOfT,
+                                JsonDeserializationContext context) throws JsonParseException {
+                              ConcurrentHashMap<String, Object> treeMap = new ConcurrentHashMap<>();
+                              JsonObject jsonObject = json.getAsJsonObject();
+                              Set<Map.Entry<String, JsonElement>> entrySet = jsonObject.entrySet();
+                              for (Map.Entry<String, JsonElement> entry : entrySet) {
+                                treeMap.put(entry.getKey(), entry.getValue());
+                              }
+                              return treeMap;
                             }
-                            return treeMap;
-                          }
-                        }).create();
+                          }).create();
 
-                Type type = new TypeToken<ConcurrentHashMap<String, Object>>() {
-                }.getType();
-                ConcurrentHashMap<String, Object> map = gson2.fromJson(cpuMetrics, type);
-                set("cpuMemMetrics" + workeri, new Gson().toJson(map.get("CPUMEM")));
-                set("cpuUtilMetrics" + workeri, new Gson().toJson(map.get("CPUUTIL")));
+                  Type type = new TypeToken<ConcurrentHashMap<String, Object>>() {
+                  }.getType();
+                  ConcurrentHashMap<String, Object> map = gson2.fromJson(cpuMetrics, type);
+                  set("cpuMemMetrics" + workeri, new Gson().toJson(map.get("CPUMEM")));
+                  set("cpuUtilMetrics" + workeri, new Gson().toJson(map.get("CPUUTIL")));
+                }
+                set("WORKER_CONTAINER_ID" + workeri, info);
+                workeri++;
               }
-              set("WORKER_CONTAINER_ID" + workeri, info);
-              workeri++;
+            } else {
+              set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(false));
             }
             i++;
           }
-        } else if (info.equals(AMParams.WORKER_NUMBER)){
+        } else if (info.equals(AMParams.WORKER_NUMBER)) {
           set(WORKER_NUMBER, String.valueOf(readLog.get(info)));
         }
       }
       set(CONTAINER_NUMBER, String.valueOf(i));
+    }
+
+    if (Boolean.parseBoolean($(CONTAINER_CPU_METRICS_ENABLE))) {
+      try {
+        WebApps.Builder.class.getMethod("build", WebApp.class);
+      } catch (NoSuchMethodException e) {
+        if (Controller.class.getClassLoader().getResource("webapps/static/xlWebApp") == null) {
+          LOG.warn("Don't have the xlWebApp Resource.");
+          set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(false));
+        }
+      }
     }
     setTitle(join($(APP_TYPE) + " Application ", $(APP_ID)));
     render(jobPage());
