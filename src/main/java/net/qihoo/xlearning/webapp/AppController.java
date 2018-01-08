@@ -176,9 +176,9 @@ public class AppController extends Controller implements AMParams {
       j++;
     }
 
+    set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(true));
     try {
       WebApps.Builder.class.getMethod("build", WebApp.class);
-      set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(true));
     } catch (NoSuchMethodException e) {
       if (Controller.class.getClassLoader().getResource("webapps/static/xlWebApp") == null) {
         LOG.debug("Don't have the xlWebApp Resource.");
