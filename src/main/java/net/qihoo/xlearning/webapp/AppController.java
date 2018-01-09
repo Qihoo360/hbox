@@ -84,10 +84,12 @@ public class AppController extends Controller implements AMParams {
       }
       set(CONTAINER_ROLE + i, "worker");
 
-      ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
-      if (cpuMetrics.size() != 0) {
-        set("cpuMemMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUMEM")));
-        set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
+      if (app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId())) != null) {
+        ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
+        if (cpuMetrics.size() != 0) {
+          set("cpuMemMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUMEM")));
+          set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
+        }
       }
 
       if (reporterProgress.get(new XLearningContainerId(container.getId())) != null && !reporterProgress.get(new XLearningContainerId(container.getId())).equals("")) {
