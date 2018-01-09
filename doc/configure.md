@@ -65,6 +65,11 @@ xlearning.container.heartbeat.retry | 3 | Maximum number of retries for the cont
 xlearning.container.update.appstatus.interval | 3 * 1000 | how often the containers get the state of the application process (in milliseconds)  
 xlearning.container.auto.create.output.dir | true | If set to true, the containers create the local output path automatically  
 xlearning.log.pull.interval | 10000 | interval between the client get the log output of the AM (in milliseconds)  
+xlearning.user.classpath.first | true |  whether user's job jar should be the first one on class path or not.  
+xlearning.worker.mem.autoscale | 0.5 | automatic memory scale ratio of worker when application retry after failed.   
+xlearning.ps.mem.autoscale | 0.2 | automatic memory scale ratio of ps when application retry after failed.   
+xlearning.app.max.attempts | 1 | the number of application attempts， default not retry after failed.   
+
 
 
 

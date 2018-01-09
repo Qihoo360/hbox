@@ -6,7 +6,7 @@
 </div>
   
 [![license](http://img.shields.io/badge/license-Apache2.0-brightgreen.svg?style=flat)](./LICENSE)
-[![Release Version](https://img.shields.io/badge/release-1.0-red.svg)]()
+[![Release Version](https://img.shields.io/badge/release-1.1-red.svg)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)]()
 
 **XLearning** is a convenient and efficient scheduling platform combined with the big data and artificial intelligence, support for a variety of machine learning, deep learning frameworks. XLearning is running on the Hadoop Yarn and has integrated deep learning frameworks such as TensorFlow, MXNet, Caffe, Theano, PyTorch, Keras, XGBoost. XLearning has the satisfactory scalability and compatibility.
@@ -47,6 +47,7 @@ The application interface can be divided into three parts:
 - **All Containers**：display the container list and corresponding information, including the container host, container role, current state of container, start time, finish time, current progress.
 - **View TensorBoard**：If set to start the service of TensorBoard when the type of application is TensorFlow, provide the link to enter the TensorBoard for real-time view.  
 - **Save Model**：If the application has the output, user can upload the intermediate output to specified HDFS path during the execution of the application through the button of "Save Model". After the upload finished, display the list of the intermediate saved path.   
+- **Worker Metrix**：display the resource usage information metrix of each worker.   
 As shown below:   
 
 ![yarn1](./doc/img/yarn1.png) 
@@ -69,7 +70,7 @@ Run the following command in the root directory of the source code:
 
 `mvn package`    
 
-After compiling, a distribution package named `xlearning-1.0-dist.tar.gz` will be generated under `target` in the root directory.   
+After compiling, a distribution package named `xlearning-1.1-dist.tar.gz` will be generated under `target` in the root directory.   
 Unpacking the distribution package, the following subdirectories will be generated under the root directory:
 
 - bin: scripts for application commit  

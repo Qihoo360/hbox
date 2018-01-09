@@ -6,7 +6,7 @@
 </div>
   
 [![license](http://img.shields.io/badge/license-Apache2.0-brightgreen.svg?style=flat)](./LICENSE)
-[![Release Version](https://img.shields.io/badge/release-1.0-red.svg)]()
+[![Release Version](https://img.shields.io/badge/release-1.1-red.svg)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)]()
 
 
@@ -42,11 +42,12 @@ XLearning系统包括三种组件：
 
 
 ### 3 可视化界面  
-作业运行界面大致分为三部分：  
+作业运行界面大致分为四部分：  
 
 - **All Containers**：显示当前作业所含Container列表及各Container对应信息，如Contianer ID、所在机器（Container Host）、所属类型（Container Role）、当前执行状态（Container Status）、开始时间（Start Time）、结束时间（Finish Time）、执行进度（Reporter Progress）。其中，点击Container ID超链接可查看该Container运行的详细日志；
 - **View TensorBoard**：当作业类型为TensorFlow时，可点击该链接直接跳转到TensorBoard页面；  
-- **Save Model**：当作业提交脚本中“--output”参数不为空时，用户可通过`Save Model`按钮，在作业执行过程中，将本地输出当前模型训练结果上传至HDFS。上传成功后，显示目前已上传的模型列表。
+- **Save Model**：当作业提交脚本中“--output”参数不为空时，用户可通过`Save Model`按钮，在作业执行过程中，将本地输出当前模型训练结果上传至HDFS。上传成功后，显示目前已上传的模型列表；  
+- **Worker Metrix**：显示各worker执行所占用的资源信息。 
   
 如下图所示：
   
@@ -72,7 +73,7 @@ XLearning系统包括三种组件：
 
 `mvn package`
 
-完成编译后，在源码根目录下的target目录中会生成发布包`xlearning-1.0-dist.tar.gz`。该发布包解压后的主要目录结构如下：  
+完成编译后，在源码根目录下的target目录中会生成发布包`xlearning-1.1-dist.tar.gz`。该发布包解压后的主要目录结构如下：  
 
 - bin：作业提交脚本  
 - lib：XLearning jar包及所依赖jar包  

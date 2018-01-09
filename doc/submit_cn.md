@@ -15,6 +15,8 @@ cacheArchive | 指定作业执行所需相关HDFS压缩文件
 cacheFile | 指定作业执行所需相关HDFS文件  
 launch-cmd | 作业执行命令  
 user-path | 用户追加环境变量$PATH  
+jars | 指定用户自定义jar包文件  
+user-classpath-first | 是否优先加载用户自定义jar包，默认为系统配置xlearning.user.classpath.first  
 conf | 设置系统配置  
 am-cores | 指定AM申请使用的CPU核数，默认个数为系统配置xlearning.am.cores  
 am-memory | 指定AM申请使用的内存大小，默认单位MB，默认大小为系统配置xlearning.am.memory  
