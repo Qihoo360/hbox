@@ -47,7 +47,7 @@ The application interface can be divided into four parts:
 - **All Containers**：display the container list and corresponding information, including the container host, container role, current state of container, start time, finish time, current progress.
 - **View TensorBoard**：If set to start the service of TensorBoard when the type of application is TensorFlow, provide the link to enter the TensorBoard for real-time view.  
 - **Save Model**：If the application has the output, user can upload the intermediate output to specified HDFS path during the execution of the application through the button of "Save Model". After the upload finished, display the list of the intermediate saved path.   
-- **Worker Metrix**：display the resource usage information metrix of each worker.   
+- **Worker Metrix**：display the resource usage information metrics of each worker.   
 As shown below:   
 
 ![yarn1](./doc/img/yarn1.png) 

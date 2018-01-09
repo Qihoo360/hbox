@@ -4,22 +4,22 @@
 
 ### 1. How to use the custom version framework or the different version of the cluster installation to execute the program?  
 Specify the required files for the related version of framework and dependent libraries by the submit parameters such as `--file`,`--cacheFile` or `--cacheArchive`. Furthermore, setting the environment variables `PYTHONPATH` as `export PYTHONPATH=./:$PYTHONPATH` if necessary.  
-For example, if there is not the tensorflow module on the node of the cluster, user can set the module by the "--cacheArchive". More detail:   
-- In the local path that tensorflow module installed, such "/usr/lib/python2.7/site-packages/tensorflow/"  
-- under the directory of the module, package all files in the directory,like " tar -zcvf  tensorflow.tgz ./*"    
+For example, if there is not the tensorflow module on the node of the cluster, user can set the module by the `--cacheArchive`. More detail:   
+- In the local path that tensorflow module installed, such `/usr/lib/python2.7/site-packages/tensorflow/`  
+- under the directory of the module, package all files in the directory,like ` tar -zcvf  tensorflow.tgz ./*`    
 - upload the package to hdfs   
-- add the cacheArchive on the submit script, such "--cacheArchive /tmp/tensorflow.tgz#tensorflow"   
-- set the environment variable for program: "export PYTHONPATH=./:$PYTHONPATH"  
+- add the cacheArchive on the submit script, such `--cacheArchive /tmp/tensorflow.tgz#tensorflow`   
+- set the environment variable for program: `export PYTHONPATH=./:$PYTHONPATH`  
 
 ### 2. How to view the progress of the execution?
 In order to view the progress of the execution both at the XLearning client and the application web interface, user need to print the progress to standard error as the format of `"report:progress:<float type>"` in the execution program.  
 
 ### 3. What distributed deep learning frameworks XLearning supports, how to distinguish between standalone mode ?    
 XLearning support the distributed deep learning framworks such as TensorFlow, MXNet, XGBoost, LightGBM.  
-- TensorFlow: Set the "--app-type" as "TensorFlow", and distinguish stand-alone and distributed mode by the number of ps applied.   
-- MXNet：Set the "--app-type" as "MXNet", and distinguish stand-alone and distributed mode by the number of ps applied.   
-- XGBoost： Set the "--app-type" as "distxgboost".  
-- LightGBM： Set the "--app-type" as "distlightgbm".  
+- TensorFlow: Set the `--app-type` as `TensorFlow`, and distinguish stand-alone and distributed mode by the number of ps applied.   
+- MXNet：Set the `--app-type` as `MXNet`, and distinguish stand-alone and distributed mode by the number of ps applied.   
+- XGBoost： Set the `--app-type` as `distxgboost`.  
+- LightGBM： Set the `--app-type` as `distlightgbm`.  
 
 ### 4. How to define the ClusterSpec in the distributed mode of TensorFlow application ?  
 In the distributed mode of TensorFlow application, ClusterSpec is defined by setting the host and port of ps and worker preliminarily. XLearning implements the automatic construction of the ClusterSpec. User can get the information of ClusterSpec, job\_name, task\_index from the environment variables TF\_CLUSTER\_DEF, TF\_ROLE, TF\_INDEX, such as:  
@@ -32,8 +32,8 @@ In the distributed mode of TensorFlow application, ClusterSpec is defined by set
     task_index = int(os.environ["TF_INDEX"])
 
 
-### 5. Report the error：" java.lang.NoClassDefFoundError: org/apache/hadoop/mapred/JobConf" after submit the application.       
-Default that the "yarn.application.classpath" setted in the "yarn-site.xml" not contains the related lib package about mapreduce，try to add the related lib path, such:    
+### 5. Report the error：`" java.lang.NoClassDefFoundError: org/apache/hadoop/mapred/JobConf"` after submit the application.       
+Default that the `yarn.application.classpath` setted in the `yarn-site.xml` not contains the related lib package about mapreduce，try to add the related lib path, such:    
 
     <property>
         <name>yarn.application.classpath</name>    
@@ -44,7 +44,7 @@ Default that the "yarn.application.classpath" setted in the "yarn-site.xml" not 
 ### 6. The mnist data set used in the example.  
 
 ### 7. How to set the number of the machines and local port on the distribute LightGBM application ?  
-User can get the information of the number of machines and local port from the environment variables and write into the configuration file on the distribute LightGBM application (More details in $XLEARNING_HOME/examples/distLightGBM ). Note that it's necessary to copy the configuration file at current directory to avoid the more containers modify the same file when they are at one machine, like :   
+User can get the information of the number of machines and local port from the environment variables and write into the configuration file on the distribute LightGBM application (More details in $XLEARNING_HOME/examples/distLightGBM ). Note that it is necessary to copy the configuration file at current directory to avoid the more containers modify the same file when they are at one machine, like :   
 
     cp train.conf train_real.conf
     chmod 777 train_real.conf
@@ -53,7 +53,7 @@ User can get the information of the number of machines and local port from the e
     ./LightGBM/lightgbm config=train_real.conf
 
 
-Also, user need to set the machine list file at the configuration which XLearning named as "lightGBMlist.txt" generated at the executive directory of each worker, like :  
+Also, user need to set the machine list file at the configuration which XLearning named as `lightGBMlist.txt` generated at the executive directory of each worker, like :  
 
     machine_list_file = lightGBMlist.txt
 
@@ -90,16 +90,16 @@ Example of TF_CONFIG for chief training in the distributed mode of Tensorflow es
     os.environ["TF_CONFIG"] = json.dumps(tf_config)
   
 
-### 9. How to display the cpu metrix when the hadoop version is lower than 2.6.4 ?   
+### 9. How to display the cpu metrics when the hadoop version is lower than 2.6.4 ?   
 
-Because of loading the required js files for CPU Metrix functionality is based on the WebApp's build method which is not achieved in the hadoop version lower than 2.6.4, there is the other method to display the cpu metrix if necessary.   
-- add the necessary resources to the package of hadoop-yarn-common-xxx.jar on the cluster, more details:  
+Because of loading the required js files for CPU Metrix functionality is based on the WebApp build method which is not achieved in the hadoop version lower than 2.6.4, there is the other method to display the cpu metrics if necessary.   
+- add the necessary resources to the package of `hadoop-yarn-common-xxx.jar` on the cluster, more details:  
 1) unpackage the hadoop-yarn-common-xxx.jar  
-2) copy the folder "src\main\resources\xlWebApp" at the source code of XLearning to the directory "webapps/static" which generated after unpackaging the hadoop-yarn-common-xxx.jar  
+2) copy the folder `src\main\resources\xlWebApp` at the source code of XLearning to the directory `webapps/static` which generated after unpackaging the `hadoop-yarn-common-xxx.jar`  
 3) re-package hadoop-yarn-common-xxx.jar  
-4) replace the hadoop-yarn-common-xxx.jar on the cluster without restart the nodemanager and resource manager. Also can use the "--jars" to load the jar when submit the application.  
+4) replace the hadoop-yarn-common-xxx.jar on the cluster without restart the nodemanager and resource manager. Also can use the `--jars` to load the jar when submit the application.  
 - display the cpu matrix in the XLearning JobHistory [Optional]  
-XLearning JobHistory is relay on the jars in the directory "$XLEARNING_HOME/lib" which generated after unpackaging the XLearning dist. Follow the above method to replace the hadoop-yarn-common-xxx.jar, then restart service.  
+XLearning JobHistory is relay on the jars in the directory `$XLEARNING_HOME/lib` which generated after unpackaging the XLearning dist. Follow the above method to replace the hadoop-yarn-common-xxx.jar, then restart service.  
 
 
 ### 10. How to set the memory scale ratio when the application retry after failed ?  
@@ -107,3 +107,6 @@ XLearning1.1 support the application retry and memory auto scaled after failed b
 - xlearning.app.max.attempts  
 - xlearning.worker.mem.autoscale  
 - xlearning.ps.mem.autoscale  
+Note that the information of AM connected error which reported at the client when application retry can ignore. 
+
+ 
