@@ -36,4 +36,6 @@ XLearning通过环境变量 TF\_CLUSTER\_DEF 、 TF\_ROLE 、 TF\_INDEX 对应�
 
 ### 6. 示例中数据集来源于mnist  
 
+### 7. 作业提交后，出现报错信息：java.io.IOException: Cannot run program "tensorboard": error=2, No such file or directory, 如何解决？
+在XLearning客户端提交作业时，添加 --user-path "/root/anaconda2/lib/python2.7/site-packages/tensorboard" ，指定tensorboard路径。
 

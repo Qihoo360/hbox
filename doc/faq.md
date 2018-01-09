@@ -39,4 +39,6 @@ For example, if there is not the tensorflow module on the node of the cluster, u
 
 ### 6. The mnist data set used in the example. 
 
- 
+### 7. Report the error：" java.io.IOException: Cannot run program "tensorboard": error=2, No such file or directory" after submit the application.       
+When the XLearning client submits a job, the --user-path "/root/anaconda2/lib/python2.7/site-packages/tensorboard" is added to specify the tensorboard path.
+
