@@ -42,7 +42,7 @@ Similar with the read strategy, XLearning allows to specify the output strategy 
 
 
 ### 3 Visualization Display  
-The application interface can be divided into three parts:  
+The application interface can be divided into four parts:  
 
 - **All Containers**：display the container list and corresponding information, including the container host, container role, current state of container, start time, finish time, current progress.
 - **View TensorBoard**：If set to start the service of TensorBoard when the type of application is TensorFlow, provide the link to enter the TensorBoard for real-time view.  
