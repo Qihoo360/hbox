@@ -110,4 +110,7 @@ XLearning1.1版本中支持作业失败重试，并且重试后作业worker与ps
 - xlearning.ps.mem.autoscale  
 注意：作业失败重试时，客户端报出的AM连接失败信息可忽略。 
 
- 
+
+### 11. 作业提交后，出现报错信息：java.io.IOException: Cannot run program "tensorboard": error=2, No such file or directory, 如何解决？  
+在XLearning客户端提交作业时，添加 --user-path "/root/anaconda2/lib/python2.7/site-packages/tensorboard" ，指定tensorboard路径。   
+
