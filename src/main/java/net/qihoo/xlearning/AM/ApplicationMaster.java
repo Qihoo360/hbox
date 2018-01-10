@@ -40,6 +40,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class ApplicationMaster extends CompositeService {
@@ -68,6 +69,8 @@ public class ApplicationMaster extends CompositeService {
   private Path appConfRemoteLocation;
   // location of files on HDFS
   private String appFilesRemoteLocation;
+  // location of lib jars on HDFS
+  private String appLibJarsRemoteLocation;
   // location of cacheFiles on HDFS
   private String appCacheFilesRemoteLocation;
   // location of cacheArchive on HDFS
@@ -75,6 +78,8 @@ public class ApplicationMaster extends CompositeService {
   private String xlearningCommand;
   private String dmlcPsRootUri;
   private int dmlcPsRootPort;
+  private String dmlcTrackerUri;
+  private int dmlcTrackerPort;
   private String xlearningAppType;
   private List<Container> acquiredWorkerContainers;
   private List<Container> acquiredPsContainers;
@@ -98,6 +103,8 @@ public class ApplicationMaster extends CompositeService {
   private Boolean startSavingModel;
   private Boolean lastSavingStatus;
   private List<Long> savingModelList;
+
+  private Thread cleanApplication;
 
   /**
    * Constructor, connect to Resource Manager
@@ -136,6 +143,8 @@ public class ApplicationMaster extends CompositeService {
     acquiredPsContainers = new ArrayList<>();
     dmlcPsRootUri = null;
     dmlcPsRootPort = 0;
+    dmlcTrackerUri = null;
+    dmlcTrackerPort = 0;
 
     if (envs.containsKey(ApplicationConstants.Environment.CONTAINER_ID.toString())) {
       ContainerId containerId = ConverterUtils
@@ -152,9 +161,31 @@ public class ApplicationMaster extends CompositeService {
         + applicationAttemptID.getApplicationId().getClusterTimestamp()
         + ", attemptId=" + applicationAttemptID.getAttemptId());
 
+    if (applicationAttemptID.getAttemptId() > 1 && (conf.getInt(XLearningConfiguration.XLEARNING_APP_MAX_ATTEMPTS, XLearningConfiguration.DEFAULT_XLEARNING_APP_MAX_ATTEMPTS) > 1)) {
+      int maxMem = Integer.valueOf(envs.get(XLearningConstants.Environment.XLEARNING_CONTAINER_MAX_MEMORY.toString()));
+      LOG.info("maxMem : " + maxMem);
+      workerMemory = workerMemory + (applicationAttemptID.getAttemptId() - 1) * (int) Math.ceil(workerMemory * conf.getDouble(XLearningConfiguration.XLEARNING_WORKER_MEM_AUTO_SCALE, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEM_AUTO_SCALE));
+      LOG.info("Auto Scale the Worker Memory from " + conf.getInt(XLearningConfiguration.XLEARNING_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY) + " to " + workerMemory);
+      if (workerMemory > maxMem) {
+        workerMemory = maxMem;
+      }
+      if (psNum > 0) {
+        psMemory = psMemory + (applicationAttemptID.getAttemptId() - 1) * (int) Math.ceil(psMemory * conf.getDouble(XLearningConfiguration.XLEARNING_PS_MEM_AUTO_SCALE, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEM_AUTO_SCALE));
+        LOG.info("Auto Scale the Ps Memory from " + conf.getInt(XLearningConfiguration.XLEARNING_PS_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEMORY) + " to " + psMemory);
+        if (psMemory > maxMem) {
+          psMemory = maxMem;
+        }
+      }
+    }
+
     if (envs.containsKey(XLearningConstants.Environment.XLEARNING_FILES_LOCATION.toString())) {
       appFilesRemoteLocation = envs.get(XLearningConstants.Environment.XLEARNING_FILES_LOCATION.toString());
       LOG.info("Application files location: " + appFilesRemoteLocation);
+    }
+
+    if (envs.containsKey(XLearningConstants.Environment.XLEARNING_LIBJARS_LOCATION.toString())) {
+      appLibJarsRemoteLocation = envs.get(XLearningConstants.Environment.XLEARNING_LIBJARS_LOCATION.toString());
+      LOG.info("Application lib Jars location: " + appLibJarsRemoteLocation);
     }
 
     if (envs.containsKey(XLearningConstants.Environment.XLEARNING_CACHE_FILE_LOCATION.toString())) {
@@ -230,7 +261,7 @@ public class ApplicationMaster extends CompositeService {
     LOG.info("master tracking url:" + applicationMasterTrackingUrl);
     LOG.info("history url: " + applicationHistoryUrl);
 
-    Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+    cleanApplication = new Thread(new Runnable() {
       @Override
       public void run() {
         System.clearProperty(XLearningConstants.Environment.HADOOP_USER_NAME.toString());
@@ -299,6 +330,10 @@ public class ApplicationMaster extends CompositeService {
             } else {
               containerMessage.put(AMParams.CONTAINER_FINISH_TIME, "N/A");
             }
+
+            ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
+            containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
+
             if (reporterProgress.get(new XLearningContainerId(container.getId())) != null && !reporterProgress.get(new XLearningContainerId(container.getId())).equals("")) {
               String progressLog = reporterProgress.get(new XLearningContainerId(container.getId()));
               String[] progress = progressLog.toString().split(":");
@@ -342,6 +377,7 @@ public class ApplicationMaster extends CompositeService {
             } else {
               containerMessage.put(AMParams.CONTAINER_STATUS, "-");
             }
+
             if (containersAppStartTime.get(new XLearningContainerId(container.getId())) != null && !containersAppStartTime.get(new XLearningContainerId(container.getId())).equals("")) {
               String localStartTime = containersAppStartTime.get(new XLearningContainerId(container.getId()));
               containerMessage.put(AMParams.CONTAINER_START_TIME, localStartTime);
@@ -381,6 +417,7 @@ public class ApplicationMaster extends CompositeService {
           }
           logMessage.put(AMParams.TIMESTAMP_LIST, savedTimeStamp);
           logMessage.put(AMParams.OUTPUT_PATH, outputList);
+          logMessage.put(AMParams.WORKER_NUMBER, String.valueOf(workerNum));
 
           out.writeBytes(new Gson().toJson(logMessage));
           out.close();
@@ -390,7 +427,8 @@ public class ApplicationMaster extends CompositeService {
           LOG.error("Writing the history log file Error." + e);
         }
       }
-    }));
+    });
+    Runtime.getRuntime().addShutdownHook(cleanApplication);
   }
 
   private void buildInputFileStatus() {
@@ -667,13 +705,25 @@ public class ApplicationMaster extends CompositeService {
                   LocalResourceType.FILE));
         }
       }
+
+      if (appLibJarsRemoteLocation != null) {
+        String[] jarFiles = StringUtils.split(appLibJarsRemoteLocation, ",");
+        for (String file : jarFiles) {
+          Path path = new Path(file);
+          containerLocalResource.put(path.getName(),
+              Utilities.createApplicationResource(path.getFileSystem(conf),
+                  path,
+                  LocalResourceType.FILE));
+        }
+      }
+
     } catch (IOException e) {
       throw new RuntimeException("Error while build container local resource", e);
     }
   }
 
   private Map<String, String> buildContainerEnv(String role) {
-    LOG.info("Seting environments for the Container");
+    LOG.info("Setting environments for the Container");
     Map<String, String> containerEnv = new HashMap<>();
     containerEnv.put(XLearningConstants.Environment.HADOOP_USER_NAME.toString(), conf.get("hadoop.job.ugi").split(",")[0]);
     containerEnv.put(XLearningConstants.Environment.XLEARNING_TF_ROLE.toString(), role);
@@ -685,6 +735,17 @@ public class ApplicationMaster extends CompositeService {
       containerEnv.put("DMLC_PS_ROOT_URI", dmlcPsRootUri);
       containerEnv.put("DMLC_PS_ROOT_PORT", String.valueOf(dmlcPsRootPort));
     }
+
+    if (xlearningAppType.equals("DISTXGBOOST")) {
+      containerEnv.put("DMLC_NUM_WORKER", String.valueOf(workerNum));
+      containerEnv.put("DMLC_TRACKER_URI", dmlcTrackerUri);
+      containerEnv.put("DMLC_TRACKER_PORT", String.valueOf(dmlcTrackerPort));
+    }
+
+    if (xlearningAppType.equals("DISTLIGHTGBM")) {
+      containerEnv.put(XLearningConstants.Environment.XLEARNING_LIGHTGBM_WORKER_NUM.toString(), String.valueOf(workerNum));
+    }
+
     containerEnv.put("CLASSPATH", System.getenv("CLASSPATH"));
     containerEnv.put(XLearningConstants.Environment.APP_ATTEMPTID.toString(), applicationAttemptID.toString());
     containerEnv.put(XLearningConstants.Environment.APP_ID.toString(), applicationAttemptID.getApplicationId().toString());
@@ -816,6 +877,9 @@ public class ApplicationMaster extends CompositeService {
       LOG.info("Try to allocate " + psNum + " ps/server containers");
     }
 
+    Boolean startAllocatedContainer = false;
+    Long startAllocatedTimeStamp = Long.MIN_VALUE;
+    String failMessage = "Container waiting except the allocated expiry time. Maybe the Cluster available resources are not satisfied the user need. Please resubmit !";
     while (rmCallbackHandler.getAllocatedPsContainerNumber() < psNum) {
       List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
       List<String> blackHosts = rmCallbackHandler.getBlackHosts();
@@ -823,10 +887,10 @@ public class ApplicationMaster extends CompositeService {
         Method updateBlacklist = amrmAsync.getClass().getMethod("updateBlacklist", List.class, List.class);
         updateBlacklist.invoke(amrmAsync, blackHosts, null);
       } catch (NoSuchMethodException e) {
-        LOG.warn("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
-      } catch (InvocationTargetException e){
-        LOG.error("InvocationTargetException : " +e);
-      } catch (IllegalAccessException e){
+        LOG.debug("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
+      } catch (InvocationTargetException e) {
+        LOG.error("InvocationTargetException : " + e);
+      } catch (IllegalAccessException e) {
         LOG.error("IllegalAccessException : " + e);
       }
       if (cancelContainers.size() != 0) {
@@ -836,6 +900,16 @@ public class ApplicationMaster extends CompositeService {
           amrmAsync.addContainerRequest(psContainerRequest);
         }
         cancelContainers.clear();
+      }
+      if (rmCallbackHandler.getAllocatedPsContainerNumber() > 0 && !startAllocatedContainer) {
+        startAllocatedContainer = true;
+        startAllocatedTimeStamp = System.currentTimeMillis();
+      }
+      if (startAllocatedContainer && (System.currentTimeMillis() - startAllocatedTimeStamp) > conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
+        this.appendMessage(failMessage, true);
+        this.appendMessage("Unregister  Application", true);
+        unregisterApp(FinalApplicationStatus.FAILED, failMessage);
+        return false;
       }
       Utilities.sleep(allocateInterval);
     }
@@ -859,7 +933,7 @@ public class ApplicationMaster extends CompositeService {
         Method updateBlacklist = amrmAsync.getClass().getMethod("updateBlacklist", List.class, List.class);
         updateBlacklist.invoke(amrmAsync, blackHosts, null);
       } catch (NoSuchMethodException e) {
-        LOG.warn("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
+        LOG.debug("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
       } catch (InvocationTargetException e) {
         LOG.error("invoke the method updateBlacklist of Class " + amrmAsync.getClass().toString() + " InvocationTargetException Error : " + e);
       } catch (IllegalAccessException e) {
@@ -873,6 +947,16 @@ public class ApplicationMaster extends CompositeService {
         }
         cancelContainers.clear();
       }
+      if (rmCallbackHandler.getAllocatedWorkerContainerNumber() > 0 && !startAllocatedContainer) {
+        startAllocatedContainer = true;
+        startAllocatedTimeStamp = System.currentTimeMillis();
+      }
+      if (startAllocatedContainer && (System.currentTimeMillis() - startAllocatedTimeStamp) > conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
+        this.appendMessage(failMessage, true);
+        this.appendMessage("Unregister  Application", true);
+        unregisterApp(FinalApplicationStatus.FAILED, failMessage);
+        return false;
+      }
       Utilities.sleep(allocateInterval);
     }
 
@@ -880,8 +964,8 @@ public class ApplicationMaster extends CompositeService {
     acquiredWorkerContainers = rmCallbackHandler.getAcquiredWorkerContainer();
 
     int totalNumAllocatedWorkers = rmCallbackHandler.getAllocatedWorkerContainerNumber();
-    if(totalNumAllocatedWorkers > workerNum) {
-      while(acquiredWorkerContainers.size() > workerNum) {
+    if (totalNumAllocatedWorkers > workerNum) {
+      while (acquiredWorkerContainers.size() > workerNum) {
         Container releaseContainer = acquiredWorkerContainers.remove(0);
         amrmAsync.releaseAssignedContainer(releaseContainer.getId());
         LOG.info("Release container " + releaseContainer.getId().toString());
@@ -934,7 +1018,7 @@ public class ApplicationMaster extends CompositeService {
               reader = new BufferedReader(new InputStreamReader(mxnetSchedulerProcess.getInputStream()));
               String mxnetSchedulerStdoutLog;
               while ((mxnetSchedulerStdoutLog = reader.readLine()) != null) {
-                LOG.debug(mxnetSchedulerStdoutLog);
+                LOG.info(mxnetSchedulerStdoutLog);
               }
             } catch (Exception e) {
               LOG.warn("Exception in thread mxnetSchedulerRedirectThread");
@@ -967,6 +1051,83 @@ public class ApplicationMaster extends CompositeService {
       }
 
     }
+
+    //launch dist xgboost scheduler
+    if (xlearningAppType.equals("DISTXGBOOST")) {
+      LOG.info("Seting environments for the dist xgboost scheduler");
+      dmlcTrackerUri = applicationMasterHostname;
+      Socket schedulerReservedSocket = new Socket();
+      try {
+        schedulerReservedSocket.bind(new InetSocketAddress("127.0.0.1", 0));
+      } catch (IOException e) {
+        LOG.error("Can not get available port");
+      }
+      dmlcTrackerPort = schedulerReservedSocket.getLocalPort();
+      String[] schedulerEnv = new String[]{
+          "PATH=" + System.getenv("PATH"),
+          "JAVA_HOME=" + System.getenv("JAVA_HOME"),
+          "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
+          "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
+          "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+              "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
+          "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
+          "PYTHONUNBUFFERED=1"
+      };
+      String distXgboostSchedulerCmd = "python xgboost/self-define/rabitTracker.py --num-workers=" + workerNum
+          + " --host-ip=" + dmlcTrackerUri + " --port=" + dmlcTrackerPort;
+      LOG.info("Dist xgboost scheduler executing command:" + distXgboostSchedulerCmd);
+      LOG.info("DMLC_TRACKER_URI is " + dmlcTrackerUri);
+      LOG.info("DMLC_TRACKER_PORT is " + dmlcTrackerPort);
+      LOG.info("DMLC_NUM_WORKER=" + workerNum);
+
+      try {
+        Runtime rt = Runtime.getRuntime();
+        schedulerReservedSocket.close();
+        final Process xgboostSchedulerProcess = rt.exec(distXgboostSchedulerCmd, schedulerEnv);
+        LOG.info("Starting thread to redirect stdout of xgboost scheduler process");
+        Thread xgboostSchedulerRedirectThread = new Thread(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              BufferedReader reader;
+              reader = new BufferedReader(new InputStreamReader(xgboostSchedulerProcess.getInputStream()));
+              String xgboostSchedulerStdoutLog;
+              while ((xgboostSchedulerStdoutLog = reader.readLine()) != null) {
+                LOG.info(xgboostSchedulerStdoutLog);
+              }
+            } catch (Exception e) {
+              LOG.warn("Exception in thread xgboostSchedulerRedirectThread");
+              e.printStackTrace();
+            }
+          }
+        });
+        xgboostSchedulerRedirectThread.start();
+
+        LOG.info("Starting thread to redirect stderr of xgboost scheduler process");
+        Thread xgboostSchedulerStderrRedirectThread = new Thread(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              BufferedReader reader;
+              reader = new BufferedReader(new InputStreamReader(xgboostSchedulerProcess.getErrorStream()));
+              String xgboostSchedulerStderrLog;
+              while ((xgboostSchedulerStderrLog = reader.readLine()) != null) {
+                LOG.info(xgboostSchedulerStderrLog);
+              }
+            } catch (Exception e) {
+              LOG.warn("Error in thread xgboostSchedulerStderrRedirectThread");
+              e.printStackTrace();
+            }
+          }
+        });
+        xgboostSchedulerStderrRedirectThread.start();
+
+      } catch (Exception e) {
+        LOG.info("start xgboost scheduler error " + e);
+      }
+
+    }
+
 
     if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).equals("STREAM")) {
       allocateInputStreamSplits();
@@ -1131,6 +1292,17 @@ public class ApplicationMaster extends CompositeService {
       diagnostics = e.getMessage();
     }
 
+    int appAttempts = conf.getInt(XLearningConfiguration.XLEARNING_APP_MAX_ATTEMPTS, XLearningConfiguration.DEFAULT_XLEARNING_APP_MAX_ATTEMPTS);
+
+    if (appAttempts > conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS)) {
+      appAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    }
+
+    if (!finalSuccess && applicationAttemptID.getAttemptId() < appAttempts) {
+      Runtime.getRuntime().removeShutdownHook(cleanApplication);
+      throw new RuntimeException("Application Failed, retry starting. Note that container memory will auto scale if user config the setting.");
+    }
+
     this.appendMessage("Unregistered Application", true);
     unregisterApp(finalSuccess ? FinalApplicationStatus.SUCCEEDED
         : FinalApplicationStatus.FAILED, diagnostics);
@@ -1224,6 +1396,11 @@ public class ApplicationMaster extends CompositeService {
     @Override
     public Map<XLearningContainerId, String> getMapedTaskID() {
       return containerListener.getMapedTaskID();
+    }
+
+    @Override
+    public Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics() {
+      return containerListener.getContainersCpuMetrics();
     }
 
     @Override

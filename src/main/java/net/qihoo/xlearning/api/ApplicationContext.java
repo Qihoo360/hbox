@@ -8,6 +8,8 @@ import net.qihoo.xlearning.common.XLearningContainerStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.mapred.InputSplit;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import java.util.List;
 import java.util.Map;
@@ -44,6 +46,8 @@ public interface ApplicationContext {
   Map<XLearningContainerId, String> getContainersAppFinishTime();
 
   Map<XLearningContainerId, String> getMapedTaskID();
+
+  Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics();
 
   int getSavingModelStatus();
 

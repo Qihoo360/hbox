@@ -13,6 +13,6 @@ public class HeaderBlock extends HtmlBlock {
       loggedIn = "Logged in as: " + this.request().getRemoteUser();
     }
 
-    ((DIV) ((DIV) html.div("#header.ui-widget").div("#user")._(new Object[]{loggedIn})._()).div("#logo").img("/xlWebApp/logo.png")._()).h1(this.$("title"))._();
+    ((DIV) ((DIV) html.div("#header.ui-widget").div("#user")._(new Object[]{loggedIn})._()).div("#logo").img("/static/xlWebApp/logo.png")._()).h1(this.$("title"))._();
   }
 }

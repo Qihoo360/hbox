@@ -114,9 +114,9 @@ public class HistoryClientService extends AbstractService {
       HttpServer2 httpServer = webApp.httpServer();
       WebAppContext webAppContext = httpServer.getWebAppContext();
       WebAppContext appWebAppContext = new WebAppContext();
-      appWebAppContext.setContextPath("/xlWebApp");
+      appWebAppContext.setContextPath("/static/xlWebApp");
       String appDir = getClass().getClassLoader().getResource("xlWebApp").toString();
-      appWebAppContext.setResourceBase(appDir + "/static");
+      appWebAppContext.setResourceBase(appDir);
       appWebAppContext.addServlet(DefaultServlet.class, "/*");
       final String[] ALL_URLS = {"/*"};
       FilterHolder[] filterHolders =
@@ -137,7 +137,7 @@ public class HistoryClientService extends AbstractService {
         throw new WebAppException("Error starting http server", e);
       }
     } catch (NoSuchMethodException e) {
-      LOG.warn("current hadoop version don't have the method build of Class " + WebApps.class.toString() + ". For More Detail: " + e);
+      LOG.debug("current hadoop version don't have the method build of Class " + WebApps.class.toString() + ". For More Detail: " + e);
       WebApps
           .$for("jobhistory", HistoryClientService.class, this, "ws")
           .with(conf)

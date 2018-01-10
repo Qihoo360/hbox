@@ -65,6 +65,10 @@ xlearning.container.heartbeat.retry | 3 | container发送心跳尝试次数
 xlearning.container.update.appstatus.interval | 3 * 1000 | container获取作业执行状态时间间隔，单位为毫秒  
 xlearning.container.auto.create.output.dir | true | container是否自动创建本地输出路径  
 xlearning.log.pull.interval | 10000 | client获取AM日志输出时间间隔，单位为毫秒  
+xlearning.user.classpath.first | true | 是否优先加载用户自定义jar包  
+xlearning.worker.mem.autoscale | 0.5 | 作业失败重试时，worker内存自动增长比例   
+xlearning.ps.mem.autoscale | 0.2 | 作业失败重试时，ps内存自动增长比例   
+xlearning.app.max.attempts | 1 | 作业执行次数，默认执行失败后不重试   
 
 
 

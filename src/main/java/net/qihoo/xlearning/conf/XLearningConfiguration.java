@@ -39,6 +39,10 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final int DEFAULT_XLEARNING_LOG_PULL_INTERVAL = 10000;
 
+  public static final String XLEARNING_USER_CLASSPATH_FIRST = "xlearning.user.classpath.first";
+
+  public static final boolean DEFAULT_XLEARNING_USER_CLASSPATH_FIRST = true;
+
   public static final String XLEARNING_AM_MEMORY = "xlearning.am.memory";
 
   public static final int DEFAULT_XLEARNING_AM_MEMORY = 1024;
@@ -70,6 +74,18 @@ public class XLearningConfiguration extends YarnConfiguration {
   public static final String XLEARNING_PS_NUM = "xlearning.ps.num";
 
   public static final int DEFAULT_XLEARNING_PS_NUM = 0;
+
+  public static final String XLEARNING_WORKER_MEM_AUTO_SCALE = "xlearning.worker.mem.autoscale";
+
+  public static final Double DEFAULT_XLEARNING_WORKER_MEM_AUTO_SCALE = 0.5;
+
+  public static final String XLEARNING_PS_MEM_AUTO_SCALE = "xlearning.ps.mem.autoscale";
+
+  public static final Double DEFAULT_XLEARNING_PS_MEM_AUTO_SCALE = 0.2;
+
+  public static final String XLEARNING_APP_MAX_ATTEMPTS = "xlearning.app.max.attempts";
+
+  public static final int DEFAULT_XLEARNING_APP_MAX_ATTEMPTS = 1;
 
   public static final String XLEARNING_TF_MODE_SINGLE = "xlearning.tf.mode.single";
 

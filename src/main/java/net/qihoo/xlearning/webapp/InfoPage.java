@@ -36,7 +36,7 @@ public class InfoPage extends TwoColumnLayout implements AMParams {
         return HeaderBlock.class;
       }
     } catch (NoSuchMethodException e) {
-      LOG.warn("current hadoop version don't have the method build of Class " + WebApps.class.toString() + ". For More Detail: " + e);
+      LOG.debug("current hadoop version don't have the method build of Class " + WebApps.class.toString() + ". For More Detail: " + e);
       return org.apache.hadoop.yarn.webapp.view.HeaderBlock.class;
     }
     return null;

@@ -1,5 +1,7 @@
 package net.qihoo.xlearning.webapp;
 
+import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
 import net.qihoo.xlearning.api.XLearningConstants;
 import net.qihoo.xlearning.common.OutputInfo;
@@ -10,11 +12,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.webapp.Controller;
+import org.apache.hadoop.yarn.webapp.WebApp;
+import org.apache.hadoop.yarn.webapp.WebApps;
 
+import java.lang.reflect.Type;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
@@ -63,6 +71,7 @@ public class AppController extends Controller implements AMParams {
     Map<XLearningContainerId, String> containersAppStartTime = app.context.getContainersAppStartTime();
     Map<XLearningContainerId, String> containersAppFinishTime = app.context.getContainersAppFinishTime();
     set(CONTAINER_NUMBER, String.valueOf(workerContainers.size() + psContainers.size()));
+    set(WORKER_NUMBER, String.valueOf(workerContainers.size()));
     set(USER_NAME, StringUtils.split(conf.get("hadoop.job.ugi"), ',')[0]);
     int i = 0;
     for (Container container : workerContainers) {
@@ -74,6 +83,15 @@ public class AppController extends Controller implements AMParams {
         set(CONTAINER_STATUS + i, "-");
       }
       set(CONTAINER_ROLE + i, "worker");
+
+      if (app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId())) != null) {
+        ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
+        if (cpuMetrics.size() != 0) {
+          set("cpuMemMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUMEM")));
+          set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
+        }
+      }
+
       if (reporterProgress.get(new XLearningContainerId(container.getId())) != null && !reporterProgress.get(new XLearningContainerId(container.getId())).equals("")) {
         String progressLog = reporterProgress.get(new XLearningContainerId(container.getId()));
         String[] progress = progressLog.toString().split(":");
@@ -113,7 +131,11 @@ public class AppController extends Controller implements AMParams {
     for (Container container : psContainers) {
       set(CONTAINER_HTTP_ADDRESS + i, container.getNodeHttpAddress());
       set(CONTAINER_ID + i, container.getId().toString());
-      set(CONTAINER_STATUS + i, app.context.getContainerStatus(new XLearningContainerId(container.getId())).toString());
+      if (app.context.getContainerStatus(new XLearningContainerId(container.getId())) != null) {
+        set(CONTAINER_STATUS + i, app.context.getContainerStatus(new XLearningContainerId(container.getId())).toString());
+      } else {
+        set(CONTAINER_STATUS + i, "-");
+      }
       if ($(APP_TYPE).equals("Tensorflow")) {
         set(CONTAINER_ROLE + i, "ps");
       } else if ($(APP_TYPE).equals("Mxnet")) {
@@ -155,6 +177,17 @@ public class AppController extends Controller implements AMParams {
       set(TIMESTAMP_LIST + j, String.valueOf(app.context.getModelSavingList().get(i - 1)));
       j++;
     }
+
+    set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(true));
+    try {
+      WebApps.Builder.class.getMethod("build", WebApp.class);
+    } catch (NoSuchMethodException e) {
+      if (Controller.class.getClassLoader().getResource("webapps/static/xlWebApp") == null) {
+        LOG.debug("Don't have the xlWebApp Resource.");
+        set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(false));
+      }
+    }
+
   }
 
   @Override

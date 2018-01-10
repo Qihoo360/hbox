@@ -47,6 +47,7 @@ public class Client {
   private ApplicationMessageProtocol xlearningClient;
   private transient AtomicBoolean isRunning;
   private StringBuffer appFilesRemotePath;
+  private StringBuffer appLibJarsRemotePath;
   private ApplicationId applicationId;
   private final FileSystem dfs;
   private final ConcurrentHashMap<String, String> inputPaths;
@@ -59,6 +60,7 @@ public class Client {
     this.clientArguments = new ClientArguments(args);
     this.isRunning = new AtomicBoolean(false);
     this.appFilesRemotePath = new StringBuffer(1000);
+    this.appLibJarsRemotePath = new StringBuffer(1000);
     this.inputPaths = new ConcurrentHashMap<>();
     this.outputPaths = new ConcurrentHashMap<>();
     JOB_FILE_PERMISSION = FsPermission.createImmutable((short) 0644);
@@ -80,6 +82,7 @@ public class Client {
     conf.set(XLearningConfiguration.XLEARNING_PS_VCORES, String.valueOf(clientArguments.psVCores));
     conf.set(XLearningConfiguration.XLEARNING_PS_NUM, String.valueOf(clientArguments.psNum));
     conf.set(XLearningConfiguration.XLEARNING_APP_PRIORITY, String.valueOf(clientArguments.priority));
+    conf.setBoolean(XLearningConfiguration.XLEARNING_USER_CLASSPATH_FIRST, clientArguments.userClasspathFirst);
     conf.set(XLearningConfiguration.XLEARNING_TF_BOARD_WORKER_INDEX, String.valueOf(clientArguments.boardIndex));
     conf.set(XLearningConfiguration.XLEARNING_TF_BOARD_RELOAD_INTERVAL, String.valueOf(clientArguments.boardReloadInterval));
     conf.set(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, String.valueOf(clientArguments.boardEnable));
@@ -131,7 +134,7 @@ public class Client {
         "\t  > < | |    / _ \\/ _` | '__| '_ \\| | '_ \\ / _` |\n" +
         "\t / . \\| |___|  __/ (_| | |  | | | | | | | | (_| |\n" +
         "\t/_/ \\_\\______\\___|\\__,_|_|  |_| |_|_|_| |_|\\__, |\n" +
-        "\t                                            __/ |\n"+
+        "\t                                            __/ |\n" +
         "\t                                           |___/ \n"
     );
   }
@@ -424,6 +427,55 @@ public class Client {
       }
     }
 
+    String libJarsClassPath = "";
+    if (clientArguments.libJars != null) {
+      Path[] jarFilesDst = new Path[clientArguments.libJars.length];
+      LOG.info("Copy XLearning lib jars from local filesystem to remote.");
+      for (int i = 0; i < clientArguments.libJars.length; i++) {
+        assert (!clientArguments.libJars[i].isEmpty());
+        if (!clientArguments.libJars[i].startsWith("hdfs://")) {
+          Path jarFilesSrc = new Path(clientArguments.libJars[i]);
+          jarFilesDst[i] = Utilities.getRemotePath(
+              conf, applicationId, new Path(clientArguments.libJars[i]).getName());
+          LOG.info("Copying " + clientArguments.libJars[i] + " to remote path " + jarFilesDst[i].toString());
+          dfs.copyFromLocalFile(false, true, jarFilesSrc, jarFilesDst[i]);
+          appLibJarsRemotePath.append(jarFilesDst[i].toUri().toString()).append(",");
+        } else {
+          Path pathRemote = new Path(clientArguments.libJars[i]);
+          if (!pathRemote.getFileSystem(conf).exists(pathRemote)) {
+            throw new IOException("hdfs lib jars path " + pathRemote + " not existed!");
+          }
+          appLibJarsRemotePath.append(clientArguments.libJars[i]).append(",");
+        }
+      }
+
+      String appFilesRemoteLocation = appLibJarsRemotePath.deleteCharAt(appLibJarsRemotePath.length() - 1).toString();
+      appMasterEnv.put(XLearningConstants.Environment.XLEARNING_LIBJARS_LOCATION.toString(),
+          appFilesRemoteLocation);
+
+      String[] jarFiles = StringUtils.split(appFilesRemoteLocation, ",");
+      for (String file : jarFiles) {
+        Path path = new Path(file);
+        localResources.put(path.getName(),
+            Utilities.createApplicationResource(path.getFileSystem(conf),
+                path,
+                LocalResourceType.FILE));
+        libJarsClassPath += path.getName() + ":";
+      }
+    }
+    StringBuilder classPathEnv = new StringBuilder("${CLASSPATH}:./*");
+    for (String cp : conf.getStrings(XLearningConfiguration.YARN_APPLICATION_CLASSPATH,
+        XLearningConfiguration.DEFAULT_XLEARNING_APPLICATION_CLASSPATH)) {
+      classPathEnv.append(':');
+      classPathEnv.append(cp.trim());
+    }
+
+    if(conf.getBoolean(XLearningConfiguration.XLEARNING_USER_CLASSPATH_FIRST, XLearningConfiguration.DEFAULT_XLEARNING_USER_CLASSPATH_FIRST)) {
+      appMasterEnv.put("CLASSPATH", libJarsClassPath + classPathEnv.toString());
+    } else {
+      appMasterEnv.put("CLASSPATH",  classPathEnv.toString() + ":" + libJarsClassPath);
+    }
+
     appMasterEnv.put(XLearningConstants.Environment.XLEARNING_STAGING_LOCATION.toString(), Utilities
         .getRemotePath(conf, applicationId, "").toString());
 
@@ -438,7 +490,8 @@ public class Client {
 
     if (clientArguments.xlearningCacheFiles != null && !clientArguments.xlearningCacheFiles.equals("")) {
       appMasterEnv.put(XLearningConstants.Environment.XLEARNING_CACHE_FILE_LOCATION.toString(), clientArguments.xlearningCacheFiles);
-      if (clientArguments.appType.equals("MXNET") && !conf.getBoolean(XLearningConfiguration.XLEARNING_MXNET_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MXNET_MODE_SINGLE)) {
+      if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(XLearningConfiguration.XLEARNING_MXNET_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MXNET_MODE_SINGLE))
+          || clientArguments.appType.equals("DISTXGBOOST")) {
         URI defaultUri = new Path(conf.get("fs.defaultFS")).toUri();
         LOG.info("default URI is " + defaultUri.toString());
         String appCacheFilesRemoteLocation = appMasterEnv.get(XLearningConstants.Environment.XLEARNING_CACHE_FILE_LOCATION.toString());
@@ -534,14 +587,7 @@ public class Client {
           outputLocation.deleteCharAt(outputLocation.length() - 1).toString());
     }
 
-    StringBuilder classPathEnv = new StringBuilder("${CLASSPATH}:./*");
-    for (String cp : conf.getStrings(XLearningConfiguration.YARN_APPLICATION_CLASSPATH,
-        XLearningConfiguration.DEFAULT_XLEARNING_APPLICATION_CLASSPATH)) {
-      classPathEnv.append(':');
-      classPathEnv.append(cp.trim());
-    }
-
-    appMasterEnv.put("CLASSPATH", classPathEnv.toString());
+    appMasterEnv.put(XLearningConstants.Environment.XLEARNING_CONTAINER_MAX_MEMORY.toString(), String.valueOf(newAppResponse.getMaximumResourceCapability().getMemory()));
 
     if (clientArguments.userPath != null && !clientArguments.userPath.equals("")) {
       appMasterEnv.put(XLearningConstants.Environment.USER_PATH.toString(), clientArguments.userPath);

@@ -39,9 +39,9 @@ public class ApplicationWebService extends AbstractService {
 
       WebAppContext webAppContext = httpServer.getWebAppContext();
       WebAppContext appWebAppContext = new WebAppContext();
-      appWebAppContext.setContextPath("/xlWebApp");
+      appWebAppContext.setContextPath("/static/xlWebApp");
       String appDir = getClass().getClassLoader().getResource("xlWebApp").toString();
-      appWebAppContext.setResourceBase(appDir + "/static");
+      appWebAppContext.setResourceBase(appDir);
       appWebAppContext.addServlet(DefaultServlet.class, "/*");
       final String[] ALL_URLS = {"/*"};
       FilterHolder[] filterHolders =
@@ -62,7 +62,7 @@ public class ApplicationWebService extends AbstractService {
         throw new WebAppException("Error starting http server", e);
       }
     } catch (NoSuchMethodException e) {
-      LOG.warn("current hadoop version don't have the method build of Class " + WebApps.class.toString() + ". For More Detail: " + e);
+      LOG.debug("current hadoop version don't have the method build of Class " + WebApps.class.toString() + ". For More Detail: " + e);
       webApp = WebApps.$for("proxy", ApplicationContext.class, applicationContext, null).with(getConfig()).start(new AMWebApp());
     } catch (Exception e) {
       LOG.error("Error starting application web server!", e);
