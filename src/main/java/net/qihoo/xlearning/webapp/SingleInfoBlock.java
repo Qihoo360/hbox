@@ -73,7 +73,40 @@ public class SingleInfoBlock extends HtmlBlock implements AMParams {
               ._()._()._()._();
         }
       }
-      tbody._()._();
+
+      if (!$(BOARD_INFO).equals("no")) {
+        if (!$(BOARD_INFO).contains("http")) {
+          tbody._()._().div().$style("margin:20px 2px;")._(" ")._().
+              h2("View Board:").
+              table("#Board").
+              thead("ui-widget-header").
+              tr().
+              th("ui-state-default", "Board Info").
+              _()._().
+              tbody("ui-widget-content").
+              tr().
+              $style("text-align:center;").
+              td(String.format($(BOARD_INFO))).
+              _()._()._();
+        } else {
+          tbody._()._().div().$style("margin:20px 2px;")._(" ")._().
+              h2("View Board:").
+              table("#Board").
+              thead("ui-widget-header").
+              tr().
+              th("ui-state-default", "Board Info").
+              _()._().
+              tbody("ui-widget-content").
+              tr().
+              $style("text-align:center;").
+              td().span().$title(String.format($(BOARD_INFO)))._().
+              a(String.format($(BOARD_INFO)),
+                  String.format($(BOARD_INFO))).
+              _()._()._()._();
+        }
+      } else {
+        tbody._()._();
+      }
 
       html.div().$style("margin:20px 2px;")._(" ")._();
       int saveModelTotal = Integer.parseInt($(SAVE_MODEL_TOTAL));

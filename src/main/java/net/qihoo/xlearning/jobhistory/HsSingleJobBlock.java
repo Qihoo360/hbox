@@ -73,7 +73,23 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
               ._()._()._()._();
         }
       }
-      tbody._()._();
+
+      if ($(BOARD_INFO_FLAG).equals("true")) {
+        tbody._()._().div().$style("margin:40px 2px;")._(" ")._().
+            h2("View Board:").
+            table("#Board").
+            thead("ui-widget-header").
+            tr().
+            th("ui-state-default", "Board Info").
+            _()._().
+            tbody("ui-widget-content").
+            tr().
+            $style("text-align:center;").
+            td($(BOARD_INFO)).
+            _()._()._();
+      } else {
+        tbody._()._();
+      }
 
       int timestampSize = Integer.parseInt($(TIMESTAMP_TOTAL));
       int outputSize = Integer.parseInt($(OUTPUT_TOTAL));

@@ -87,6 +87,9 @@ public class Client {
     conf.set(XLearningConfiguration.XLEARNING_TF_BOARD_RELOAD_INTERVAL, String.valueOf(clientArguments.boardReloadInterval));
     conf.set(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, String.valueOf(clientArguments.boardEnable));
     conf.set(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, clientArguments.boardLogDir);
+    conf.set(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR, clientArguments.boardHistoryDir);
+    conf.set(XLearningConfiguration.XLEARNING_BOARD_MODELPB, clientArguments.boardModelPB);
+    conf.set(XLearningConfiguration.XLEARNING_BOARD_CACHE_TIMEOUT, String.valueOf(clientArguments.boardCacheTimeout));
     conf.set(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, clientArguments.inputStrategy);
     conf.set(XLearningConfiguration.XLEARNING_OUTPUT_STRATEGY, clientArguments.outputStrategy);
     conf.setBoolean(XLearningConfiguration.XLEARNING_INPUTFILE_RENAME, clientArguments.isRenameInputFile);
@@ -107,9 +110,6 @@ public class Client {
     if ("TENSORFLOW".equals(clientArguments.appType)) {
       if (conf.getInt(XLearningConfiguration.XLEARNING_PS_NUM, XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM) == 0) {
         conf.setBoolean(XLearningConfiguration.XLEARNING_TF_MODE_SINGLE, true);
-        if (conf.getInt(XLearningConfiguration.XLEARNING_WORKER_NUM, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM) == 1) {
-          conf.setInt(XLearningConfiguration.XLEARNING_TF_BOARD_WORKER_INDEX, 0);
-        }
       }
     }
 
@@ -117,6 +117,18 @@ public class Client {
       if (conf.getInt(XLearningConfiguration.XLEARNING_PS_NUM, XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM) == 0) {
         conf.setBoolean(XLearningConfiguration.XLEARNING_MXNET_MODE_SINGLE, true);
       }
+    }
+
+    if (conf.getInt(XLearningConfiguration.XLEARNING_WORKER_NUM, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM) == 1) {
+      conf.setInt(XLearningConfiguration.XLEARNING_TF_BOARD_WORKER_INDEX, 0);
+    }
+
+    if (conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR).indexOf("/") == 0) {
+      Path tf_board_log_dir = new Path(conf.get("fs.defaultFS"), conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR));
+      conf.set(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, tf_board_log_dir.toString());
+    }
+    if ((conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR).indexOf("hdfs") == 0) && (!"TENSORFLOW".equals(clientArguments.appType))) {
+      LOG.warn("VisualDL not support the hdfs path for logdir. Please ensure the logdir setting is right.");
     }
 
     yarnClient = YarnClient.createYarnClient();

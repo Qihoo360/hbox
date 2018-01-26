@@ -293,8 +293,13 @@ public class ApplicationMaster extends CompositeService {
             if (conf.getBoolean(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_ENABLE)) {
               String boardLogPath;
               if (conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR).indexOf("hdfs://") == -1) {
-                boardLogPath = xlearningConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
-                    XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR) + "/" + applicationAttemptID.getApplicationId().toString();
+                if (conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR).equals(XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR)) {
+                  boardLogPath = xlearningConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
+                      XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR) + "/" + applicationAttemptID.getApplicationId().toString();
+                } else {
+                  boardLogPath = conf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
+                      XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR);
+                }
               } else {
                 boardLogPath = conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR);
               }

@@ -42,6 +42,9 @@ class ClientArguments {
   int boardReloadInterval;
   String boardLogDir;
   Boolean boardEnable;
+  String boardHistoryDir;
+  String boardModelPB;
+  int boardCacheTimeout;
   Boolean isRenameInputFile;
   public Boolean userClasspathFirst;
   public int streamEpoch;
@@ -80,6 +83,9 @@ class ClientArguments {
     boardReloadInterval = XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_RELOAD_INTERVAL;
     boardEnable = XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_ENABLE;
     boardLogDir = XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR;
+    boardHistoryDir = XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR;
+    boardModelPB = XLearningConfiguration.DEFAULT_XLEARNING_BOARD_MODELPB;
+    boardCacheTimeout = XLearningConfiguration.DEFAULT_XLEARNING_BOARD_CACHE_TIMEOUT;
     isRenameInputFile = XLearningConfiguration.DEFAULT_XLEARNING_INPUTFILE_RENAME;
     streamEpoch = XLearningConfiguration.DEFAULT_XLEARNING_STREAM_EPOCH;
     inputStreamShuffle = XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STREAM_SHUFFLE;
@@ -140,7 +146,11 @@ class ClientArguments {
     allOptions.addOption("boardEnable", "board-enable", true,
         "if app type is tensorflow, enable to run tensorboard, default:true");
     allOptions.addOption("boardHistoryDir", "board-historydir", true,
-        "if app type is tensorflow, hdfs path for tensorflow event log");
+        "hdfs path for board event log");
+    allOptions.addOption("boardModelPB", "board-modelpb", true,
+        "if app type is not tensorflow, model pb for visualDL");
+    allOptions.addOption("boardCacheTimeout", "board-cacheTimeout", true,
+        "if app type is not tensorflow, visualDL memory cache timeout duration in seconds, default:20");
     allOptions.addOption("isRenameInputFile", "isRenameInputFile", true,
         "whether rename the inputFiles when download from hdfs");
 
@@ -311,7 +321,7 @@ class ClientArguments {
       libJars = StringUtils.split(cliParser.getOptionValue("jars"), ",");
     }
 
-    if(cliParser.hasOption("userClasspathFirst")){
+    if (cliParser.hasOption("userClasspathFirst")) {
       String classpathFirst = cliParser.getOptionValue("userClasspathFirst");
       userClasspathFirst = Boolean.parseBoolean(classpathFirst);
     }
@@ -343,28 +353,38 @@ class ClientArguments {
       streamEpoch = Integer.parseInt(streamEpochStr);
     }
 
-    if ("TENSORFLOW".equals(appType)) {
-      if (cliParser.hasOption("board-index")) {
-        String boardIndexStr = cliParser.getOptionValue("board-index");
-        boardIndex = Integer.parseInt(boardIndexStr);
-      }
+    if (cliParser.hasOption("board-index")) {
+      String boardIndexStr = cliParser.getOptionValue("board-index");
+      boardIndex = Integer.parseInt(boardIndexStr);
     }
 
-    if ("TENSORFLOW".equals(appType)) {
-      if (cliParser.hasOption("board-reloadinterval")) {
-        String boardReloadIntervalStr = cliParser.getOptionValue("board-reloadinterval");
-        boardReloadInterval = Integer.parseInt(boardReloadIntervalStr);
-      }
-
-      if (cliParser.hasOption("board-logdir")) {
-        boardLogDir = cliParser.getOptionValue("board-logdir");
-      }
-
-      if (cliParser.hasOption("board-enable")) {
-        String boardEnableStr = cliParser.getOptionValue("board-enable");
-        boardEnable = Boolean.parseBoolean(boardEnableStr);
-      }
+    if (cliParser.hasOption("board-reloadinterval")) {
+      String boardReloadIntervalStr = cliParser.getOptionValue("board-reloadinterval");
+      boardReloadInterval = Integer.parseInt(boardReloadIntervalStr);
     }
+
+    if (cliParser.hasOption("board-logdir")) {
+      boardLogDir = cliParser.getOptionValue("board-logdir");
+    }
+
+    if (cliParser.hasOption("board-historydir")) {
+      boardHistoryDir = cliParser.getOptionValue("board-historydir");
+    }
+
+    if (cliParser.hasOption("board-enable")) {
+      String boardEnableStr = cliParser.getOptionValue("board-enable");
+      boardEnable = Boolean.parseBoolean(boardEnableStr);
+    }
+
+    if (cliParser.hasOption("board-modelpb")) {
+      boardModelPB = cliParser.getOptionValue("board-modelpb");
+    }
+
+    if (cliParser.hasOption("board-cacheTimeout")) {
+      String boardCacheTimeoutStr = cliParser.getOptionValue("board-cacheTimeout");
+      boardCacheTimeout = Integer.parseInt(boardCacheTimeoutStr);
+    }
+
     appMasterJar = JobConf.findContainingJar(ApplicationMaster.class);
     LOG.info("Application Master's jar is " + appMasterJar);
   }

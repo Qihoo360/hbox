@@ -49,20 +49,16 @@ public class AppController extends Controller implements AMParams {
       set(APP_TYPE, "XLearning");
     }
 
-    if ($(APP_TYPE).equals("Tensorflow")) {
-      String boardUrl = app.context.getTensorBoardUrl();
-      if (this.conf.getBoolean(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_ENABLE)) {
-        if (boardUrl != null) {
-          set(BOARD_INFO, boardUrl);
-        } else {
-          set(BOARD_INFO, "Waiting for tensorboard process start...");
-        }
+    String boardUrl = app.context.getTensorBoardUrl();
+    if (this.conf.getBoolean(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_ENABLE)) {
+      if (boardUrl != null) {
+        set(BOARD_INFO, boardUrl);
       } else {
-        String boardInfo = "Tensorboard server don't start, You can set argument \"--board-enable true\" in your submit script to start.";
-        set(BOARD_INFO, boardInfo);
+        set(BOARD_INFO, "Waiting for board process start...");
       }
-    } else if ($(APP_TYPE).equals("Mxnet")) {
-      set(BOARD_INFO, "no");
+    } else {
+      String boardInfo = "Board server don't start, You can set argument \"--board-enable true\" in your submit script to start.";
+      set(BOARD_INFO, boardInfo);
     }
 
     List<Container> workerContainers = app.context.getWorkerContainers();

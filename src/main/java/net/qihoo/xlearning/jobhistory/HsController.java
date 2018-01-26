@@ -89,12 +89,7 @@ public class HsController extends Controller implements AMParams {
           }
         } else if (info.equals(AMParams.BOARD_INFO)) {
           set(BOARD_INFO_FLAG, "true");
-          if (readLog.get(info).equals("-")) {
-            String boardInfo = "Tensorboard server don't start, You can set argument \"--boardEnable true\" in your submit script to start.";
-            set(BOARD_INFO, boardInfo);
-          } else {
-            set(BOARD_INFO, String.format("tensorboard --logdir=%s", readLog.get(info)));
-          }
+          set(BOARD_INFO, String.valueOf(readLog.get(info)));
         } else if (info.equals(AMParams.OUTPUT_PATH)) {
           if (readLog.get(info) instanceof ArrayList<?>) {
             List<String> outputList = (ArrayList<String>) readLog.get(info);
@@ -181,6 +176,18 @@ public class HsController extends Controller implements AMParams {
         }
       }
       set(CONTAINER_NUMBER, String.valueOf(i));
+
+      if ($(BOARD_INFO).equals("-")) {
+        String boardInfo = "Board server don't start, You can set argument \"--boardEnable true\" in your submit script to start.";
+        set(BOARD_INFO, boardInfo);
+      } else {
+        String boardLogDir = $(BOARD_INFO);
+        if ($(APP_TYPE).equals("Tensorflow")) {
+          set(BOARD_INFO, String.format("tensorboard --logdir=%s", boardLogDir));
+        } else {
+          set(BOARD_INFO, String.format("VisualDL not support the hdfs path for logdir. Please download the log from %s first. Then using \" visualDL \" to start the board", boardLogDir));
+        }
+      }
     }
 
     if (Boolean.parseBoolean($(CONTAINER_CPU_METRICS_ENABLE))) {

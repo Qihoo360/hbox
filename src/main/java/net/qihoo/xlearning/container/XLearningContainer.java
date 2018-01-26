@@ -300,16 +300,14 @@ public class XLearningContainer {
       }
     }
 
-    if ("TENSORFLOW".equals(xlearningAppType)) {
-      int boardIndex = this.conf.getInt(XLearningConfiguration.XLEARNING_TF_BOARD_WORKER_INDEX, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_WORKER_INDEX);
-      Boolean boardEnable = this.conf.getBoolean(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_ENABLE);
-      if (boardEnable && this.role.equals(XLearningConstants.WORKER) && boardIndex == this.index) {
-        if (this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR).indexOf("hdfs://") == -1) {
-          Utilities.mkdirs(this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR));
-          LOG.info("Created tensorboard log dir " + this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR));
-        } else {
-          LOG.info("User appoint the tensorboard log dir : " + this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR));
-        }
+    int boardIndex = this.conf.getInt(XLearningConfiguration.XLEARNING_TF_BOARD_WORKER_INDEX, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_WORKER_INDEX);
+    Boolean boardEnable = this.conf.getBoolean(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_ENABLE);
+    if (boardEnable && this.role.equals(XLearningConstants.WORKER) && boardIndex == this.index) {
+      if (this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR).indexOf("hdfs://") == -1) {
+        Utilities.mkdirs(this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR));
+        LOG.info("Created board log dir " + this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR));
+      } else {
+        LOG.info("User appoint the board log dir : " + this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR));
       }
     }
   }
@@ -342,30 +340,44 @@ public class XLearningContainer {
       }
     }
 
-    if ("TENSORFLOW".equals(xlearningAppType)) {
-      if (this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR).indexOf("hdfs://") == -1) {
-        int boardIndex = conf.getInt(XLearningConfiguration.XLEARNING_TF_BOARD_WORKER_INDEX, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_WORKER_INDEX);
-        Boolean boardEnable = conf.getBoolean(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_ENABLE);
-        String boardLogDir = conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR);
-        String boardHistoryDir = conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
+
+    if (this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR).indexOf("hdfs://") == -1) {
+      XLearningConfiguration xlConf = new XLearningConfiguration();
+      int boardIndex = conf.getInt(XLearningConfiguration.XLEARNING_TF_BOARD_WORKER_INDEX, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_WORKER_INDEX);
+      Boolean boardEnable = conf.getBoolean(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_ENABLE);
+      String boardLogDir = conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR);
+      Path localLogPath = new Path(boardLogDir);
+      FileSystem boardLocalFs = FileSystem.getLocal(conf);
+      String boardHistoryDir;
+      Path remoteLogPath;
+      FileSystem boardDfs;
+      if (conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR).equals(XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR)) {
+        boardHistoryDir = xlConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
             XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR) + "/" + this.envs.get("APP_ID");
-        Path localLogPath = new Path(boardLogDir);
-        Path remoteLogPath = new Path(boardHistoryDir);
-        FileSystem boardLocalFs = FileSystem.getLocal(conf);
-        if (boardLocalFs.exists(localLogPath) && boardEnable && boardIndex == this.index) {
-          FileSystem boardDfs = remoteLogPath.getFileSystem(conf);
-          if (boardDfs.exists(remoteLogPath)) {
-            LOG.info("Container remote tensorboard log output path " + remoteLogPath + "exists, so we has to delete is first.");
-            boardDfs.delete(remoteLogPath);
-          }
-          boardDfs.copyFromLocalFile(false, false, localLogPath, remoteLogPath);
-          LOG.info("Upload tensorboard  log dir " + localLogPath + " to remote path " + remoteLogPath + " finished.");
-        }
-        boardLocalFs.close();
+        remoteLogPath = new Path(boardHistoryDir);
+        boardDfs = remoteLogPath.getFileSystem(xlConf);
       } else {
-        LOG.info("User appoint the tensorboard log dir : " + this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR));
+        boardHistoryDir = conf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
+            XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR);
+        remoteLogPath = new Path(boardHistoryDir);
+        boardDfs = remoteLogPath.getFileSystem(conf);
+      }
+      if (boardLocalFs.exists(localLogPath) && boardEnable && boardIndex == this.index) {
+        if (boardDfs.exists(remoteLogPath)) {
+          LOG.info("Container remote board log output path " + remoteLogPath + "exists, so we has to delete is first.");
+          boardDfs.delete(remoteLogPath);
+        }
+        boardDfs.copyFromLocalFile(false, false, localLogPath, remoteLogPath);
+        LOG.info("Upload board  log dir " + localLogPath + " to remote path " + remoteLogPath + " finished.");
+      }
+      boardLocalFs.close();
+    } else {
+      LOG.info("User appoint the board log dir : " + this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR));
+      if (!(xlearningAppType.equals("TENSORFLOW"))) {
+        LOG.error("Note that VisualDL not support the hdfs path of logdir.");
       }
     }
+
   }
 
   private static synchronized String getPidOfProcess(Process p) {
@@ -715,76 +727,84 @@ public class XLearningContainer {
 
     heartbeatThread.setContainerStatus(XLearningContainerStatus.RUNNING);
 
-    //Start tensorboard process
-    if ("TENSORFLOW".equals(xlearningAppType)) {
-      int boardIndex = this.conf.getInt(XLearningConfiguration.XLEARNING_TF_BOARD_WORKER_INDEX, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_WORKER_INDEX);
-      Boolean boardEnable = this.conf.getBoolean(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_ENABLE);
-      if (boardEnable && this.role.equals(XLearningConstants.WORKER) && boardIndex == this.index) {
-        Socket boardReservedSocket = new Socket();
-        try {
-          boardReservedSocket.bind(new InetSocketAddress("127.0.0.1", 0));
-        } catch (IOException e) {
-          LOG.error("Can not get available port");
-          reportFailedAndExit();
-        }
-        String boardHost = envs.get(ApplicationConstants.Environment.NM_HOST.toString());
+    //Start board process
+    int boardIndex = this.conf.getInt(XLearningConfiguration.XLEARNING_TF_BOARD_WORKER_INDEX, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_WORKER_INDEX);
+    Boolean boardEnable = this.conf.getBoolean(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_ENABLE);
+    if (boardEnable && this.role.equals(XLearningConstants.WORKER) && boardIndex == this.index) {
+      Socket boardReservedSocket = new Socket();
+      try {
+        boardReservedSocket.bind(new InetSocketAddress("127.0.0.1", 0));
+      } catch (IOException e) {
+        LOG.error("Can not get available port");
+        reportFailedAndExit();
+      }
+      String boardHost = envs.get(ApplicationConstants.Environment.NM_HOST.toString());
+      String boardLogDir = this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR);
+      int boardPort = boardReservedSocket.getLocalPort();
+      String boardCommand;
+      if ("TENSORFLOW".equals(xlearningAppType)) {
         int boardReloadInterval = this.conf.getInt(XLearningConfiguration.XLEARNING_TF_BOARD_RELOAD_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_RELOAD_INTERVAL);
-        String boardLogDir = this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR);
-        int boardPort = boardReservedSocket.getLocalPort();
-        String boardCommand = "tensorboard --host=" + boardHost + " --port=" + boardPort + " --reload_interval=" + boardReloadInterval + " --logdir=" + boardLogDir;
-        String boardUrl = "http://" + boardHost + ":" + boardPort;
-        LOG.info("Executing tensorborad command:" + boardCommand);
-        boardReservedSocket.close();
-        try {
-          final Process boardProcess = rt.exec(boardCommand, env);
-          LOG.info("Starting thread to redirect stdout of tensorboard process");
-          Thread boardStdoutRedirectThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-              try {
-                BufferedReader reader;
-                reader = new BufferedReader(new InputStreamReader(boardProcess.getInputStream()));
-                String boardStdoutLog;
-                while ((boardStdoutLog = reader.readLine()) != null) {
-                  LOG.debug(boardStdoutLog);
-                }
-              } catch (Exception e) {
-                LOG.warn("Exception in thread boardStdoutRedirectThread");
-                e.printStackTrace();
-              }
-            }
-          });
-          boardStdoutRedirectThread.start();
-
-          LOG.info("Starting thread to redirect stderr of tensorboard process");
-          Thread boardStderrRedirectThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-              try {
-                BufferedReader reader;
-                reader = new BufferedReader(new InputStreamReader(boardProcess.getErrorStream()));
-                String boardStderrLog;
-                while ((boardStderrLog = reader.readLine()) != null) {
-                  LOG.debug(boardStderrLog);
-                }
-              } catch (Exception e) {
-                LOG.warn("Error in thread boardStderrRedirectThread");
-                e.printStackTrace();
-              }
-            }
-          });
-          boardStderrRedirectThread.start();
-          amClient.reportTensorBoardURL(boardUrl);
-          LOG.info("Container index is " + index + ", report tensorboard url:" + boardUrl);
-        } catch (Exception e) {
-          LOG.error("Board Process failed. For more detail: " + e);
+        boardCommand = this.conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_PATH, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_PATH) + " --host=" + boardHost + " --port=" + boardPort + " --reload_interval=" + boardReloadInterval + " --logdir=" + boardLogDir;
+      } else {
+        int boardCacheTimeout = this.conf.getInt(XLearningConfiguration.XLEARNING_BOARD_CACHE_TIMEOUT, XLearningConfiguration.DEFAULT_XLEARNING_BOARD_CACHE_TIMEOUT);
+        boardCommand = this.conf.get(XLearningConfiguration.XLEARNING_BOARD_PATH, XLearningConfiguration.DEFAULT_XLEARNING_BOARD_PATH) + " --host=" + boardHost + " --port=" + boardPort + " --logdir=" + boardLogDir + " --cache_timeout=" + boardCacheTimeout;
+        String modelpb = this.conf.get(XLearningConfiguration.XLEARNING_BOARD_MODELPB, XLearningConfiguration.DEFAULT_XLEARNING_BOARD_MODELPB);
+        if (!(modelpb.equals("") || modelpb == null)) {
+          boardCommand = boardCommand + " --model_pb=" + modelpb;
         }
+      }
+      String boardUrl = "http://" + boardHost + ":" + boardPort;
+      LOG.info("Executing borad command:" + boardCommand);
+      boardReservedSocket.close();
+      try {
+        final Process boardProcess = rt.exec(boardCommand, env);
+        LOG.info("Starting thread to redirect stdout of board process");
+        Thread boardStdoutRedirectThread = new Thread(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              BufferedReader reader;
+              reader = new BufferedReader(new InputStreamReader(boardProcess.getInputStream()));
+              String boardStdoutLog;
+              while ((boardStdoutLog = reader.readLine()) != null) {
+                LOG.debug(boardStdoutLog);
+              }
+            } catch (Exception e) {
+              LOG.warn("Exception in thread boardStdoutRedirectThread");
+              e.printStackTrace();
+            }
+          }
+        });
+        boardStdoutRedirectThread.start();
+
+        LOG.info("Starting thread to redirect stderr of board process");
+        Thread boardStderrRedirectThread = new Thread(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              BufferedReader reader;
+              reader = new BufferedReader(new InputStreamReader(boardProcess.getErrorStream()));
+              String boardStderrLog;
+              while ((boardStderrLog = reader.readLine()) != null) {
+                LOG.debug(boardStderrLog);
+              }
+            } catch (Exception e) {
+              LOG.warn("Error in thread boardStderrRedirectThread");
+              e.printStackTrace();
+            }
+          }
+        });
+        boardStderrRedirectThread.start();
+        amClient.reportTensorBoardURL(boardUrl);
+        LOG.info("Container index is " + index + ", report board url:" + boardUrl);
+      } catch (Exception e) {
+        LOG.error("Board Process failed. For more detail: " + e);
       }
     }
 
     int updateAppStatusInterval = this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL);
 
-    if(this.role.equals(XLearningConstants.WORKER)) {
+    if (this.role.equals(XLearningConstants.WORKER)) {
       this.xlearningCmdProcessId = getPidOfProcess(xlearningProcess);
       LOG.info("xlearningCmdProcessId is:" + this.xlearningCmdProcessId);
       containerReporter = new ContainerReporter(amClient, conf, containerId, this.xlearningCmdProcessId);

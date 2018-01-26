@@ -359,7 +359,7 @@ public class ApplicationContainerListener extends AbstractService implements App
   @Override
   public void reportTensorBoardURL(String url) {
     this.tensorboardUrl = url;
-    LOG.info("Received reported tensorboard url:" + url);
+    LOG.info("Received reported board url:" + url);
   }
 
   @Override

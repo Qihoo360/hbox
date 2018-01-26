@@ -82,11 +82,11 @@ public class InfoBlock extends HtmlBlock implements AMParams {
       if (!$(BOARD_INFO).equals("no")) {
         if (!$(BOARD_INFO).contains("http")) {
           tbody._()._().div().$style("margin:20px 2px;")._(" ")._().
-              h2("View TensorBoard:").
-              table("#TensorBoard").
+              h2("View Board:").
+              table("#Board").
               thead("ui-widget-header").
               tr().
-              th("ui-state-default", "Tensorboard Info").
+              th("ui-state-default", "Board Info").
               _()._().
               tbody("ui-widget-content").
               tr().
@@ -95,11 +95,11 @@ public class InfoBlock extends HtmlBlock implements AMParams {
               _()._()._();
         } else {
           tbody._()._().div().$style("margin:20px 2px;")._(" ")._().
-              h2("View TensorBoard:").
-              table("#TensorBoard").
+              h2("View Board:").
+              table("#Board").
               thead("ui-widget-header").
               tr().
-              th("ui-state-default", "Tensorboard Info").
+              th("ui-state-default", "Board Info").
               _()._().
               tbody("ui-widget-content").
               tr().
