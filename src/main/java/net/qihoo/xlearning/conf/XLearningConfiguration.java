@@ -179,6 +179,10 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final int DEFAULT_XLEARNING_TASK_TIMEOUT = 5 * 60 * 1000;
 
+  public static final String XLEARNING_LOCALRESOURCE_TIMEOUT = "xlearning.localresource.timeout";
+
+  public static final int DEFAULT_XLEARNING_LOCALRESOURCE_TIMEOUT = 5 * 60 * 1000;
+
   public static final String XLEARNING_TASK_TIMEOUT_CHECK_INTERVAL_MS = "xlearning.task.timeout.check.interval";
 
   public static final int DEFAULT_XLEARNING_TASK_TIMEOUT_CHECK_INTERVAL_MS = 3 * 1000;

@@ -67,6 +67,8 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   private int containerTimeOut;
 
+  private int localResourceTimeOut;
+
   private int monitorInterval;
 
   private boolean isXLearningTrainFinished;
@@ -100,6 +102,7 @@ public class ApplicationContainerListener extends AbstractService implements App
     this.clock = new SystemClock();
     this.runningContainers = new ConcurrentHashMap<>();
     this.containerTimeOut = conf.getInt(XLearningConfiguration.XLEARNING_TASK_TIMEOUT, XLearningConfiguration.DEFAULT_XLEARNING_TASK_TIMEOUT);
+    this.localResourceTimeOut = conf.getInt(XLearningConfiguration.XLEARNING_LOCALRESOURCE_TIMEOUT, XLearningConfiguration.DEFAULT_XLEARNING_LOCALRESOURCE_TIMEOUT);
     this.monitorInterval = conf.getInt(XLearningConfiguration.XLEARNING_TASK_TIMEOUT_CHECK_INTERVAL_MS, XLearningConfiguration.DEFAULT_XLEARNING_TASK_TIMEOUT_CHECK_INTERVAL_MS);
     this.isXLearningTrainFinished = false;
     this.tensorboardUrl = null;
@@ -597,12 +600,22 @@ public class ApplicationContainerListener extends AbstractService implements App
         long currentTime = clock.getTime();
         Set<Entry<XLearningContainerId, LastTime>> entrySet = runningContainers.entrySet();
         for (Entry<XLearningContainerId, LastTime> entry : entrySet) {
-          if (currentTime > (entry.getValue().getLastTime() + containerTimeOut)) {
-            LOG.info("Container " + entry.getKey().toString() + " timed out after"
-                + containerTimeOut / 1000 + " seconds");
-            HeartbeatRequest heartbeatRequest = new HeartbeatRequest();
-            heartbeatRequest.setXLearningContainerStatus(XLearningContainerStatus.FAILED);
-            heartbeat(entry.getKey(), heartbeatRequest);
+          if(containerId2Status.get(entry.getKey()).equals(XLearningContainerStatus.UNDEFINED)) {
+            if (currentTime > (entry.getValue().getLastTime() + localResourceTimeOut)) {
+              LOG.info("Container " + entry.getKey().toString() + " local resource timed out after "
+                  + localResourceTimeOut / 1000 + " seconds");
+              HeartbeatRequest heartbeatRequest = new HeartbeatRequest();
+              heartbeatRequest.setXLearningContainerStatus(XLearningContainerStatus.FAILED);
+              heartbeat(entry.getKey(), heartbeatRequest);
+            }
+          }  else {
+            if (currentTime > (entry.getValue().getLastTime() + containerTimeOut)) {
+              LOG.info("Container " + entry.getKey().toString() + " timed out after "
+                  + containerTimeOut / 1000 + " seconds");
+              HeartbeatRequest heartbeatRequest = new HeartbeatRequest();
+              heartbeatRequest.setXLearningContainerStatus(XLearningContainerStatus.FAILED);
+              heartbeat(entry.getKey(), heartbeatRequest);
+            }
           }
         }
         try {
