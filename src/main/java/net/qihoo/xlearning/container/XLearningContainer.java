@@ -735,46 +735,50 @@ public class XLearningContainer {
         String boardUrl = "http://" + boardHost + ":" + boardPort;
         LOG.info("Executing tensorborad command:" + boardCommand);
         boardReservedSocket.close();
-        final Process boardProcess = rt.exec(boardCommand, env);
-        LOG.info("Starting thread to redirect stdout of tensorboard process");
-        Thread boardStdoutRedirectThread = new Thread(new Runnable() {
-          @Override
-          public void run() {
-            try {
-              BufferedReader reader;
-              reader = new BufferedReader(new InputStreamReader(boardProcess.getInputStream()));
-              String boardStdoutLog;
-              while ((boardStdoutLog = reader.readLine()) != null) {
-                LOG.debug(boardStdoutLog);
+        try {
+          final Process boardProcess = rt.exec(boardCommand, env);
+          LOG.info("Starting thread to redirect stdout of tensorboard process");
+          Thread boardStdoutRedirectThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+              try {
+                BufferedReader reader;
+                reader = new BufferedReader(new InputStreamReader(boardProcess.getInputStream()));
+                String boardStdoutLog;
+                while ((boardStdoutLog = reader.readLine()) != null) {
+                  LOG.debug(boardStdoutLog);
+                }
+              } catch (Exception e) {
+                LOG.warn("Exception in thread boardStdoutRedirectThread");
+                e.printStackTrace();
               }
-            } catch (Exception e) {
-              LOG.warn("Exception in thread boardStdoutRedirectThread");
-              e.printStackTrace();
             }
-          }
-        });
-        boardStdoutRedirectThread.start();
+          });
+          boardStdoutRedirectThread.start();
 
-        LOG.info("Starting thread to redirect stderr of tensorboard process");
-        Thread boardStderrRedirectThread = new Thread(new Runnable() {
-          @Override
-          public void run() {
-            try {
-              BufferedReader reader;
-              reader = new BufferedReader(new InputStreamReader(boardProcess.getErrorStream()));
-              String boardStderrLog;
-              while ((boardStderrLog = reader.readLine()) != null) {
-                LOG.debug(boardStderrLog);
+          LOG.info("Starting thread to redirect stderr of tensorboard process");
+          Thread boardStderrRedirectThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+              try {
+                BufferedReader reader;
+                reader = new BufferedReader(new InputStreamReader(boardProcess.getErrorStream()));
+                String boardStderrLog;
+                while ((boardStderrLog = reader.readLine()) != null) {
+                  LOG.debug(boardStderrLog);
+                }
+              } catch (Exception e) {
+                LOG.warn("Error in thread boardStderrRedirectThread");
+                e.printStackTrace();
               }
-            } catch (Exception e) {
-              LOG.warn("Error in thread boardStderrRedirectThread");
-              e.printStackTrace();
             }
-          }
-        });
-        boardStderrRedirectThread.start();
-        amClient.reportTensorBoardURL(boardUrl);
-        LOG.info("Container index is " + index + ", report tensorboard url:" + boardUrl);
+          });
+          boardStderrRedirectThread.start();
+          amClient.reportTensorBoardURL(boardUrl);
+          LOG.info("Container index is " + index + ", report tensorboard url:" + boardUrl);
+        } catch (Exception e) {
+          LOG.error("Board Process failed. For more detail: " + e);
+        }
       }
     }
 

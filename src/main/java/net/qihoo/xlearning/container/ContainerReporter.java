@@ -61,7 +61,11 @@ public class ContainerReporter extends Thread {
 
     while (true) {
       Utilities.sleep(3000);
-      protocol.reportCpuMetrics(containerId, new Gson().toJson(cpuMetrics));
+      try {
+        protocol.reportCpuMetrics(containerId, new Gson().toJson(cpuMetrics));
+      } catch (Exception e) {
+        LOG.debug("report cpu metrics exception:" + e);
+      }
     }
   }
 
