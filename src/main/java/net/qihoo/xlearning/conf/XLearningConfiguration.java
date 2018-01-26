@@ -43,6 +43,10 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final boolean DEFAULT_XLEARNING_USER_CLASSPATH_FIRST = true;
 
+  public static final String XLEARNING_REPORT_CONTAINER_STATUS = "xlearning.report.container.status";
+
+  public static final boolean DEFAULT_XLEARNING_REPORT_CONTAINER_STATUS = true;
+
   public static final String XLEARNING_AM_MEMORY = "xlearning.am.memory";
 
   public static final int DEFAULT_XLEARNING_AM_MEMORY = 1024;

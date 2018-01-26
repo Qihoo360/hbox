@@ -8,5 +8,6 @@ public enum XLearningContainerStatus {
   INITIALIZING,
   RUNNING,
   FAILED,
-  SUCCEEDED
+  SUCCEEDED,
+  STARTED
 }

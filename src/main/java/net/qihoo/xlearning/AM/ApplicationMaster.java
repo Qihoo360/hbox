@@ -1196,8 +1196,32 @@ public class ApplicationMaster extends CompositeService {
 
     try {
       LOG.info("Waiting for train completed");
+      Map<XLearningContainerId, XLearningContainerStatus> lastWorkerContainerStatus = new ConcurrentHashMap<>();
+      Map<XLearningContainerId, XLearningContainerStatus> lastPsContainerStatus = new ConcurrentHashMap<>();
       while (!containerListener.isTrainCompleted()) {
         //report progress to client
+        if(conf.getBoolean(XLearningConfiguration.XLEARNING_REPORT_CONTAINER_STATUS, XLearningConfiguration.DEFAULT_XLEARNING_REPORT_CONTAINER_STATUS)) {
+          List<Container> workerContainersStatus = applicationContext.getWorkerContainers();
+          List<Container> psContainersStatus = applicationContext.getPsContainers();
+          for(Container container : workerContainersStatus) {
+            if(!lastWorkerContainerStatus.containsKey(new XLearningContainerId(container.getId()))) {
+              lastWorkerContainerStatus.put(new XLearningContainerId(container.getId()), XLearningContainerStatus.STARTED);
+            }
+            if(!applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).equals(lastWorkerContainerStatus.get(new XLearningContainerId(container.getId())))) {
+              this.appendMessage("container " + container.getId().toString() + " status is " + applicationContext.getContainerStatus(new XLearningContainerId(container.getId())), false);
+              lastWorkerContainerStatus.put(new XLearningContainerId(container.getId()),applicationContext.getContainerStatus(new XLearningContainerId(container.getId())));
+            }
+          }
+          for(Container container : psContainersStatus) {
+            if(!lastPsContainerStatus.containsKey(new XLearningContainerId(container.getId()))) {
+              lastPsContainerStatus.put(new XLearningContainerId(container.getId()), XLearningContainerStatus.STARTED);
+            }
+            if(!applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).equals(lastPsContainerStatus.get(new XLearningContainerId(container.getId())))) {
+              this.appendMessage("container " + container.getId().toString() + " status is " + applicationContext.getContainerStatus(new XLearningContainerId(container.getId())), false);
+              lastPsContainerStatus.put(new XLearningContainerId(container.getId()),applicationContext.getContainerStatus(new XLearningContainerId(container.getId())));
+            }
+          }
+        }
         List<Container> workerContainers = applicationContext.getWorkerContainers();
         Map<XLearningContainerId, String> clientProgress = applicationContext.getReporterProgress();
         float total = 0.0f;
