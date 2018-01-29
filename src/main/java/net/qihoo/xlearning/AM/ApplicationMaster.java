@@ -288,25 +288,24 @@ public class ApplicationMaster extends CompositeService {
           fs.setPermission(jobLogPath, new FsPermission(LOG_FILE_PERMISSION));
           Map<String, Object> logMessage = new HashMap<>();
           logMessage.put(AMParams.APP_TYPE, xlearningAppType);
-          if ("TENSORFLOW".equals(xlearningAppType)) {
-            String tensorboardInfo = "-";
-            if (conf.getBoolean(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_ENABLE)) {
-              String boardLogPath;
-              if (conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR).indexOf("hdfs://") == -1) {
-                if (conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR).equals(XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR)) {
-                  boardLogPath = xlearningConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
-                      XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR) + "/" + applicationAttemptID.getApplicationId().toString();
-                } else {
-                  boardLogPath = conf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
-                      XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR);
-                }
+
+          String tensorboardInfo = "-";
+          if (conf.getBoolean(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_ENABLE)) {
+            String boardLogPath;
+            if (conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR).indexOf("hdfs://") == -1) {
+              if (conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR).equals(XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR)) {
+                boardLogPath = xlearningConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
+                    XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR) + "/" + applicationAttemptID.getApplicationId().toString();
               } else {
-                boardLogPath = conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR);
+                boardLogPath = conf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
+                    XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR);
               }
-              tensorboardInfo = boardLogPath;
+            } else {
+              boardLogPath = conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR);
             }
-            logMessage.put(AMParams.BOARD_INFO, tensorboardInfo);
+            tensorboardInfo = boardLogPath;
           }
+          logMessage.put(AMParams.BOARD_INFO, tensorboardInfo);
 
           String userName = StringUtils.split(conf.get("hadoop.job.ugi"), ',')[0];
           List<Container> workerContainers = applicationContext.getWorkerContainers();
