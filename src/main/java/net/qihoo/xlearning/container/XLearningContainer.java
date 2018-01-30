@@ -35,6 +35,7 @@ import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.text.SimpleDateFormat;
+import java.util.zip.GZIPOutputStream;
 
 public class XLearningContainer {
 
@@ -597,6 +598,9 @@ public class XLearningContainer {
         public void run() {
           try {
             OutputStreamWriter osw = new OutputStreamWriter(xlearningProcess.getOutputStream());
+            File gzFile = new File(conf.get(XLearningConfiguration.XLEARNING_INPUTFORMAT_CACHEFILE_NAME, XLearningConfiguration.DEFAULT_XLEARNING_INPUTFORMAT_CACHEFILE_NAME));
+            GZIPOutputStream gos = new GZIPOutputStream(new FileOutputStream(gzFile));
+            boolean isCache = conf.getBoolean(XLearningConfiguration.XLEARNING_INPUTFORMAT_CACHE, XLearningConfiguration.DEFAULT_XLEARNING_INPUTFORMAT_CACHE);
             List<InputSplit> inputs = Arrays.asList(amClient.getStreamInputSplit(containerId));
             JobConf jobConf = new JobConf(conf);
             RecordReader reader;
@@ -618,16 +622,35 @@ public class XLearningContainer {
                     }
                     osw.write(value.toString());
                     osw.write("\n");
+                    if(j == 0 && isCache) {
+                      if(conf.getInt(XLearningConfiguration.XLEARNING_STREAM_EPOCH, XLearningConfiguration.DEFAULT_XLEARNING_STREAM_EPOCH) > 1) {
+                        gos.write(value.toString().getBytes());
+                        gos.write("\n".getBytes());
+
+                        if((gzFile.length() / 1024 / 1024) > conf.getInt(XLearningConfiguration.XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT, XLearningConfiguration.DEFAULT_XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT)) {
+                          LOG.info("Inputformat cache file size is:" + gzFile.length() / 1024 / 1024 + "M "
+                              + "beyond the limit size:" + conf.getInt(XLearningConfiguration.XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT, XLearningConfiguration.DEFAULT_XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT) + "M.");
+                          gzFile.delete();
+                          LOG.info("Local cache file deleted and will not use cache.");
+                          isCache = false;
+                        }
+                      }
+                    }
                   } catch (EOFException e) {
                     finished = true;
+                    e.printStackTrace();
                   }
                 }
                 reader.close();
                 LOG.info("split " + (i + 1) + " is finished.");
               }
               LOG.info("Epoch " + (j + 1) + " finished.");
+              if(isCache) {
+                break;
+              }
             }
             osw.close();
+            gos.close();
           } catch (Exception e) {
             LOG.warn("Exception in thread stdinRedirectThread");
             e.printStackTrace();
@@ -754,7 +777,7 @@ public class XLearningContainer {
         }
       }
       String boardUrl = "http://" + boardHost + ":" + boardPort;
-      LOG.info("Executing borad command:" + boardCommand);
+      LOG.info("Executing board command:" + boardCommand);
       boardReservedSocket.close();
       try {
         final Process boardProcess = rt.exec(boardCommand, env);

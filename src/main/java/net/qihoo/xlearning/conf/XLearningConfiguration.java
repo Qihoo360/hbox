@@ -139,6 +139,18 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final Boolean DEFAULT_XLEARNING_INPUT_STREAM_SHUFFLE = false;
 
+  public static final String XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT= "xlearning.inputformat.cachesize.limit";
+
+  public static final int DEFAULT_XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT = 100 * 1024;
+
+  public static final String XLEARNING_INPUTFORMAT_CACHE = "xlearning.inputformat.cache";
+
+  public static final boolean DEFAULT_XLEARNING_INPUTFORMAT_CACHE = false;
+
+  public static final String XLEARNING_INPUTFORMAT_CACHEFILE_NAME = "xlearning.inputformat.cachefile.name";
+
+  public static final String DEFAULT_XLEARNING_INPUTFORMAT_CACHEFILE_NAME = "inputformatCache.gz";
+
   public static final String XLEARNING_INTERREAULST_DIR = "xlearning.interresult.dir";
 
   public static final String DEFAULT_XLEARNING_INTERRESULT_DIR = "/interResult_";
