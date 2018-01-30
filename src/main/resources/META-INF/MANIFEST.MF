@@ -1,4 +1,4 @@
-Manifest-Version: 1.1
+Manifest-Version: 1.2
 Created-By: net.qihoo.xitong
 Built-By: Qihoo
 Main-Class: net.qihoo.xlearning.client.Client

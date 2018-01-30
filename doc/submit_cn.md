@@ -28,11 +28,13 @@ worker-cores | 指定worker申请的CPU核数，默认个数为系统配置xlear
 worker-memory | 指定worker申请内存，默认单位为MB，默认大小为系统配置xlearning.worker.memory  
 queue | 指定作业提交队列，默认为系统配置xlearning.app.queue  
 priority | 指定作业提交优先级，默认为系统配置xlearning.app.priority对应级别  
-board-enable | 是否开启TensorBoard服务，默认为系统配置xlearning.tf.board.enable  
-board-index | 指定开启TensorBoard服务的work index，默认为系统配置xlearning.tf.board.worker.index  
-board-logdir | TensorBoard日志存放路径，默认为系统配置xlearning.tf.board.log.dir  
+board-enable | 是否开启Board服务，默认为系统配置xlearning.tf.board.enable  
+board-index | 指定开启Board服务的work index，默认为系统配置xlearning.tf.board.worker.index  
+board-logdir | Board日志存放路径，默认为系统配置xlearning.tf.board.log.dir  
 board-reloadinterval | TensorBoard数据加载时间间隔，默认为系统配置xlearning.tf.board.reload.interval  
-board-historydir | TensorBoard日志HDFS上传路径，默认为系统配置xlearning.tf.board.history.dir
+board-historydir | Board日志HDFS上传路径，默认为系统配置xlearning.tf.board.history.dir  
+board-modelpb | VisualDL加载的模型文件，默认为系统配置xlearning.board.modelpb  
+board-cacheTimeout | VisualDL加载缓存间隔时间，默认为系统配置xlearning.board.cache.timeout  
 input-strategy | 输入文件加载策略，默认为系统配置xlearning.input.strategy  
 inRenameInputFile | 当输入文件加载策略为DOWNLOAD时，设置是否对下载后的文件进行重命名，默认为系统配置xlearning.inputfile.rename  
 stream-epoch | 当输入文件加载策略为STREAM时，流式数据读取次数，默认为系统配置xlearning.stream.epoch  
