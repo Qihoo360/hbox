@@ -49,7 +49,7 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final String XLEARNING_AM_MEMORY = "xlearning.am.memory";
 
-  public static final int DEFAULT_XLEARNING_AM_MEMORY = 1024;
+  public static final long DEFAULT_XLEARNING_AM_MEMORY = 1024;
 
   public static final String XLEARNING_AM_CORES = "xlearning.am.cores";
 
@@ -57,7 +57,7 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final String XLEARNING_WORKER_MEMORY = "xlearning.worker.memory";
 
-  public static final int DEFAULT_XLEARNING_WORKER_MEMORY = 1024;
+  public static final long DEFAULT_XLEARNING_WORKER_MEMORY = 1024;
 
   public static final String XLEARNING_WORKER_VCORES = "xlearning.worker.cores";
 
@@ -69,7 +69,7 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final String XLEARNING_PS_MEMORY = "xlearning.ps.memory";
 
-  public static final int DEFAULT_XLEARNING_PS_MEMORY = 1024;
+  public static final long DEFAULT_XLEARNING_PS_MEMORY = 1024;
 
   public static final String XLEARNING_PS_VCORES = "xlearning.ps.cores";
 

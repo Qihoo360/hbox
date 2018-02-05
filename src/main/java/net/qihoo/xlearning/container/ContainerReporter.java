@@ -14,7 +14,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Method;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -165,13 +164,7 @@ public class ContainerReporter extends Thread {
             pTree.updateProcessTree();
             Long time = (new Date()).getTime();
             double currentPmemUsage = 0.0;
-            try {
-              Method getMemorySize = pTree.getClass().getMethod("getRssMemorySize");
-              currentPmemUsage = Double.parseDouble(df.format(((long) getMemorySize.invoke(pTree)) / 1024.0 / 1024.0 / 1024.0));
-            } catch (NoSuchMethodException e) {
-              LOG.debug("current hadoop version don't have the method getRssMemorySize of Class " + pTree.getClass().toString() + ". For More Detail: " + e);
-              currentPmemUsage = Double.parseDouble(df.format(pTree.getCumulativeRssmem() / 1024.0 / 1024.0 / 1024.0));
-            }
+            currentPmemUsage = Double.parseDouble(df.format(pTree.getRssMemorySize() / 1024.0 / 1024.0 / 1024.0));
             int cpuUsagePercentPerCore = (int) pTree.getCpuUsagePercent();
             if (cpuUsagePercentPerCore < 0) {
               cpuUsagePercentPerCore = 0;

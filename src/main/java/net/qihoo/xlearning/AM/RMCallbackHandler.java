@@ -5,13 +5,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
-import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync.CallbackHandler;
+import org.apache.hadoop.yarn.api.records.UpdatedContainer;
+import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class RMCallbackHandler implements CallbackHandler {
+public class RMCallbackHandler extends AMRMClientAsync.AbstractCallbackHandler{
   private static final Log LOG = LogFactory.getLog(RMCallbackHandler.class);
 
   private final List<Container> cancelContainers;
@@ -91,6 +92,11 @@ public class RMCallbackHandler implements CallbackHandler {
       LOG.info("Container " + containerStatus.getContainerId() + " completed with status "
           + containerStatus.getState().toString());
     }
+  }
+
+  @Override
+  public void onContainersUpdated(
+      List<UpdatedContainer> containers) {
   }
 
   @Override

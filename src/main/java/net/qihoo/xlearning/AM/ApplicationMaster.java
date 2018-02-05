@@ -30,8 +30,6 @@ import org.apache.hadoop.yarn.util.Records;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.math.RoundingMode;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -54,10 +52,10 @@ public class ApplicationMaster extends CompositeService {
   private String applicationMasterHostname;
   private String applicationMasterTrackingUrl;
   private String applicationHistoryUrl;
-  private int workerMemory;
+  private long workerMemory;
   private int workerVCores;
   private int workerNum;
-  private int psMemory;
+  private long psMemory;
   private int psVCores;
   private int psNum;
   private Boolean single;
@@ -130,10 +128,10 @@ public class ApplicationMaster extends CompositeService {
     applicationContext = new RunningAppContext();
 
     envs = System.getenv();
-    workerMemory = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
+    workerMemory = conf.getLong(XLearningConfiguration.XLEARNING_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
     workerVCores = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_VCORES, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_VCORES);
     workerNum = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_NUM, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM);
-    psMemory = conf.getInt(XLearningConfiguration.XLEARNING_PS_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEMORY);
+    psMemory = conf.getLong(XLearningConfiguration.XLEARNING_PS_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEMORY);
     psVCores = conf.getInt(XLearningConfiguration.XLEARNING_PS_VCORES, XLearningConfiguration.DEFAULT_XLEARNING_PS_VCORES);
     psNum = conf.getInt(XLearningConfiguration.XLEARNING_PS_NUM, XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM);
     single = conf.getBoolean(XLearningConfiguration.XLEARNING_TF_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_MODE_SINGLE);
@@ -162,16 +160,16 @@ public class ApplicationMaster extends CompositeService {
         + ", attemptId=" + applicationAttemptID.getAttemptId());
 
     if (applicationAttemptID.getAttemptId() > 1 && (conf.getInt(XLearningConfiguration.XLEARNING_APP_MAX_ATTEMPTS, XLearningConfiguration.DEFAULT_XLEARNING_APP_MAX_ATTEMPTS) > 1)) {
-      int maxMem = Integer.valueOf(envs.get(XLearningConstants.Environment.XLEARNING_CONTAINER_MAX_MEMORY.toString()));
+      long maxMem = Long.valueOf(envs.get(XLearningConstants.Environment.XLEARNING_CONTAINER_MAX_MEMORY.toString()));
       LOG.info("maxMem : " + maxMem);
-      workerMemory = workerMemory + (applicationAttemptID.getAttemptId() - 1) * (int) Math.ceil(workerMemory * conf.getDouble(XLearningConfiguration.XLEARNING_WORKER_MEM_AUTO_SCALE, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEM_AUTO_SCALE));
-      LOG.info("Auto Scale the Worker Memory from " + conf.getInt(XLearningConfiguration.XLEARNING_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY) + " to " + workerMemory);
+      workerMemory = workerMemory + (applicationAttemptID.getAttemptId() - 1) * (long) Math.ceil(workerMemory * conf.getDouble(XLearningConfiguration.XLEARNING_WORKER_MEM_AUTO_SCALE, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEM_AUTO_SCALE));
+      LOG.info("Auto Scale the Worker Memory from " + conf.getLong(XLearningConfiguration.XLEARNING_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY) + " to " + workerMemory);
       if (workerMemory > maxMem) {
         workerMemory = maxMem;
       }
       if (psNum > 0) {
-        psMemory = psMemory + (applicationAttemptID.getAttemptId() - 1) * (int) Math.ceil(psMemory * conf.getDouble(XLearningConfiguration.XLEARNING_PS_MEM_AUTO_SCALE, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEM_AUTO_SCALE));
-        LOG.info("Auto Scale the Ps Memory from " + conf.getInt(XLearningConfiguration.XLEARNING_PS_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEMORY) + " to " + psMemory);
+        psMemory = psMemory + (applicationAttemptID.getAttemptId() - 1) * (long) Math.ceil(psMemory * conf.getDouble(XLearningConfiguration.XLEARNING_PS_MEM_AUTO_SCALE, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEM_AUTO_SCALE));
+        LOG.info("Auto Scale the Ps Memory from " + conf.getLong(XLearningConfiguration.XLEARNING_PS_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEMORY) + " to " + psMemory);
         if (psMemory > maxMem) {
           psMemory = maxMem;
         }
@@ -615,14 +613,14 @@ public class ApplicationMaster extends CompositeService {
     Priority priority = Records.newRecord(Priority.class);
     priority.setPriority(appPriority);
     Resource workerCapability = Records.newRecord(Resource.class);
-    workerCapability.setMemory(workerMemory);
+    workerCapability.setMemorySize(workerMemory);
     workerCapability.setVirtualCores(workerVCores);
     workerContainerRequest = new ContainerRequest(workerCapability, null, null, priority);
     LOG.info("Create worker container request: " + workerContainerRequest.toString());
 
     if (("TENSORFLOW".equals(xlearningAppType) && !single) || ("MXNET".equals(xlearningAppType) && !singleMx)) {
       Resource psCapability = Records.newRecord(Resource.class);
-      psCapability.setMemory(psMemory);
+      psCapability.setMemorySize(psMemory);
       psCapability.setVirtualCores(psVCores);
       psContainerRequest = new ContainerRequest(psCapability, null, null, priority);
       LOG.info("Create ps container request: " + psContainerRequest.toString());
@@ -768,7 +766,7 @@ public class ApplicationMaster extends CompositeService {
     return containerEnv;
   }
 
-  private List<String> buildContainerLaunchCommand(int containerMemory) {
+  private List<String> buildContainerLaunchCommand(long containerMemory) {
     List<String> containerLaunchcommands = new ArrayList<>();
     LOG.info("Setting up container command");
     Vector<CharSequence> vargs = new Vector<>(10);
@@ -887,16 +885,7 @@ public class ApplicationMaster extends CompositeService {
     while (rmCallbackHandler.getAllocatedPsContainerNumber() < psNum) {
       List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
       List<String> blackHosts = rmCallbackHandler.getBlackHosts();
-      try {
-        Method updateBlacklist = amrmAsync.getClass().getMethod("updateBlacklist", List.class, List.class);
-        updateBlacklist.invoke(amrmAsync, blackHosts, null);
-      } catch (NoSuchMethodException e) {
-        LOG.debug("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
-      } catch (InvocationTargetException e) {
-        LOG.error("InvocationTargetException : " + e);
-      } catch (IllegalAccessException e) {
-        LOG.error("IllegalAccessException : " + e);
-      }
+      amrmAsync.updateBlacklist(blackHosts, null);
       if (cancelContainers.size() != 0) {
         for (Container container : cancelContainers) {
           LOG.info("Canceling container: " + container.getId().toString());
@@ -933,16 +922,7 @@ public class ApplicationMaster extends CompositeService {
     while (rmCallbackHandler.getAllocatedWorkerContainerNumber() < workerNum) {
       List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
       List<String> blackHosts = rmCallbackHandler.getBlackHosts();
-      try {
-        Method updateBlacklist = amrmAsync.getClass().getMethod("updateBlacklist", List.class, List.class);
-        updateBlacklist.invoke(amrmAsync, blackHosts, null);
-      } catch (NoSuchMethodException e) {
-        LOG.debug("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
-      } catch (InvocationTargetException e) {
-        LOG.error("invoke the method updateBlacklist of Class " + amrmAsync.getClass().toString() + " InvocationTargetException Error : " + e);
-      } catch (IllegalAccessException e) {
-        LOG.error("invoke the method updateBlacklist of Class " + amrmAsync.getClass().toString() + " IllegalAccessException Error : " + e);
-      }
+      amrmAsync.updateBlacklist(blackHosts, null);
       if (cancelContainers.size() != 0) {
         for (Container container : cancelContainers) {
           LOG.info("Canceling container: " + container.getId().toString());
@@ -1204,25 +1184,25 @@ public class ApplicationMaster extends CompositeService {
       Map<XLearningContainerId, XLearningContainerStatus> lastPsContainerStatus = new ConcurrentHashMap<>();
       while (!containerListener.isTrainCompleted()) {
         //report progress to client
-        if(conf.getBoolean(XLearningConfiguration.XLEARNING_REPORT_CONTAINER_STATUS, XLearningConfiguration.DEFAULT_XLEARNING_REPORT_CONTAINER_STATUS)) {
+        if (conf.getBoolean(XLearningConfiguration.XLEARNING_REPORT_CONTAINER_STATUS, XLearningConfiguration.DEFAULT_XLEARNING_REPORT_CONTAINER_STATUS)) {
           List<Container> workerContainersStatus = applicationContext.getWorkerContainers();
           List<Container> psContainersStatus = applicationContext.getPsContainers();
-          for(Container container : workerContainersStatus) {
-            if(!lastWorkerContainerStatus.containsKey(new XLearningContainerId(container.getId()))) {
+          for (Container container : workerContainersStatus) {
+            if (!lastWorkerContainerStatus.containsKey(new XLearningContainerId(container.getId()))) {
               lastWorkerContainerStatus.put(new XLearningContainerId(container.getId()), XLearningContainerStatus.STARTED);
             }
-            if(!applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).equals(lastWorkerContainerStatus.get(new XLearningContainerId(container.getId())))) {
+            if (!applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).equals(lastWorkerContainerStatus.get(new XLearningContainerId(container.getId())))) {
               this.appendMessage("container " + container.getId().toString() + " status is " + applicationContext.getContainerStatus(new XLearningContainerId(container.getId())), false);
-              lastWorkerContainerStatus.put(new XLearningContainerId(container.getId()),applicationContext.getContainerStatus(new XLearningContainerId(container.getId())));
+              lastWorkerContainerStatus.put(new XLearningContainerId(container.getId()), applicationContext.getContainerStatus(new XLearningContainerId(container.getId())));
             }
           }
-          for(Container container : psContainersStatus) {
-            if(!lastPsContainerStatus.containsKey(new XLearningContainerId(container.getId()))) {
+          for (Container container : psContainersStatus) {
+            if (!lastPsContainerStatus.containsKey(new XLearningContainerId(container.getId()))) {
               lastPsContainerStatus.put(new XLearningContainerId(container.getId()), XLearningContainerStatus.STARTED);
             }
-            if(!applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).equals(lastPsContainerStatus.get(new XLearningContainerId(container.getId())))) {
+            if (!applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).equals(lastPsContainerStatus.get(new XLearningContainerId(container.getId())))) {
               this.appendMessage("container " + container.getId().toString() + " status is " + applicationContext.getContainerStatus(new XLearningContainerId(container.getId())), false);
-              lastPsContainerStatus.put(new XLearningContainerId(container.getId()),applicationContext.getContainerStatus(new XLearningContainerId(container.getId())));
+              lastPsContainerStatus.put(new XLearningContainerId(container.getId()), applicationContext.getContainerStatus(new XLearningContainerId(container.getId())));
             }
           }
         }

@@ -222,12 +222,12 @@ public class Client {
   }
 
   private void checkArguments(XLearningConfiguration conf, GetNewApplicationResponse newApplication) {
-    int maxMem = newApplication.getMaximumResourceCapability().getMemory();
+    long maxMem = newApplication.getMaximumResourceCapability().getMemorySize();
     LOG.info("Max mem capability of resources in this cluster " + maxMem);
     int maxVCores = newApplication.getMaximumResourceCapability().getVirtualCores();
     LOG.info("Max vcores capability of resources in this cluster " + maxVCores);
 
-    int amMem = conf.getInt(XLearningConfiguration.XLEARNING_AM_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_AM_MEMORY);
+    long amMem = conf.getLong(XLearningConfiguration.XLEARNING_AM_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_AM_MEMORY);
     int amCores = conf.getInt(XLearningConfiguration.XLEARNING_AM_CORES, XLearningConfiguration.DEFAULT_XLEARNING_AM_CORES);
     if (amMem > maxMem) {
       throw new RequestOverLimitException("AM memory requested " + amMem +
@@ -251,7 +251,7 @@ public class Client {
     LOG.info("Apply for am vcores " + amCores);
 
     int workerNum = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_NUM, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM);
-    int workerMemory = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
+    long workerMemory = conf.getLong(XLearningConfiguration.XLEARNING_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
     int workerVcores = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_VCORES, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_VCORES);
     if (workerNum < 1) {
       throw new IllegalArgumentException(
@@ -295,7 +295,7 @@ public class Client {
       }
       LOG.info("Apply for ps number " + psNum);
       if (!single) {
-        int psMemory = conf.getInt(XLearningConfiguration.XLEARNING_PS_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEMORY);
+        long psMemory = conf.getLong(XLearningConfiguration.XLEARNING_PS_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEMORY);
         int psVcores = conf.getInt(XLearningConfiguration.XLEARNING_PS_VCORES, XLearningConfiguration.DEFAULT_XLEARNING_PS_VCORES);
         if (psMemory > maxMem) {
           throw new RequestOverLimitException("ps memory requested " + psMemory +
@@ -608,8 +608,8 @@ public class Client {
     LOG.info("Building application master launch command");
     List<String> appMasterArgs = new ArrayList<>(20);
     appMasterArgs.add("${JAVA_HOME}" + "/bin/java");
-    appMasterArgs.add("-Xms" + conf.getInt(XLearningConfiguration.XLEARNING_AM_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_AM_MEMORY) + "m");
-    appMasterArgs.add("-Xmx" + conf.getInt(XLearningConfiguration.XLEARNING_AM_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_AM_MEMORY) + "m");
+    appMasterArgs.add("-Xms" + conf.getLong(XLearningConfiguration.XLEARNING_AM_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_AM_MEMORY) + "m");
+    appMasterArgs.add("-Xmx" + conf.getLong(XLearningConfiguration.XLEARNING_AM_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_AM_MEMORY) + "m");
     appMasterArgs.add(ApplicationMaster.class.getName());
     appMasterArgs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
         + "/" + ApplicationConstants.STDOUT);
@@ -626,7 +626,7 @@ public class Client {
     appMasterLaunchcommands.add(command.toString());
 
     Resource capability = Records.newRecord(Resource.class);
-    capability.setMemory(conf.getInt(XLearningConfiguration.XLEARNING_AM_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_AM_MEMORY));
+    capability.setMemorySize(conf.getInt(XLearningConfiguration.XLEARNING_AM_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_AM_MEMORY));
     capability.setVirtualCores(conf.getInt(XLearningConfiguration.XLEARNING_AM_CORES, XLearningConfiguration.DEFAULT_XLEARNING_AM_CORES));
     applicationContext.setResource(capability);
     ContainerLaunchContext amContainer = ContainerLaunchContext.newInstance(

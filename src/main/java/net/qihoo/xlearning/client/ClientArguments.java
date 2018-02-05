@@ -17,12 +17,12 @@ class ClientArguments {
   private Options allOptions;
   String appName;
   String appType;
-  int amMem;
+  long amMem;
   int amCores;
-  int workerMemory;
+  long workerMemory;
   int workerVCores;
   int workerNum;
-  int psMemory;
+  long psMemory;
   int psVCores;
   int psNum;
   String[] xlearningFiles;
@@ -393,13 +393,13 @@ class ClientArguments {
     new HelpFormatter().printHelp("Client", opts);
   }
 
-  private int getNormalizedMem(String rawMem) {
+  private long getNormalizedMem(String rawMem) {
     if (rawMem.endsWith("G") || rawMem.endsWith("g")) {
-      return Integer.parseInt(rawMem.substring(0, rawMem.length() - 1)) * 1024;
+      return Long.parseLong(rawMem.substring(0, rawMem.length() - 1)) * 1024;
     } else if (rawMem.endsWith("M") || rawMem.endsWith("m")) {
-      return Integer.parseInt(rawMem.substring(0, rawMem.length() - 1));
+      return Long.parseLong(rawMem.substring(0, rawMem.length() - 1));
     } else {
-      return Integer.parseInt(rawMem);
+      return Long.parseLong(rawMem);
     }
   }
 
