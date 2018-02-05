@@ -45,8 +45,8 @@ xlearning.tf.board.history.dir | /tmp/XLearning/eventLog | 指定Board日志上�
 xlearning.tf.board.reload.interval | 1 | 指定TensorBoard数据加载时间间隔，单位为秒  
 xlearning.board.modelpb | "" | 指定VisualDL加载的模型文件  
 xlearning.board.cache.timeout | 20 | 指定VisualDL缓存加载间隔，单位为秒  
-xlearning.tf.board.path | /bin/tensorboard | 指定TensorBoard服务路径  
-xlearning.board.path | /bin/visualDL | 指定VisualDL服务路径  
+xlearning.tf.board.path | tensorboard | 指定TensorBoard服务路径  
+xlearning.board.path | visualDL | 指定VisualDL服务路径  
 
 
 

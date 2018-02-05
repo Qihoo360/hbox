@@ -45,8 +45,8 @@ xlearning.tf.board.history.dir | /tmp/XLearning/eventLog | specify the HDFS path
 xlearning.tf.board.reload.interval | 1 | how often the backend should load more data of event log (in seconds) for tensorboard  
 xlearning.board.modelpb | "" | model proto in ONNX format for VisualDL  
 xlearning.board.cache.timeout | 20 | memory cache timeout duration in seconds for VisualDL  
-xlearning.tf.board.path | /bin/tensorboard | the path of the tensorboard  
-xlearning.board.path | /bin/visualDL | the path of the visualDL  
+xlearning.tf.board.path | tensorboard | the path of the tensorboard  
+xlearning.board.path | visualDL | the path of the visualDL  
 
 
 ### System Configuration
@@ -71,7 +71,7 @@ xlearning.container.heartbeat.retry | 3 | Maximum number of retries for the cont
 xlearning.container.update.appstatus.interval | 3 * 1000 | how often the containers get the state of the application process (in milliseconds)  
 xlearning.container.auto.create.output.dir | true | If set to true, the containers create the local output path automatically  
 xlearning.log.pull.interval | 10000 | interval between the client get the log output of the AM (in milliseconds)  
-xlearning.user.classpath.first | true |  whether user's job jar should be the first one on class path or not.  
+xlearning.user.classpath.first | true |  whether user job jar should be the first one on class path or not.  
 xlearning.worker.mem.autoscale | 0.5 | automatic memory scale ratio of worker when application retry after failed.   
 xlearning.ps.mem.autoscale | 0.2 | automatic memory scale ratio of ps when application retry after failed.   
 xlearning.app.max.attempts | 1 | the number of application attempts， default not retry after failed.   

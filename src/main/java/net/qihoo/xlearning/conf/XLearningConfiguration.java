@@ -168,7 +168,7 @@ public class XLearningConfiguration extends YarnConfiguration {
   };
 
   public static final String XLEARNING_TF_BOARD_PATH = "xlearning.tf.board.path";
-  public static final String DEFAULT_XLEARNING_TF_BOARD_PATH = "/bin/nvidia";
+  public static final String DEFAULT_XLEARNING_TF_BOARD_PATH = "tensorboard";
   public static final String XLEARNING_TF_BOARD_WORKER_INDEX = "xlearning.tf.board.worker.index";
   public static final int DEFAULT_XLEARNING_TF_BOARD_WORKER_INDEX = 0;
   public static final String XLEARNING_TF_BOARD_RELOAD_INTERVAL = "xlearning.tf.board.reload.interval";
@@ -180,7 +180,7 @@ public class XLearningConfiguration extends YarnConfiguration {
   public static final String XLEARNING_TF_BOARD_HISTORY_DIR = "xlearning.tf.board.history.dir";
   public static final String DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR = "/tmp/XLearning/eventLog";
   public static final String XLEARNING_BOARD_PATH = "xlearning.board.path";
-  public static final String DEFAULT_XLEARNING_BOARD_PATH = "/bin/visualDL";
+  public static final String DEFAULT_XLEARNING_BOARD_PATH = "visualDL";
   public static final String XLEARNING_BOARD_MODELPB = "xlearning.board.modelpb";
   public static final String DEFAULT_XLEARNING_BOARD_MODELPB = "";
   public static final String XLEARNING_BOARD_CACHE_TIMEOUT = "xlearning.board.cache.timeout";

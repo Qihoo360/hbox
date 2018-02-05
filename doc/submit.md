@@ -16,7 +16,7 @@ cacheFile | the required files in the HDFS path
 launch-cmd | execute command  
 user-path | the append for the environment variable $PATH  
 jars | the required jar files  
-user-classpath-first | whether user's job jar should be the first one on class path or not, default as the configure of xlearning.user.classpath.first  
+user-classpath-first | whether user job jar should be the first one on class path or not, default as the configure of xlearning.user.classpath.first  
 conf | set the configuration  
 am-cores | number of cores to use for the AM process, default as the configure of xlearning.am.cores  
 am-memory | amount of memory to use for the AM process (in MB)，default as the configure of xlearning.am.memory  
