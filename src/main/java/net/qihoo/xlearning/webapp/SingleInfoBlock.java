@@ -3,11 +3,11 @@ package net.qihoo.xlearning.webapp;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TD;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TR;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TD;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import java.text.SimpleDateFormat;
@@ -32,15 +32,15 @@ public class SingleInfoBlock extends HtmlBlock implements AMParams {
           th("ui-state-default", "Start Time").
           th("ui-state-default", "Finish Time").
           th("ui-state-default", "Reporter Progress").
-          _()._().
+          __().__().
           tbody();
 
       for (int i = 0; i < numContainers; i++) {
         TD<TR<TBODY<TABLE<Hamlet>>>> td = tbody.
-            _().tbody("ui-widget-content").
+            __().tbody("ui-widget-content").
             tr().
             $style("text-align:center;").td();
-        td.span().$title(String.format($(CONTAINER_ID + i)))._().
+        td.span().$title(String.format($(CONTAINER_ID + i))).__().
             a(String.format("http://%s/node/containerlogs/%s/%s",
                 $(CONTAINER_HTTP_ADDRESS + i),
                 $(CONTAINER_ID + i),
@@ -49,100 +49,100 @@ public class SingleInfoBlock extends HtmlBlock implements AMParams {
         String containerMachine = $(CONTAINER_HTTP_ADDRESS + i);
 
         if ($(CONTAINER_REPORTER_PROGRESS + i).equals("progress log format error")) {
-          td._().
+          td.__().
               td(containerMachine.split(":")[0]).
               td($(CONTAINER_STATUS + i)).
               td($(CONTAINER_START_TIME + i)).
               td($(CONTAINER_FINISH_TIME + i)).
-              td($(CONTAINER_REPORTER_PROGRESS + i)).td()._()._();
+              td($(CONTAINER_REPORTER_PROGRESS + i)).td().__().__();
         } else if ($(CONTAINER_REPORTER_PROGRESS + i).equals("0.00%")) {
-          td._().
+          td.__().
               td(containerMachine.split(":")[0]).
               td($(CONTAINER_STATUS + i)).
               td($(CONTAINER_START_TIME + i)).
               td($(CONTAINER_FINISH_TIME + i)).
-              td("N/A").td()._()._();
+              td("N/A").td().__().__();
         } else {
-          td._().
+          td.__().
               td(containerMachine.split(":")[0]).
               td($(CONTAINER_STATUS + i)).
               td($(CONTAINER_START_TIME + i)).
               td($(CONTAINER_FINISH_TIME + i)).td()
               .div().$class("ui-progressbar ui-widget ui-widget-content ui-corner-all").$title($(CONTAINER_REPORTER_PROGRESS + i))
               .div().$class("ui-progressbar-value ui-widget-header ui-corner-left").$style("width:" + $(CONTAINER_REPORTER_PROGRESS + i))
-              ._()._()._()._();
+              .__().__().__().__();
         }
       }
 
       if (!$(BOARD_INFO).equals("no")) {
         if (!$(BOARD_INFO).contains("http")) {
-          tbody._()._().div().$style("margin:20px 2px;")._(" ")._().
+          tbody.__().__().div().$style("margin:20px 2px;").__(" ").__().
               h2("View Board:").
               table("#Board").
               thead("ui-widget-header").
               tr().
               th("ui-state-default", "Board Info").
-              _()._().
+              __().__().
               tbody("ui-widget-content").
               tr().
               $style("text-align:center;").
               td(String.format($(BOARD_INFO))).
-              _()._()._();
+              __().__().__();
         } else {
-          tbody._()._().div().$style("margin:20px 2px;")._(" ")._().
+          tbody.__().__().div().$style("margin:20px 2px;").__(" ").__().
               h2("View Board:").
               table("#Board").
               thead("ui-widget-header").
               tr().
               th("ui-state-default", "Board Info").
-              _()._().
+              __().__().
               tbody("ui-widget-content").
               tr().
               $style("text-align:center;").
-              td().span().$title(String.format($(BOARD_INFO)))._().
+              td().span().$title(String.format($(BOARD_INFO))).__().
               a(String.format($(BOARD_INFO)),
                   String.format($(BOARD_INFO))).
-              _()._()._()._();
+              __().__().__().__();
         }
       } else {
-        tbody._()._();
+        tbody.__().__();
       }
 
-      html.div().$style("margin:20px 2px;")._(" ")._();
+      html.div().$style("margin:20px 2px;").__(" ").__();
       int saveModelTotal = Integer.parseInt($(SAVE_MODEL_TOTAL));
       int saveModelSize = Integer.parseInt($(OUTPUT_TOTAL));
       if ((saveModelTotal > 0) && (saveModelSize > 0)) {
         if (!Boolean.valueOf($(SAVE_MODEL))) {
-          html.div().button().$id("saveModel").$onclick("savedModel()").b("Save Model")._()._();
+          html.div().button().$id("saveModel").$onclick("savedModel()").b("Save Model").__().__();
           StringBuilder script = new StringBuilder();
           script.append("function savedModel(){")
               .append("document.getElementById(\"saveModel\").disable=true;")
               .append("document.location.href='/proxy/").append($(APP_ID))
               .append("/proxy/savedmodel';")
               .append("}");
-          html.script().$type("text/javascript")._(script.toString())._();
+          html.script().$type("text/javascript").__(script.toString()).__();
           if (!Boolean.valueOf($(LAST_SAVE_STATUS))) {
-            html.div().$style("margin:20px 2px;")._(" ")._();
+            html.div().$style("margin:20px 2px;").__(" ").__();
           } else {
-            html.div().$style("margin:20px 2px;")._("saved the model completed!")._();
+            html.div().$style("margin:20px 2px;").__("saved the model completed!").__();
           }
         } else {
-          html.div().button().$id("saveModel").$disabled().b("Save Model")._()._();
+          html.div().button().$id("saveModel").$disabled().b("Save Model").__().__();
           if (!$(SAVE_MODEL_STATUS).equals($(SAVE_MODEL_TOTAL))) {
-            html.div().$style("margin:20px 2px;")._(String.format("saving the model ... %s/%s",
-                $(SAVE_MODEL_STATUS), $(SAVE_MODEL_TOTAL)))._();
+            html.div().$style("margin:20px 2px;").__(String.format("saving the model ... %s/%s",
+                $(SAVE_MODEL_STATUS), $(SAVE_MODEL_TOTAL))).__();
           } else {
             StringBuilder script = new StringBuilder();
             script.append("location.href='/proxy/").append($(APP_ID))
                 .append("';");
-            html.script().$type("text/javascript")._(script.toString())._();
+            html.script().$type("text/javascript").__(script.toString()).__();
           }
         }
       } else if (saveModelSize == 0) {
-        html.div().button().$id("saveModel").$disabled().b("Save Model")._()._();
-        html.div().$style("margin:20px 2px;")._("don't have the local output dir")._();
+        html.div().button().$id("saveModel").$disabled().b("Save Model").__().__();
+        html.div().$style("margin:20px 2px;").__("don't have the local output dir").__();
       } else if (saveModelTotal == 0) {
-        html.div().button().$id("saveModel").$disabled().b("Save Model")._()._();
+        html.div().button().$id("saveModel").$disabled().b("Save Model").__().__();
       }
 
       int modelSaveTotal = Integer.parseInt($(TIMESTAMP_TOTAL));
@@ -154,13 +154,13 @@ public class SingleInfoBlock extends HtmlBlock implements AMParams {
             tr().
             th("ui-state-default", "Saved timeStamp").
             th("ui-state-default", "Saved path").
-            _()._().
+            __().__().
             tbody();
 
         for (int i = 0; i < modelSaveTotal; i++) {
           String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(Long.parseLong($(TIMESTAMP_LIST + i))));
           TD<TR<TBODY<TABLE<Hamlet>>>> td = tbodySave.
-              _().tbody("ui-widget-content").
+              __().tbody("ui-widget-content").
               tr().
               $style("text-align:center;").
               td(timeStamp).
@@ -168,21 +168,21 @@ public class SingleInfoBlock extends HtmlBlock implements AMParams {
 
           String pathStr = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date(Long.parseLong($(TIMESTAMP_LIST + i))));
           for (int j = 0; j < saveModelSize; j++) {
-            td.p()._($(OUTPUT_PATH + j) + pathStr)._();
+            td.p().__($(OUTPUT_PATH + j) + pathStr).__();
           }
-          td._()._();
+          td.__().__();
         }
-        tbodySave._()._();
+        tbodySave.__().__();
       }
-      html.div().$style("margin:20px 2px;")._(" ")._();
+      html.div().$style("margin:20px 2px;").__(" ").__();
       if (Boolean.parseBoolean($(CONTAINER_CPU_METRICS_ENABLE))) {
         for (int i = 0; i < numWorkers; i++) {
           if (!$("cpuMemMetrics" + i).equals("") && $("cpuMemMetrics" + i) != null) {
-            html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px")._(String.format($(CONTAINER_ID + i)) + " metrics:")._();
+            html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px").__(String.format($(CONTAINER_ID + i)) + " metrics:").__();
 
-            html.script().$src("/proxy/" + $(APP_ID) + "/static/xlWebApp/jquery-3.1.1.min.js")._();
-            html.script().$src("/proxy/" + $(APP_ID) + "/static/xlWebApp/highstock.js")._();
-            html.script().$src("/proxy/" + $(APP_ID) + "/static/xlWebApp/exporting.js")._();
+            html.script().$src("/proxy/" + $(APP_ID) + "/static/xlWebApp/jquery-3.1.1.min.js").__();
+            html.script().$src("/proxy/" + $(APP_ID) + "/static/xlWebApp/highstock.js").__();
+            html.script().$src("/proxy/" + $(APP_ID) + "/static/xlWebApp/exporting.js").__();
 
             String containerCpuMemID = "containerCpuMem" + i;
             String containerCpuUtilID = "containerCpuUtil" + i;
@@ -196,13 +196,13 @@ public class SingleInfoBlock extends HtmlBlock implements AMParams {
                 "            data: " + $("cpuUtilMetrics" + i) + "\n" +
                 "        }]";
             html.div()
-                .div().$id(containerCpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
-                .div().$id(containerCpuUtilID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
-                ._();
+                .div().$id(containerCpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block").__()
+                .div().$id(containerCpuUtilID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block").__()
+                .__();
             String css = "." + containerClass + "{\n" +
                 "    display:inline-block;\n" +
                 "}";
-            html.style().$type("text/css")._(css)._();
+            html.style().$type("text/css").__(css).__();
             String striptHead = "Highcharts.setOptions({\n" +
                 "    global: {\n" +
                 "        useUTC: false\n" +
@@ -282,12 +282,12 @@ public class SingleInfoBlock extends HtmlBlock implements AMParams {
                 "    series: " + seriesCpuUtilOptions + "\n" +
                 "});\n";
 
-            html.script().$type("text/javascript")._(striptHead + striptBody)._();
+            html.script().$type("text/javascript").__(striptHead + striptBody).__();
           }
         }
       }
     } else {
-      html.div().$style("font-size:20px;")._("Waiting for all containers allocated......")._();
+      html.div().$style("font-size:20px;").__("Waiting for all containers allocated......").__();
     }
   }
 }

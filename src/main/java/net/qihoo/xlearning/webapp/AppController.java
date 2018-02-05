@@ -1,7 +1,6 @@
 package net.qihoo.xlearning.webapp;
 
 import com.google.gson.*;
-import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
 import net.qihoo.xlearning.api.XLearningConstants;
 import net.qihoo.xlearning.common.OutputInfo;
@@ -15,12 +14,10 @@ import org.apache.hadoop.yarn.webapp.Controller;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
-import java.lang.reflect.Type;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 
