@@ -86,9 +86,36 @@ XLearning系统包括三种组件：
 
 - CentOS 7.2  
 - Java >= 1.8
-- Hadoop = 3.1.0 [目前社区未发正式版，为3.1.0-SNAPSHOT，详细说明可见FAQ中的`hadoop 3.1.0-SNAPSHOT`部分]
+- Hadoop = 3.1.0 [目前社区未发正式版，为3.1.0-SNAPSHOT，详细说明可见3.1]
 - [可选]各计算节点具有所需学习平台的依赖环境，如TensorFlow、numpy、Caffe等。
-- nvidia-smi : 用于获取gpu信息
+- nvidia-smi : 用于获取gpu信息  
+
+#### 3.1 Hadoop 3.1.0-SNAPSHOT 集群配置注意事项
+`xlearning-gpu-beta` 版本中的gpu申请分配功能是基于 `hadoop3.1.0-SNAPSHOT` 版本中的gpu调度隔离功能来实现的。在使用 `hadoop3.1.0-SNAPSHOT` 版本中gpu资源的调度隔离时，需要注重以下几个方面：  
+- 所需java版本为1.8  
+- 因gpu资源采用cgroup实现的隔离，`yarn.nodemanager.container-executor.class`需要配置为`org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor`，并进行相关设置；  
+- 采用默认的资源调度策略`CapacityScheduler`，注意设置`yarn.scheduler.capacity.resource-calculator`为`org.apache.hadoop.yarn.util.resource.DominantResourceCalculator`；  
+- 配置gpu资源信息：  
+1）yarn-site.xml 中配置类似如下：  
+
+      <!-- resource -->
+      <property>
+        <name>yarn.nodemanager.resource-plugins</name>
+        <value>yarn.io/gpu</value>
+      </property>
+      <property>
+        <name>yarn.nodemanager.resource-plugins.gpu.allowed-gpu-devices</name>
+        <value>auto</value>
+      </property>
+
+2）resource-types.xml 中配置类似如下：  
+
+      <configuration>
+        <property>
+          <name>yarn.resource-types</name>
+          <value>yarn.io/gpu</value>
+        </property>
+      </configuration>
 
 
 ### 4 XLearning客户端部署方法  
