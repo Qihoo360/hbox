@@ -21,10 +21,12 @@ conf | 设置系统配置
 am-cores | 指定AM申请使用的CPU核数，默认个数为系统配置xlearning.am.cores  
 am-memory | 指定AM申请使用的内存大小，默认单位MB，默认大小为系统配置xlearning.am.memory  
 ps-num | 指定ps申请数目，默认个数为系统配置xlearning.ps.num  
-ps-cores | 指定ps申请的CPU核数，默认个数为系统配置xlearning.ps.cores  
+ps-cores | 指定ps申请的CPU核数，默认个数为系统配置xlearning.ps.cores
+ps-gcores | 指定ps申请的GPU卡数，默认个数为系统配置xlearning.ps.gcores
 ps-memory | 指定ps申请的内存大小，默认单位为MB，默认大小为系统配置xlearning.ps.memory  
 worker-num | 指定worker申请数目，默认个数为系统配置xlearning.worker.num  
-worker-cores | 指定worker申请的CPU核数，默认个数为系统配置xlearning.worker.cores  
+worker-cores | 指定worker申请的CPU核数，默认个数为系统配置xlearning.worker.cores
+worker-gcores | 指定worker申请的GPU卡数，默认个数为系统配置xlearning.worker.gcores
 worker-memory | 指定worker申请内存，默认单位为MB，默认大小为系统配置xlearning.worker.memory  
 queue | 指定作业提交队列，默认为系统配置xlearning.app.queue  
 priority | 指定作业提交优先级，默认为系统配置xlearning.app.priority对应级别  

@@ -21,10 +21,12 @@ conf | set the configuration
 am-cores | number of cores to use for the AM process, default as the configure of xlearning.am.cores  
 am-memory | amount of memory to use for the AM process (in MB)，default as the configure of xlearning.am.memory  
 ps-num | number of ps containers to use for the application, default as the configure of xlearning.ps.num  
-ps-cores | number of cores to use for the ps process, default as the configure of xlearning.ps.cores  
+ps-cores | number of cores to use for the ps process, default as the configure of xlearning.ps.cores
+ps-gcores | number of gpu to use for the ps process, default as the configure of xlearning.ps.gcores
 ps-memory | amount of memory to use for the ps process (in MB), default as the configure of xlearning.ps.memory  
 worker-num | number of worker containers to use for the application, default as the configure of xlearning.worker.num  
-worker-cores | number of cores to use for the worker process, default as the configure of xlearning.worker.cores  
+worker-cores | number of cores to use for the worker process, default as the configure of xlearning.worker.cores
+worker-gcores | number of gpu to use for the worker process, default as the configure of xlearning.worker.gcores
 worker-memory | amount of memory to use for the worker process(in MB), default as the configure of xlearning.worker.memory  
 queue | the queue of application submitted to, default as the configure of xlearning.app.queue  
 priority | the priority of application, default as the configure of xlearning.app.priority  

@@ -64,7 +64,7 @@ XLearning系统包括三种组件：
 
 ### 1 编译环境依赖 
 
-- jdk >= 1.7
+- jdk >= 1.8
 - Maven >= 3.3
 
 ### 2 编译方法  
@@ -85,9 +85,10 @@ XLearning系统包括三种组件：
 ### 3 部署环境依赖  
 
 - CentOS 7.2  
-- Java >= 1.7
-- Hadoop = 2.6，2.7，2.8
-- [可选]各计算节点具有所需学习平台的依赖环境，如TensorFlow、numpy、Caffe等。  
+- Java >= 1.8
+- Hadoop = 3.1.0 [目前社区未发正式版，为3.1.0-SNAPSHOT，详细说明可见FAQ中的`hadoop 3.1.0-SNAPSHOT`部分]
+- [可选]各计算节点具有所需学习平台的依赖环境，如TensorFlow、numpy、Caffe等。
+- nvidia-smi : 用于获取gpu信息
 
 
 ### 4 XLearning客户端部署方法  
@@ -130,6 +131,7 @@ XLearning系统包括三种组件：
        --worker-memory 10G \
        --worker-num 2 \
        --worker-cores 3 \
+       --worker-gcores 1 \
        --ps-memory 1G \
        --ps-num 1 \
        --ps-cores 2 \
@@ -149,7 +151,8 @@ files | 需要传给各container的本地文件，包括 demo.py、dataDeal.py
 launch-cmd | 训练执行命令  
 worker-memory | worker内存使用为10G  
 worker-num | worker数目为2  
-worker-cores | worker使用CPU核数为3 
+worker-cores | worker使用CPU核数为3
+worker-gcores | worker使用GPU卡数为1
 ps-memory | parameterServer内存使用为1G  
 ps-num | parameterServer数目为1  
 ps-cores | parameterServer使用CPU核数为2  

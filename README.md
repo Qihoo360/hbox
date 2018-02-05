@@ -61,7 +61,7 @@ Except the automatic construction of the ClusterSpec at the distributed mode Ten
 
 ### 1 Compilation Environment Requirements 
 
-- jdk >= 1.7
+- jdk >= 1.8
 - Maven >= 3.3
 
 ### 2 Compilation Method 
@@ -84,9 +84,10 @@ Unpacking the distribution package, the following subdirectories will be generat
 ### 3 Deployment Environment Requirements  
 
 - CentOS 7.2  
-- Java >= 1.7
-- Hadoop = 2.6, 2.7, 2.8
-- [optional] Dependent environment for deep learning frameworks at the cluster nodes, such as TensorFlow, numpy, Caffe.  
+- Java >= 1.8
+- Hadoop = 3.1.0, [Current is 3.1.0-SNAPSHOT, More Detail see the part `hadoop 3.1.0-SNAPSHOT` of faq]
+- [optional] Dependent environment for deep learning frameworks at the cluster nodes, such as TensorFlow, numpy, Caffe.
+- nvidia-smi, to get the information of gpu
 
 
 ### 4 XLearning Client Deployment Guide  
@@ -128,6 +129,7 @@ upload the "data" directory under the root of unpacking distribution package to 
        --worker-memory 10G \
        --worker-num 2 \
        --worker-cores 3 \
+       --worker-gcores 1 \
        --ps-memory 1G \
        --ps-num 1 \
        --ps-cores 2 \
@@ -146,7 +148,8 @@ files | application program and required local files, including demo.py, dataDea
 launch-cmd | execute command  
 worker-memory | amount of memory to use for the worker process is 10GB  
 worker-num | number of worker containers to use for the application is 2  
-worker-cores | number of cores to use for the worker process is 3  
+worker-cores | number of cores to use for the worker process is 3
+worker-gcores | number of gpu to use for the worker process is 1
 ps-memory | amount of memory to use for the ps process is 1GB  
 ps-num | number of ps containers to use for the application is 1  
 ps-cores | number of cores to use for the ps process is 2  

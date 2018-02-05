@@ -12,10 +12,12 @@ xlearning.am.memory | 1024 | AM申请所需内存大小，单位为MB
 xlearning.am.cores | 1 | AM申请所需CPU核数  
 xlearning.worker.num | 1 | worker启动数目  
 xlearning.worker.memory | 1024 | worker申请使用内存大小，单位为MB  
-xlearning.worker.cores | 1 | worker申请使用CPU核数  
+xlearning.worker.cores | 1 | worker申请使用CPU核数
+xlearning.worker.gcores | 0 | worker申请使用GPU卡数
 xlearning.ps.num | 0 | ps启动数目，默认作业不使用ParameterServer机制  
 xlearning.ps.memory | 1024 | ps申请使用内存大小，默认单位为MB  
-xlearning.ps.cores | 1 | ps申请使用CPU核数  
+xlearning.ps.cores | 1 | ps申请使用CPU核数
+xlearning.ps.gcores | 0 | ps申请使用GPU卡数
 xlearning.app.queue | DEFAULT | 作业提交队列  
 xlearning.app.priority | 3 | 作业优先级，级别0-5，分别对应DEFAULT、VERY\_LOW、LOW、NORMAL、HIGH、VERY\_HIGH  
 xlearning.input.strategy | DOWNLOAD | 输入文件加载模式，目前主要有DOWNLOAD、STREAM、PLACEHOLDER  

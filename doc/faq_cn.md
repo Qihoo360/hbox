@@ -114,3 +114,30 @@ XLearning1.1版本中支持作业失败重试，并且重试后作业worker与ps
 ### 11. 作业提交后，出现报错信息：java.io.IOException: Cannot run program "tensorboard": error=2, No such file or directory, 如何解决？  
 在XLearning客户端提交作业时，添加 --user-path "/root/anaconda2/lib/python2.7/site-packages/tensorboard" ，指定tensorboard路径。   
 
+### hadoop 3.1.0-SNAPSHOT 集群配置注意事项
+`xlearning-gpu-beta` 版本中的gpu申请分配功能是基于 `hadoop3.1.0-SNAPSHOT` 版本中的gpu调度隔离功能来实现的。在使用 `hadoop3.1.0-SNAPSHOT` 版本中gpu资源的调度隔离时，需要注重以下几个方面：  
+- 所需java版本为1.8  
+- 因gpu资源采用cgroup实现的隔离，`yarn.nodemanager.container-executor.class`需要配置为`org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor`，并进行相关设置；  
+- 采用默认的资源调度策略`CapacityScheduler`，注意设置`yarn.scheduler.capacity.resource-calculator`为`org.apache.hadoop.yarn.util.resource.DominantResourceCalculator`；  
+- 配置gpu资源信息：  
+1）yarn-site.xml 中配置类似如下：  
+
+      <!-- resource -->
+      <property>
+        <name>yarn.nodemanager.resource-plugins</name>
+        <value>yarn.io/gpu</value>
+      </property>
+      <property>
+        <name>yarn.nodemanager.resource-plugins.gpu.allowed-gpu-devices</name>
+        <value>auto</value>
+      </property>
+
+2）resource-types.xml 中配置类似如下：  
+
+      <configuration>
+        <property>
+          <name>yarn.resource-types</name>
+          <value>yarn.io/gpu</value>
+        </property>
+      </configuration>
+

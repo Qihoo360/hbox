@@ -12,10 +12,12 @@ xlearning.am.memory | 1024MB | amount of memory to use for the AM process
 xlearning.am.cores | 1 | number of cores to use for the AM process  
 xlearning.worker.num | 1 | number of worker containers to use for the application  
 xlearning.worker.memory | 1024MB | amount of memory to use for the worker process  
-xlearning.worker.cores | 1 | number of cores to use for the worker process    
+xlearning.worker.cores | 1 | number of cores to use for the worker process
+xlearning.worker.gcores | 0 | number of gpu to use for the worker process
 xlearning.ps.num | 0 | number of ps containers to use for the application  
 xlearning.ps.memory | 1024MB | amount of memory to use for the ps process  
-xlearning.ps.cores | 1 | number of cores to use for the ps process   
+xlearning.ps.cores | 1 | number of cores to use for the ps process
+xlearning.ps.gcores | 0 | number of gpu to use for the ps process
 xlearning.app.queue | DEFAULT | the queue which application submitted to  
 xlearning.app.priority | 3 | the priority of the application, divided into level 0 to 5, corresponding to DEFAULT, VERY\_LOW, LOW, NORMAL, HIGH, VERY\_HIGH  
 xlearning.input.strategy | DOWNLOAD | loading strategy of input file, including DOWNLOAD, STREAM, PLACEHOLDER  

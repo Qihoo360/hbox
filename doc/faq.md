@@ -112,3 +112,32 @@ Note that the information of AM connected error which reported at the client whe
 ### 11. Report the error：" java.io.IOException: Cannot run program "tensorboard": error=2, No such file or directory" after submit the application.       
 When the XLearning client submits a job, the --user-path "/root/anaconda2/lib/python2.7/site-packages/tensorboard" is added to specify the tensorboard path.
 
+
+
+### hadoop 3.1.0-SNAPSHOT Cluster Setting Notes
+The gpu resources applied in `xlearning-gpu-beta` version is based on the version of `hadoop3.1.0-SNAPSHOT`. When using the gpu resources scheduler and isolation in the version of `hadoop3.1.0-SNAPSHOT`, notes that :  
+- java version >= 1.8  
+- `yarn.nodemanager.container-executor.class`  is setted as `org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor`, and configure the related settings.    
+- Use the DefaultScheduler `CapacityScheduler`. Note that `yarn.scheduler.capacity.resource-calculator` is setted as `org.apache.hadoop.yarn.util.resource.DominantResourceCalculator`.  
+- Configure the gpu resources information, same as follow settings:    
+1）yarn-site.xml :  
+
+      <!-- resource -->
+      <property>
+        <name>yarn.nodemanager.resource-plugins</name>
+        <value>yarn.io/gpu</value>
+      </property>
+      <property>
+        <name>yarn.nodemanager.resource-plugins.gpu.allowed-gpu-devices</name>
+        <value>auto</value>
+      </property>
+
+2）resource-types.xml :    
+
+      <configuration>
+        <property>
+          <name>yarn.resource-types</name>
+          <value>yarn.io/gpu</value>
+        </property>
+      </configuration>
+
