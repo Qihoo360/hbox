@@ -8,6 +8,7 @@ import net.qihoo.xlearning.common.XLearningContainerStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.mapred.InputSplit;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 
@@ -22,6 +23,8 @@ public interface ApplicationContext {
   int getWorkerNum();
 
   int getPsNum();
+
+  long getWorkerGcores();
 
   List<Container> getWorkerContainers();
 
@@ -47,6 +50,10 @@ public interface ApplicationContext {
 
   Map<XLearningContainerId, String> getMapedTaskID();
 
+  Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuMemMetrics();
+
+  Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuUtilMetrics();
+
   Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics();
 
   int getSavingModelStatus();
@@ -60,5 +67,7 @@ public interface ApplicationContext {
   Boolean getLastSavingStatus();
 
   List<Long> getModelSavingList();
+
+  String getContainerGPUDevice(XLearningContainerId containerId);
 
 }

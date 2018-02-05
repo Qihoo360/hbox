@@ -55,6 +55,10 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   private final Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> containersCpuMetrics;
 
+  private final Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> containersGpuMemMetrics;
+
+  private final Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> containersGpuUtilMetrics;
+
   private String clusterDefStr;
 
   private String lightGBMIpPortStr;
@@ -83,6 +87,8 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   private String xlearningAppType;
 
+  private final Map<XLearningContainerId, String> containerId2GPU;
+
   public ApplicationContainerListener(ApplicationContext applicationContext, Configuration conf) {
     super(ApplicationContainerListener.class.getSimpleName());
     this.setConfig(conf);
@@ -110,11 +116,14 @@ public class ApplicationContainerListener extends AbstractService implements App
     this.interResultTimeStamp = Long.MIN_VALUE;
     this.containerId2InnerModel = new ConcurrentHashMap<>();
     this.containersCpuMetrics = new ConcurrentHashMap<>();
+    this.containersGpuMemMetrics = new ConcurrentHashMap<>();
+    this.containersGpuUtilMetrics = new ConcurrentHashMap<>();
     if (System.getenv().containsKey(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString())) {
       xlearningAppType = System.getenv(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString()).toUpperCase();
     } else {
       xlearningAppType = "XLEARNING";
     }
+    this.containerId2GPU = new ConcurrentHashMap<>();
   }
 
   @Override
@@ -163,6 +172,14 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   public Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics() {
     return this.containersCpuMetrics;
+  }
+
+  public Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuMemMetrics() {
+    return this.containersGpuMemMetrics;
+  }
+
+  public Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuUtilMetrics() {
+    return this.containersGpuUtilMetrics;
   }
 
   public int getServerPort() {
@@ -216,6 +233,8 @@ public class ApplicationContainerListener extends AbstractService implements App
     containersAppStartTimeMap.put(containerId, "");
     containersAppFinishTimeMap.put(containerId, "");
     containersCpuMetrics.put(containerId, new ConcurrentHashMap<String, LinkedBlockingDeque<Object>>());
+    containersGpuMemMetrics.put(containerId, new ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>());
+    containersGpuUtilMetrics.put(containerId, new ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>());
     if (role.equals(XLearningConstants.WORKER.toString())) {
       containerId2InnerModel.put(containerId, new InnerModelSavedPair());
     }
@@ -368,6 +387,71 @@ public class ApplicationContainerListener extends AbstractService implements App
     LOG.info("STREAM containerId is:" + containerId.toString() + " taskid is:" + taskid);
   }
 
+
+  @Override
+  public void reportGpuMemeoryUsed(XLearningContainerId containerId, String gpuMemeoryUsed) {
+    if (this.containersGpuMemMetrics.get(containerId).size() == 0) {
+      Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {
+      }.getType();
+      ConcurrentHashMap<String, List<Long>> map = new Gson().fromJson(gpuMemeoryUsed, type);
+      for (String str : map.keySet()) {
+        LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
+        queue.add(map.get(str));
+        this.containersGpuMemMetrics.get(containerId).put(str, queue);
+      }
+    } else {
+      Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {
+      }.getType();
+      ConcurrentHashMap<String, List<Long>> map = new Gson().fromJson(gpuMemeoryUsed, type);
+      for (String str : map.keySet()) {
+        if (this.containersGpuMemMetrics.get(containerId).keySet().contains(str)) {
+          if (this.containersGpuMemMetrics.get(containerId).get(str).size() < 1800) {
+            this.containersGpuMemMetrics.get(containerId).get(str).add(map.get(str));
+          } else {
+            this.containersGpuMemMetrics.get(containerId).get(str).poll();
+            this.containersGpuMemMetrics.get(containerId).get(str).add(map.get(str));
+          }
+        } else {
+          LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
+          queue.add(map.get(str));
+          this.containersGpuMemMetrics.get(containerId).put(str, queue);
+        }
+      }
+    }
+  }
+
+  @Override
+  public void reportGpuUtilization(XLearningContainerId containerId, String gpuUtilization) {
+    if (this.containersGpuUtilMetrics.get(containerId).size() == 0) {
+      Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {
+      }.getType();
+      ConcurrentHashMap<String, List<Long>> map = new Gson().fromJson(gpuUtilization, type);
+      for (String str : map.keySet()) {
+        LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
+        queue.add(map.get(str));
+        this.containersGpuUtilMetrics.get(containerId).put(str, queue);
+      }
+    } else {
+      Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {
+      }.getType();
+      ConcurrentHashMap<String, List<Long>> map = new Gson().fromJson(gpuUtilization, type);
+      for (String str : map.keySet()) {
+        if (this.containersGpuUtilMetrics.get(containerId).keySet().contains(str)) {
+          if (this.containersGpuUtilMetrics.get(containerId).get(str).size() < 1800) {
+            this.containersGpuUtilMetrics.get(containerId).get(str).add(map.get(str));
+          } else {
+            this.containersGpuUtilMetrics.get(containerId).get(str).poll();
+            this.containersGpuUtilMetrics.get(containerId).get(str).add(map.get(str));
+          }
+        } else {
+          LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
+          queue.add(map.get(str));
+          this.containersGpuUtilMetrics.get(containerId).put(str, queue);
+        }
+      }
+    }
+  }
+
   @Override
   public void reportCpuMetrics(XLearningContainerId containerId, String cpuMetrics) {
     if (this.containersCpuMetrics.get(containerId).size() == 0) {
@@ -438,6 +522,23 @@ public class ApplicationContainerListener extends AbstractService implements App
         }
       }
     }
+  }
+
+  @Override
+  public void reportGPUDevice(XLearningContainerId containerId, String containerGPUDevice){
+    try {
+      LOG.info("Get container " + containerId.toString() + " GPU Device ID: " + containerGPUDevice);
+      containerId2GPU.put(containerId, containerGPUDevice);
+    } catch (Exception e) {
+      LOG.error("Get the container " + containerId.toString() + " GPU Device ID failed, ", e);
+    }
+  }
+
+  public String getContainerGPUDevice(XLearningContainerId containerId){
+    if (containerId2GPU.containsKey(containerId)) {
+      return containerId2GPU.get(containerId);
+    }
+    return null;
   }
 
   @Override

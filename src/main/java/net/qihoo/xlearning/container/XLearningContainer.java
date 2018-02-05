@@ -1,7 +1,7 @@
 package net.qihoo.xlearning.container;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.gson.Gson;
+import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import net.qihoo.xlearning.api.ApplicationContainerProtocol;
 import net.qihoo.xlearning.api.XLearningConstants;
@@ -622,12 +622,12 @@ public class XLearningContainer {
                     }
                     osw.write(value.toString());
                     osw.write("\n");
-                    if(j == 0 && isCache) {
-                      if(conf.getInt(XLearningConfiguration.XLEARNING_STREAM_EPOCH, XLearningConfiguration.DEFAULT_XLEARNING_STREAM_EPOCH) > 1) {
+                    if (j == 0 && isCache) {
+                      if (conf.getInt(XLearningConfiguration.XLEARNING_STREAM_EPOCH, XLearningConfiguration.DEFAULT_XLEARNING_STREAM_EPOCH) > 1) {
                         gos.write(value.toString().getBytes());
                         gos.write("\n".getBytes());
 
-                        if((gzFile.length() / 1024 / 1024) > conf.getInt(XLearningConfiguration.XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT, XLearningConfiguration.DEFAULT_XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT)) {
+                        if ((gzFile.length() / 1024 / 1024) > conf.getInt(XLearningConfiguration.XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT, XLearningConfiguration.DEFAULT_XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT)) {
                           LOG.info("Inputformat cache file size is:" + gzFile.length() / 1024 / 1024 + "M "
                               + "beyond the limit size:" + conf.getInt(XLearningConfiguration.XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT, XLearningConfiguration.DEFAULT_XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT) + "M.");
                           gzFile.delete();
@@ -645,7 +645,7 @@ public class XLearningContainer {
                 LOG.info("split " + (i + 1) + " is finished.");
               }
               LOG.info("Epoch " + (j + 1) + " finished.");
-              if(isCache) {
+              if (isCache) {
                 break;
               }
             }
@@ -825,12 +825,74 @@ public class XLearningContainer {
       }
     }
 
+    String gpuStr = "";
+    if (Long.valueOf(envs.get(XLearningConstants.Environment.XLEARNING_CONTAIENR_GPU_NUM.toString())) > 0) {
+      // get the container gpu assigned info
+      String gpuUsedCommand = "curl --compressed -H Accept:application/json -XGET http://" + conf.get(XLearningConfiguration.NM_WEBAPP_ADDRESS, XLearningConfiguration.DEFAULT_NM_WEBAPP_ADDRESS) + "/ws/v1/node/resources/yarn.io%2Fgpu";
+      LOG.info("get gpu info cmd: " + gpuUsedCommand);
+      final Process getGPUUsedProcess = Runtime.getRuntime().exec(gpuUsedCommand, env);
+      LOG.info("Starting thread to get the gpu used info");
+      try {
+        StringBuilder gpuDevice = new StringBuilder();
+        BufferedReader reader;
+        reader = new BufferedReader(new InputStreamReader(getGPUUsedProcess.getInputStream()));
+        String line = reader.readLine();
+        LOG.debug("nodemanager info: " + line);
+        if (line == null) {
+          LOG.error("Can't get the gpu info from nodemanager.");
+        } else {
+          Gson gson = new GsonBuilder().
+              registerTypeAdapter(
+                  new TypeToken<Map<String, Object>>() {
+                  }.getType(),
+                  new JsonDeserializer<Map<String, Object>>() {
+                    @Override
+                    public Map<String, Object> deserialize(
+                        JsonElement json, Type typeOfT,
+                        JsonDeserializationContext context) throws JsonParseException {
+                      Map<String, Object> treeMap = new HashMap<String, Object>();
+                      JsonObject jsonObject = json.getAsJsonObject();
+                      Set<Map.Entry<String, JsonElement>> entrySet = jsonObject.entrySet();
+                      for (Map.Entry<String, JsonElement> entry : entrySet) {
+                        treeMap.put(entry.getKey(), entry.getValue());
+                      }
+                      return treeMap;
+                    }
+                  }).
+              create();
+          Map<String, Object> gpuInfo = gson.fromJson(line, new TypeToken<Map<String, Object>>() {
+          }.getType());
+          if (gpuInfo.containsKey(XLearningConstants.ASSIGNED_GPU_DEVICES.toString())) {
+            List<Map> assignedInfo = gson.fromJson(gpuInfo.get(XLearningConstants.ASSIGNED_GPU_DEVICES.toString()).toString(), List.class);
+            for (Map info : assignedInfo) {
+              if (info.get("containerId").equals(containerId.toString())) {
+                gpuDevice.append(StringUtils.split(info.get("index").toString(), ".")[0]).append(",");
+                LOG.info("container: " + containerId.toString() + " assigned gpu: " + info.get("index").toString());
+              }
+            }
+          } else {
+            LOG.info("Current nodemanager haven't assigned gpu.");
+          }
+        }
+        reader.close();
+        getGPUUsedProcess.waitFor();
+        if (gpuDevice.length() > 0) {
+          gpuStr = gpuDevice.toString().substring(0, gpuDevice.length() - 1);
+        }
+      } catch (Exception e) {
+        LOG.warn("Exception in thread get the gpu used info process stdoutRedirectThread");
+        e.printStackTrace();
+      }
+      LOG.info("the gpu used info for container " + containerId + " : " + gpuStr);
+    }
+    amClient.reportGPUDevice(containerId, gpuStr);
+
     int updateAppStatusInterval = this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL);
 
     if (this.role.equals(XLearningConstants.WORKER)) {
       this.xlearningCmdProcessId = getPidOfProcess(xlearningProcess);
       LOG.info("xlearningCmdProcessId is:" + this.xlearningCmdProcessId);
-      containerReporter = new ContainerReporter(amClient, conf, containerId, this.xlearningCmdProcessId);
+      containerReporter = new ContainerReporter(amClient, conf, containerId, gpuStr, this.xlearningCmdProcessId);
       containerReporter.setDaemon(true);
       containerReporter.start();
     }

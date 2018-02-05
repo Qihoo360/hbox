@@ -3,6 +3,7 @@ package net.qihoo.xlearning.container;
 import com.google.gson.Gson;
 import net.qihoo.xlearning.api.ApplicationContainerProtocol;
 import net.qihoo.xlearning.util.Utilities;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -28,6 +29,8 @@ public class ContainerReporter extends Thread {
 
   private Configuration conf;
 
+  private String gpuStr;
+
   private XLearningContainerId containerId;
 
   private String xlearningCmdProcessId;
@@ -38,20 +41,35 @@ public class ContainerReporter extends Thread {
 
   private ConcurrentHashMap<String, List> cpuMetrics;
 
+  private ConcurrentHashMap<String, List<Long>> gpuMemoryUsed;
+
+  private ConcurrentHashMap<String, List<Long>> gpuUtilization;
+
 
   public ContainerReporter(ApplicationContainerProtocol protocol, Configuration conf,
-                           XLearningContainerId xlearningContainerId, String xlearningCmdProcessId) {
+                           XLearningContainerId xlearningContainerId, String gpuStr, String xlearningCmdProcessId) {
     this.protocol = protocol;
     this.conf = conf;
+    this.gpuStr = gpuStr;
     this.containerId = xlearningContainerId;
     this.xlearningCmdProcessId = xlearningCmdProcessId;
     this.containerProcessId = null;
     this.processTreeClass = conf.getClass(YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE, null,
         ResourceCalculatorProcessTree.class);
     this.cpuMetrics = new ConcurrentHashMap<>();
+    this.gpuMemoryUsed = new ConcurrentHashMap<>();
+    this.gpuUtilization = new ConcurrentHashMap<>();
   }
 
   public void run() {
+    if (!this.gpuStr.equals("")) {
+      try {
+        produceGpuMetrics(this.gpuStr);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+
     try {
       produceCpuMetrics(this.xlearningCmdProcessId);
     } catch (IOException e) {
@@ -60,6 +78,14 @@ public class ContainerReporter extends Thread {
 
     while (true) {
       Utilities.sleep(3000);
+      if (!this.gpuStr.equals("")) {
+        try {
+          protocol.reportGpuMemeoryUsed(containerId, new Gson().toJson(gpuMemoryUsed));
+          protocol.reportGpuUtilization(containerId, new Gson().toJson(gpuUtilization));
+        } catch (Exception e) {
+          LOG.info("report gpu metrics exception:" + e);
+        }
+      }
       try {
         protocol.reportCpuMetrics(containerId, new Gson().toJson(cpuMetrics));
       } catch (Exception e) {
@@ -189,6 +215,45 @@ public class ContainerReporter extends Thread {
       }
     });
     cpuMetricsThread.start();
+  }
+
+  private void produceGpuMetrics(String gpuStr) throws IOException {
+    String command = "nvidia-smi --format=csv,noheader,nounits --query-gpu=index,memory.used,utilization.gpu -l 1";
+    final String[] gpuList = StringUtils.split(gpuStr, ',');
+    final Process finalProcess = Runtime.getRuntime().exec(command);
+    LOG.info("Starting thread to redirect stdout of nvidia-smi process");
+    Thread stdoutRedirectThread = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          BufferedReader reader;
+          reader = new BufferedReader(new InputStreamReader(finalProcess.getInputStream()));
+          String line;
+          int i;
+          while ((line = reader.readLine()) != null) {
+            Long time = (new Date()).getTime();
+            String[] gpusIndex = StringUtils.split(line, ',');
+            for (i = 0; i < gpuList.length; i++) {
+              if (i == Integer.valueOf(gpusIndex[0])) {
+                List<Long> memPoint = new ArrayList<>();
+                memPoint.add(time);
+                memPoint.add(Long.parseLong(gpusIndex[1].trim()));
+                List<Long> utilPoint = new ArrayList<>();
+                utilPoint.add(time);
+                utilPoint.add(Long.parseLong(gpusIndex[2].trim()));
+                gpuMemoryUsed.put(gpuList[i], memPoint);
+                gpuUtilization.put(gpuList[i], utilPoint);
+                break;
+              }
+            }
+          }
+        } catch (Exception e) {
+          LOG.warn("Exception in thread nvidia-smi stdoutRedirectThread");
+          e.printStackTrace();
+        }
+      }
+    });
+    stdoutRedirectThread.start();
   }
 
 }

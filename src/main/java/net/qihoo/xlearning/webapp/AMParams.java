@@ -9,6 +9,8 @@ public interface AMParams {
 
   public static final String WORKER_NUMBER = "worker.number";
 
+  public static final String WORKER_GCORES = "worker.gcores";
+
   public static final String CONTAINER_HTTP_ADDRESS = "container.address";
 
   public static final String CONTAINER_ID = "container.id";
@@ -17,6 +19,8 @@ public interface AMParams {
 
   public static final String CONTAINER_STATUS = "container.status";
 
+  public static final String CONTAINER_GPU_DEVICE = "container.gpu.device";
+
   public static final String CONTAINER_ROLE = "container.role";
 
   public static final String CONTAINER_LOG_ADDRESS = "container.log.address";
@@ -24,6 +28,10 @@ public interface AMParams {
   public static final String CONTAINER_CPU_METRICS_ENABLE = "container.cpu.metrics.enable";
 
   public static final String CONTAINER_CPU_METRICS = "container.cpu.metrics";
+
+  public static final String CONTAINER_GPU_MEM_METRICS = "container.gpu.mem.metrics";
+
+  public static final String CONTAINER_GPU_UTIL_METRICS = "container.gpu.util.metrics";
 
   public static final String BOARD_INFO = "board.info";
 

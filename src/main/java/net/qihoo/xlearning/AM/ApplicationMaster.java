@@ -318,6 +318,17 @@ public class ApplicationMaster extends CompositeService {
           for (Container container : workerContainers) {
             Map<String, String> containerMessage = new HashMap<>();
             containerMessage.put(AMParams.CONTAINER_HTTP_ADDRESS, container.getNodeHttpAddress());
+            if (applicationContext.getContainerGPUDevice(new XLearningContainerId(container.getId())) != null) {
+              if (applicationContext.getContainerGPUDevice(new XLearningContainerId(container.getId())).trim().length() != 0) {
+                containerMessage.put(AMParams.CONTAINER_GPU_DEVICE, applicationContext.getContainerGPUDevice(new XLearningContainerId(container.getId())));
+              } else {
+                containerMessage.put(AMParams.CONTAINER_GPU_DEVICE, "-");
+                workerGCores = 0;
+              }
+            } else {
+              containerMessage.put(AMParams.CONTAINER_GPU_DEVICE, "-");
+              workerGCores = 0;
+            }
             containerMessage.put(AMParams.CONTAINER_ROLE, "worker");
             if (applicationContext.getContainerStatus(new XLearningContainerId(container.getId())) != null) {
               containerMessage.put(AMParams.CONTAINER_STATUS, applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).toString());
@@ -339,6 +350,16 @@ public class ApplicationMaster extends CompositeService {
 
             ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
             containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
+
+            if (workerGCores > 0) {
+              ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuMemMetrics = applicationContext.getContainersGpuMemMetrics().get(new XLearningContainerId(container.getId()));
+              ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuUtilMetrics = applicationContext.getContainersGpuUtilMetrics().get(new XLearningContainerId(container.getId()));
+              containerMessage.put(AMParams.CONTAINER_GPU_MEM_METRICS, new Gson().toJson(containersGpuMemMetrics));
+              containerMessage.put(AMParams.CONTAINER_GPU_UTIL_METRICS, new Gson().toJson(containersGpuUtilMetrics));
+            } else {
+              containerMessage.put(AMParams.CONTAINER_GPU_MEM_METRICS, "-");
+              containerMessage.put(AMParams.CONTAINER_GPU_UTIL_METRICS, "-");
+            }
 
             if (reporterProgress.get(new XLearningContainerId(container.getId())) != null && !reporterProgress.get(new XLearningContainerId(container.getId())).equals("")) {
               String progressLog = reporterProgress.get(new XLearningContainerId(container.getId()));
@@ -372,6 +393,15 @@ public class ApplicationMaster extends CompositeService {
           for (Container container : psContainers) {
             Map<String, String> containerMessage = new HashMap<>();
             containerMessage.put(AMParams.CONTAINER_HTTP_ADDRESS, container.getNodeHttpAddress());
+            if (applicationContext.getContainerGPUDevice(new XLearningContainerId(container.getId())) != null) {
+              if (applicationContext.getContainerGPUDevice(new XLearningContainerId(container.getId())).trim().length() != 0) {
+                containerMessage.put(AMParams.CONTAINER_GPU_DEVICE, applicationContext.getContainerGPUDevice(new XLearningContainerId(container.getId())));
+              } else {
+                containerMessage.put(AMParams.CONTAINER_GPU_DEVICE, "-");
+              }
+            } else {
+              containerMessage.put(AMParams.CONTAINER_GPU_DEVICE, "-");
+            }
             if (xlearningAppType.equals("TENSORFLOW")) {
               containerMessage.put(AMParams.CONTAINER_ROLE, "ps");
             } else if (xlearningAppType.equals("MXNET")) {
@@ -424,6 +454,7 @@ public class ApplicationMaster extends CompositeService {
           logMessage.put(AMParams.TIMESTAMP_LIST, savedTimeStamp);
           logMessage.put(AMParams.OUTPUT_PATH, outputList);
           logMessage.put(AMParams.WORKER_NUMBER, String.valueOf(workerNum));
+          logMessage.put(AMParams.WORKER_GCORES, String.valueOf(workerGCores));
 
           out.writeBytes(new Gson().toJson(logMessage));
           out.close();
@@ -741,6 +772,11 @@ public class ApplicationMaster extends CompositeService {
     containerEnv.put(XLearningConstants.Environment.XLEARNING_TF_ROLE.toString(), role);
     containerEnv.put(XLearningConstants.Environment.XLEARNING_EXEC_CMD.toString(), xlearningCommand);
     containerEnv.put(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString(), xlearningAppType);
+    if (role.equals(XLearningConstants.PS)) {
+      containerEnv.put(XLearningConstants.Environment.XLEARNING_CONTAIENR_GPU_NUM.toString(), String.valueOf(psGCores));
+    } else if (role.equals(XLearningConstants.WORKER)) {
+      containerEnv.put(XLearningConstants.Environment.XLEARNING_CONTAIENR_GPU_NUM.toString(), String.valueOf(workerGCores));
+    }
     if (xlearningAppType.equals("MXNET") && !singleMx) {
       containerEnv.put(XLearningConstants.Environment.XLEARNING_MXNET_WORKER_NUM.toString(), String.valueOf(workerNum));
       containerEnv.put(XLearningConstants.Environment.XLEARNING_MXNET_SERVER_NUM.toString(), String.valueOf(psNum));
@@ -1349,6 +1385,12 @@ public class ApplicationMaster extends CompositeService {
     }
 
     @Override
+    public long getWorkerGcores() {
+      return workerGCores;
+    }
+
+
+    @Override
     public List<Container> getWorkerContainers() {
       return acquiredWorkerContainers;
     }
@@ -1361,6 +1403,11 @@ public class ApplicationMaster extends CompositeService {
     @Override
     public XLearningContainerStatus getContainerStatus(XLearningContainerId containerId) {
       return containerListener.getContainerStatus(containerId);
+    }
+
+    @Override
+    public String getContainerGPUDevice(XLearningContainerId containerId) {
+      return containerListener.getContainerGPUDevice(containerId);
     }
 
     @Override
@@ -1414,6 +1461,16 @@ public class ApplicationMaster extends CompositeService {
     @Override
     public Map<XLearningContainerId, String> getMapedTaskID() {
       return containerListener.getMapedTaskID();
+    }
+
+    @Override
+    public Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuMemMetrics() {
+      return containerListener.getContainersGpuMemMetrics();
+    }
+
+    @Override
+    public Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuUtilMetrics() {
+      return containerListener.getContainersGpuUtilMetrics();
     }
 
     @Override

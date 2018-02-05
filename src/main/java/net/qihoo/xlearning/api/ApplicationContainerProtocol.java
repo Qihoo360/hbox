@@ -29,7 +29,13 @@ public interface ApplicationContainerProtocol extends VersionedProtocol {
 
   void reportMapedTaskID(XLearningContainerId containerId, String taskId);
 
+  void reportGpuMemeoryUsed(XLearningContainerId containerId, String gpuMemeoryUsed);
+
+  void reportGpuUtilization(XLearningContainerId containerId, String gpuUtilization);
+
   void reportCpuMetrics(XLearningContainerId containerId, String cpuMetrics);
+
+  void reportGPUDevice(XLearningContainerId containerId, String containerGPUDevice);
 
   Long interResultTimeStamp();
 

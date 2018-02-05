@@ -63,9 +63,11 @@ public class AppController extends Controller implements AMParams {
     Map<XLearningContainerId, String> reporterProgress = app.context.getReporterProgress();
     Map<XLearningContainerId, String> containersAppStartTime = app.context.getContainersAppStartTime();
     Map<XLearningContainerId, String> containersAppFinishTime = app.context.getContainersAppFinishTime();
+    long workerGcores = app.context.getWorkerGcores();
     set(CONTAINER_NUMBER, String.valueOf(workerContainers.size() + psContainers.size()));
     set(WORKER_NUMBER, String.valueOf(workerContainers.size()));
     set(USER_NAME, StringUtils.split(conf.get("hadoop.job.ugi"), ',')[0]);
+    set(WORKER_GCORES, String.valueOf(workerGcores));
     int i = 0;
     for (Container container : workerContainers) {
       set(CONTAINER_HTTP_ADDRESS + i, container.getNodeHttpAddress());
@@ -76,6 +78,29 @@ public class AppController extends Controller implements AMParams {
         set(CONTAINER_STATUS + i, "-");
       }
       set(CONTAINER_ROLE + i, "worker");
+
+      if (app.context.getContainerGPUDevice(new XLearningContainerId(container.getId())) != null) {
+        if (app.context.getContainerGPUDevice(new XLearningContainerId(container.getId())).trim().length() != 0) {
+          set(CONTAINER_GPU_DEVICE + i, app.context.getContainerGPUDevice(new XLearningContainerId(container.getId())).toString());
+          ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuMemMetrics = app.context.getContainersGpuMemMetrics().get(new XLearningContainerId(container.getId()));
+          ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuUtilMetrics = app.context.getContainersGpuUtilMetrics().get(new XLearningContainerId(container.getId()));
+          if (containersGpuMemMetrics.size() != 0) {
+            for (String str : containersGpuMemMetrics.keySet()) {
+              set("gpuMemMetrics" + i + str, new Gson().toJson(containersGpuMemMetrics.get(str)));
+            }
+          }
+          if (containersGpuUtilMetrics.size() != 0) {
+            for (String str : containersGpuUtilMetrics.keySet()) {
+              set("gpuUtilMetrics" + i + str, new Gson().toJson(containersGpuUtilMetrics.get(str)));
+            }
+          }
+        } else {
+          set(CONTAINER_GPU_DEVICE + i, "-");
+          if (Long.valueOf($(WORKER_GCORES)) > 0) {
+            set(WORKER_GCORES, "0");
+          }
+        }
+      }
 
       if (app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId())) != null) {
         ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
@@ -124,6 +149,13 @@ public class AppController extends Controller implements AMParams {
     for (Container container : psContainers) {
       set(CONTAINER_HTTP_ADDRESS + i, container.getNodeHttpAddress());
       set(CONTAINER_ID + i, container.getId().toString());
+
+      if (app.context.getContainerGPUDevice(new XLearningContainerId(container.getId())).trim().length() != 0) {
+        set(CONTAINER_GPU_DEVICE + i, app.context.getContainerGPUDevice(new XLearningContainerId(container.getId())).toString());
+      } else {
+        set(CONTAINER_GPU_DEVICE + i, "-");
+      }
+
       if (app.context.getContainerStatus(new XLearningContainerId(container.getId())) != null) {
         set(CONTAINER_STATUS + i, app.context.getContainerStatus(new XLearningContainerId(container.getId())).toString());
       } else {

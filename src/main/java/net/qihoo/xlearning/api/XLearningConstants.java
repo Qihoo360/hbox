@@ -19,6 +19,8 @@ public interface XLearningConstants {
 
   String GPU = "yarn.io/gpu";
 
+  String ASSIGNED_GPU_DEVICES = "assignedGpuDevices";
+
   String STREAM_INPUT_DIR = "mapreduce.input.fileinputformat.inputdir";
 
   String STREAM_OUTPUT_DIR = "mapreduce.output.fileoutputformat.outputdir";
@@ -29,6 +31,8 @@ public interface XLearningConstants {
     XLEARNING_APP_TYPE("XLEARNING_APP_TYPE"),
 
     XLEARNING_CONTAINER_MAX_MEMORY("XLEARNING_MAX_MEM"),
+
+    XLEARNING_CONTAIENR_GPU_NUM("GPU_NUM"),
 
     XLEARNING_LIBJARS_LOCATION("XLEARNING_LIBJARS_LOCATION"),
 
