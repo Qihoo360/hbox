@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
@@ -127,6 +128,7 @@ public class HsController extends Controller implements AMParams {
           if (readLog.get(info) instanceof Map<?, ?>) {
             Map<String, String> containerMessage = (Map<String, String>) readLog.get(info);
             set(CONTAINER_HTTP_ADDRESS + i, containerMessage.get(AMParams.CONTAINER_HTTP_ADDRESS));
+            set(CONTAINER_GPU_DEVICE + i, containerMessage.get(AMParams.CONTAINER_GPU_DEVICE));
             set(CONTAINER_ROLE + i, containerMessage.get(AMParams.CONTAINER_ROLE));
             set(CONTAINER_STATUS + i, containerMessage.get(AMParams.CONTAINER_STATUS));
             set(CONTAINER_START_TIME + i, containerMessage.get(AMParams.CONTAINER_START_TIME));
@@ -134,6 +136,30 @@ public class HsController extends Controller implements AMParams {
             set(CONTAINER_REPORTER_PROGRESS + i, containerMessage.get(AMParams.CONTAINER_REPORTER_PROGRESS));
             set(CONTAINER_LOG_ADDRESS + i, containerMessage.get(AMParams.CONTAINER_LOG_ADDRESS));
             if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
+              if (!containerMessage.get(AMParams.CONTAINER_GPU_DEVICE).equals("-")) {
+                if (containerMessage.containsKey(AMParams.CONTAINER_GPU_MEM_METRICS) && containerMessage.containsKey(AMParams.CONTAINER_GPU_UTIL_METRICS)) {
+                  String containersGpuMemMetrics = containerMessage.get(AMParams.CONTAINER_GPU_MEM_METRICS);
+                  String containersGpuUtilMetrics = containerMessage.get(AMParams.CONTAINER_GPU_UTIL_METRICS);
+                  if (containersGpuMemMetrics != null) {
+                    Type type = new TypeToken<ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>>() {
+                    }.getType();
+                    ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> map = new Gson().fromJson(containersGpuMemMetrics, type);
+                    for (String str : map.keySet()) {
+                      set("gpuMemMetrics" + workeri + str, new Gson().toJson(map.get(str)));
+                    }
+                  }
+                  if (containersGpuUtilMetrics != null) {
+                    Type type = new TypeToken<ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>>() {
+                    }.getType();
+                    ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> map = new Gson().fromJson(containersGpuUtilMetrics, type);
+                    for (String str : map.keySet()) {
+                      set("gpuUtilMetrics" + workeri + str, new Gson().toJson(map.get(str)));
+                    }
+                  }
+                  set("WORKER_GPU_DEVICE" + workeri, containerMessage.get(AMParams.CONTAINER_GPU_DEVICE));
+                }
+              }
+
               if (containerMessage.containsKey(AMParams.CONTAINER_CPU_METRICS)) {
                 set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(true));
                 String cpuMetrics = containerMessage.get(AMParams.CONTAINER_CPU_METRICS);
@@ -173,6 +199,8 @@ public class HsController extends Controller implements AMParams {
           }
         } else if (info.equals(AMParams.WORKER_NUMBER)) {
           set(WORKER_NUMBER, String.valueOf(readLog.get(info)));
+        } else if (info.equals(AMParams.WORKER_GCORES)) {
+          set(WORKER_GCORES, String.valueOf(readLog.get(info)));
         }
       }
       set(CONTAINER_NUMBER, String.valueOf(i));
