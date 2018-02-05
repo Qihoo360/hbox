@@ -77,9 +77,11 @@ public class Client {
     conf.set(XLearningConfiguration.XLEARNING_AM_CORES, String.valueOf(clientArguments.amCores));
     conf.set(XLearningConfiguration.XLEARNING_WORKER_MEMORY, String.valueOf(clientArguments.workerMemory));
     conf.set(XLearningConfiguration.XLEARNING_WORKER_VCORES, String.valueOf(clientArguments.workerVCores));
+    conf.set(XLearningConfiguration.XLEARNING_WORKER_GPU, String.valueOf(clientArguments.workerGCores));
     conf.set(XLearningConfiguration.XLEARNING_WORKER_NUM, String.valueOf(clientArguments.workerNum));
     conf.set(XLearningConfiguration.XLEARNING_PS_MEMORY, String.valueOf(clientArguments.psMemory));
     conf.set(XLearningConfiguration.XLEARNING_PS_VCORES, String.valueOf(clientArguments.psVCores));
+    conf.set(XLearningConfiguration.XLEARNING_PS_GPU, String.valueOf(clientArguments.psGCores));
     conf.set(XLearningConfiguration.XLEARNING_PS_NUM, String.valueOf(clientArguments.psNum));
     conf.set(XLearningConfiguration.XLEARNING_APP_PRIORITY, String.valueOf(clientArguments.priority));
     conf.setBoolean(XLearningConfiguration.XLEARNING_USER_CLASSPATH_FIRST, clientArguments.userClasspathFirst);
@@ -226,6 +228,8 @@ public class Client {
     LOG.info("Max mem capability of resources in this cluster " + maxMem);
     int maxVCores = newApplication.getMaximumResourceCapability().getVirtualCores();
     LOG.info("Max vcores capability of resources in this cluster " + maxVCores);
+    long maxGCores = newApplication.getMaximumResourceCapability().getResourceValue(XLearningConstants.GPU);
+    LOG.info("Max gpu cores capability of resources in this cluster " + maxGCores);
 
     long amMem = conf.getLong(XLearningConfiguration.XLEARNING_AM_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_AM_MEMORY);
     int amCores = conf.getInt(XLearningConfiguration.XLEARNING_AM_CORES, XLearningConfiguration.DEFAULT_XLEARNING_AM_CORES);
@@ -253,6 +257,7 @@ public class Client {
     int workerNum = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_NUM, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM);
     long workerMemory = conf.getLong(XLearningConfiguration.XLEARNING_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
     int workerVcores = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_VCORES, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_VCORES);
+    long workerGcores = conf.getLong(XLearningConfiguration.XLEARNING_WORKER_GPU, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_GPU);
     if (workerNum < 1) {
       throw new IllegalArgumentException(
           "Invalid no. of worker specified, exiting."
@@ -279,6 +284,16 @@ public class Client {
               + "Specified vcores=" + workerVcores);
     }
     LOG.info("Apply for worker vcores " + workerVcores);
+    if (workerGcores > maxGCores) {
+      throw new RequestOverLimitException("Worker gpu cores requested " + workerGcores +
+          " above the max threshold of yarn cluster " + maxGCores);
+    }
+    if (workerGcores < 0) {
+      throw new IllegalArgumentException(
+          "Invalid gpu cores specified for worker, exiting."
+              + "Specified gpu cores=" + workerGcores);
+    }
+    LOG.info("Apply for worker gpu cores " + workerGcores);
 
     if ("TENSORFLOW".equals(clientArguments.appType) || "MXNET".equals(clientArguments.appType)) {
       Boolean single;
@@ -297,6 +312,7 @@ public class Client {
       if (!single) {
         long psMemory = conf.getLong(XLearningConfiguration.XLEARNING_PS_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEMORY);
         int psVcores = conf.getInt(XLearningConfiguration.XLEARNING_PS_VCORES, XLearningConfiguration.DEFAULT_XLEARNING_PS_VCORES);
+        long psGcores = conf.getLong(XLearningConfiguration.XLEARNING_PS_GPU, XLearningConfiguration.DEFAULT_XLEARNING_PS_GPU);
         if (psMemory > maxMem) {
           throw new RequestOverLimitException("ps memory requested " + psMemory +
               " above the max threshold of yarn cluster " + maxMem);
@@ -317,6 +333,16 @@ public class Client {
                   + "Specified vcores=" + psVcores);
         }
         LOG.info("Apply for ps vcores " + psVcores);
+        if (psGcores > maxGCores) {
+          throw new RequestOverLimitException("ps gpu cores requested " + psGcores +
+              " above the max threshold of yarn cluster " + maxGCores);
+        }
+        if (psGcores < 0) {
+          throw new IllegalArgumentException(
+              "Invalid gpu cores specified for ps, exiting."
+                  + "Specified gpu cores=" + psGcores);
+        }
+        LOG.info("Apply for ps gpu cores " + psGcores);
       }
       int limitNode = conf.getInt(XLearningConfiguration.XLEARNING_EXECUTE_NODE_LIMIT, XLearningConfiguration.DEFAULT_XLEARNING_EXECUTENODE_LIMIT);
       if (workerNum + psNum > limitNode) {
@@ -482,10 +508,10 @@ public class Client {
       classPathEnv.append(cp.trim());
     }
 
-    if(conf.getBoolean(XLearningConfiguration.XLEARNING_USER_CLASSPATH_FIRST, XLearningConfiguration.DEFAULT_XLEARNING_USER_CLASSPATH_FIRST)) {
+    if (conf.getBoolean(XLearningConfiguration.XLEARNING_USER_CLASSPATH_FIRST, XLearningConfiguration.DEFAULT_XLEARNING_USER_CLASSPATH_FIRST)) {
       appMasterEnv.put("CLASSPATH", libJarsClassPath + classPathEnv.toString());
     } else {
-      appMasterEnv.put("CLASSPATH",  classPathEnv.toString() + ":" + libJarsClassPath);
+      appMasterEnv.put("CLASSPATH", classPathEnv.toString() + ":" + libJarsClassPath);
     }
 
     appMasterEnv.put(XLearningConstants.Environment.XLEARNING_STAGING_LOCATION.toString(), Utilities
@@ -626,7 +652,7 @@ public class Client {
     appMasterLaunchcommands.add(command.toString());
 
     Resource capability = Records.newRecord(Resource.class);
-    capability.setMemorySize(conf.getInt(XLearningConfiguration.XLEARNING_AM_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_AM_MEMORY));
+    capability.setMemorySize(conf.getLong(XLearningConfiguration.XLEARNING_AM_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_AM_MEMORY));
     capability.setVirtualCores(conf.getInt(XLearningConfiguration.XLEARNING_AM_CORES, XLearningConfiguration.DEFAULT_XLEARNING_AM_CORES));
     applicationContext.setResource(capability);
     ContainerLaunchContext amContainer = ContainerLaunchContext.newInstance(

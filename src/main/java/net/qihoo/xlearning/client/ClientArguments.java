@@ -21,9 +21,11 @@ class ClientArguments {
   int amCores;
   long workerMemory;
   int workerVCores;
+  long workerGCores;
   int workerNum;
   long psMemory;
   int psVCores;
+  long psGCores;
   int psNum;
   String[] xlearningFiles;
   String[] libJars;
@@ -65,9 +67,11 @@ class ClientArguments {
     amCores = XLearningConfiguration.DEFAULT_XLEARNING_AM_CORES;
     workerMemory = XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY;
     workerVCores = XLearningConfiguration.DEFAULT_XLEARNING_WORKER_VCORES;
+    workerGCores = XLearningConfiguration.DEFAULT_XLEARNING_WORKER_GPU;
     workerNum = XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM;
     psMemory = XLearningConfiguration.DEFAULT_XLEARNING_PS_MEMORY;
     psVCores = XLearningConfiguration.DEFAULT_XLEARNING_PS_VCORES;
+    psGCores = XLearningConfiguration.DEFAULT_XLEARNING_PS_GPU;
     psNum = XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM;
     xlearningFiles = null;
     libJars = null;
@@ -111,6 +115,8 @@ class ClientArguments {
         "Amount of vcores to be requested to run worker");
     allOptions.addOption("workerNum", "worker-num", true,
         "No. of containers on which the worker needs to be executed");
+    allOptions.addOption("workerGcores", "worker-gcores", true,
+        "Amount of gpu cores to be requested to run worker");
 
     allOptions.addOption("psMemory", "ps-memory", true,
         "Amount of memory in MB to be requested to run ps");
@@ -118,6 +124,8 @@ class ClientArguments {
         "Amount of vcores to be requested to run ps");
     allOptions.addOption("psNum", "ps-num", true,
         "No. of containers on which the ps needs to be executed");
+    allOptions.addOption("psGcores", "ps-gcores", true,
+        "Amount of gpu cores to be requested to run ps");
 
     allOptions.addOption("files", "files", true,
         "Location of the XLearning files used in container");
@@ -256,6 +264,11 @@ class ClientArguments {
       workerNum = Integer.parseInt(workerNumStr);
     }
 
+    if (cliParser.hasOption("worker-gcores")) {
+      String workerGCoresStr = cliParser.getOptionValue("worker-gcores");
+      workerGCores = Long.parseLong(workerGCoresStr);
+    }
+
     if ("TENSORFLOW".equals(appType) || "MXNET".equals(appType)) {
       if (cliParser.hasOption("ps-memory")) {
         psMemory = getNormalizedMem(cliParser.getOptionValue("ps-memory"));
@@ -269,6 +282,11 @@ class ClientArguments {
       if (cliParser.hasOption("ps-num")) {
         String psNumStr = cliParser.getOptionValue("ps-num");
         psNum = Integer.parseInt(psNumStr);
+      }
+
+      if (cliParser.hasOption("ps-gcores")) {
+        String psGCoresStr = cliParser.getOptionValue("ps-gcores");
+        psGCores = Long.parseLong(psGCoresStr);
       }
     }
 

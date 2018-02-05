@@ -54,9 +54,11 @@ public class ApplicationMaster extends CompositeService {
   private String applicationHistoryUrl;
   private long workerMemory;
   private int workerVCores;
+  private long workerGCores;
   private int workerNum;
   private long psMemory;
   private int psVCores;
+  private long psGCores;
   private int psNum;
   private Boolean single;
   private Boolean singleMx;
@@ -130,9 +132,11 @@ public class ApplicationMaster extends CompositeService {
     envs = System.getenv();
     workerMemory = conf.getLong(XLearningConfiguration.XLEARNING_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
     workerVCores = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_VCORES, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_VCORES);
+    workerGCores = conf.getLong(XLearningConfiguration.XLEARNING_WORKER_GPU, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_GPU);
     workerNum = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_NUM, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM);
     psMemory = conf.getLong(XLearningConfiguration.XLEARNING_PS_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEMORY);
     psVCores = conf.getInt(XLearningConfiguration.XLEARNING_PS_VCORES, XLearningConfiguration.DEFAULT_XLEARNING_PS_VCORES);
+    psGCores = conf.getLong(XLearningConfiguration.XLEARNING_PS_GPU, XLearningConfiguration.DEFAULT_XLEARNING_PS_GPU);
     psNum = conf.getInt(XLearningConfiguration.XLEARNING_PS_NUM, XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM);
     single = conf.getBoolean(XLearningConfiguration.XLEARNING_TF_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_MODE_SINGLE);
     singleMx = conf.getBoolean(XLearningConfiguration.XLEARNING_MXNET_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MXNET_MODE_SINGLE);
@@ -615,6 +619,9 @@ public class ApplicationMaster extends CompositeService {
     Resource workerCapability = Records.newRecord(Resource.class);
     workerCapability.setMemorySize(workerMemory);
     workerCapability.setVirtualCores(workerVCores);
+    if (workerGCores > 0) {
+      workerCapability.setResourceValue(XLearningConstants.GPU, workerGCores);
+    }
     workerContainerRequest = new ContainerRequest(workerCapability, null, null, priority);
     LOG.info("Create worker container request: " + workerContainerRequest.toString());
 
@@ -622,6 +629,9 @@ public class ApplicationMaster extends CompositeService {
       Resource psCapability = Records.newRecord(Resource.class);
       psCapability.setMemorySize(psMemory);
       psCapability.setVirtualCores(psVCores);
+      if (psGCores > 0) {
+        psCapability.setResourceValue(XLearningConstants.GPU, psGCores);
+      }
       psContainerRequest = new ContainerRequest(psCapability, null, null, priority);
       LOG.info("Create ps container request: " + psContainerRequest.toString());
     }

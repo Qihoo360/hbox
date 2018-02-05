@@ -67,6 +67,10 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final int DEFAULT_XLEARNING_WORKER_NUM = 1;
 
+  public static final String XLEARNING_WORKER_GPU = "xlearning.worker.gcores";
+
+  public static final long DEFAULT_XLEARNING_WORKER_GPU = 0;
+
   public static final String XLEARNING_PS_MEMORY = "xlearning.ps.memory";
 
   public static final long DEFAULT_XLEARNING_PS_MEMORY = 1024;
@@ -78,6 +82,10 @@ public class XLearningConfiguration extends YarnConfiguration {
   public static final String XLEARNING_PS_NUM = "xlearning.ps.num";
 
   public static final int DEFAULT_XLEARNING_PS_NUM = 0;
+
+  public static final String XLEARNING_PS_GPU = "xlearning.ps.gcores";
+
+  public static final long DEFAULT_XLEARNING_PS_GPU = 0;
 
   public static final String XLEARNING_WORKER_MEM_AUTO_SCALE = "xlearning.worker.mem.autoscale";
 

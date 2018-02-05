@@ -17,6 +17,8 @@ public interface XLearningConstants {
 
   String PS = "ps";
 
+  String GPU = "yarn.io/gpu";
+
   String STREAM_INPUT_DIR = "mapreduce.input.fileinputformat.inputdir";
 
   String STREAM_OUTPUT_DIR = "mapreduce.output.fileoutputformat.outputdir";

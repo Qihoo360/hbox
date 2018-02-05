@@ -50,6 +50,10 @@
         <value>1</value>
     </property>
     <property>
+        <name>xlearning.worker.gcores</name>
+        <value>0</value>
+    </property>
+    <property>
         <name>xlearning.worker.num</name>
         <value>1</value>
     </property>
@@ -60,6 +64,10 @@
     <property>
         <name>xlearning.ps.cores</name>
         <value>1</value>
+    </property>
+    <property>
+        <name>xlearning.ps.gcores</name>
+        <value>0</value>
     </property>
     <property>
         <name>xlearning.ps.num</name>
