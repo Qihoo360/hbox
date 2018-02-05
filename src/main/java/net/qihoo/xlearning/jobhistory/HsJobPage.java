@@ -12,7 +12,7 @@ import org.apache.hadoop.yarn.webapp.view.TwoColumnLayout;
 public class HsJobPage extends TwoColumnLayout implements AMParams {
 
   @Override
-  protected void preHead(Page.HTML<_> html) {
+  protected void preHead(Page.HTML<__> html) {
     super.preHead(html);
     String jobID = $(APP_ID);
     set(TITLE, jobID.isEmpty() ? "Bad request: missing job ID"

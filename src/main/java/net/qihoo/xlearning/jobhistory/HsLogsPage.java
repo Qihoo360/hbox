@@ -13,7 +13,7 @@ import org.apache.hadoop.yarn.webapp.view.TwoColumnLayout;
 public class HsLogsPage extends TwoColumnLayout {
 
   @Override
-  protected void preHead(Page.HTML<_> html) {
+  protected void preHead(Page.HTML<__> html) {
     String logEntity = $(ENTITY_STRING);
     if (logEntity == null || logEntity.isEmpty()) {
       logEntity = $(CONTAINER_ID);

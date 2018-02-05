@@ -95,8 +95,6 @@ public class JobHistoryServer extends CompositeService {
   protected void serviceInit(Configuration conf) throws Exception {
     Configuration config = new XLearningConfiguration(conf);
 
-    config.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
-
     // This is required for WebApps to use https if enabled.
     XLearningWebAppUtil.initialize(getConfig());
 

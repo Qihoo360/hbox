@@ -2,8 +2,8 @@ package net.qihoo.xlearning.jobhistory;
 
 import net.qihoo.xlearning.webapp.AMParams;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -35,66 +35,66 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
           th("ui-state-default", "Start Time").
           th("ui-state-default", "Finish Time").
           th("ui-state-default", "Reporter Progress").
-          _()._().
+          __().__().
           tbody();
 
       for (int i = 0; i < numContainers; i++) {
         Hamlet.TD<Hamlet.TR<Hamlet.TBODY<TABLE<Hamlet>>>> td = tbody.
-            _().tbody("ui-widget-content").
+            __().tbody("ui-widget-content").
             tr().
             $style("text-align:center;").td();
-        td.span().$title(String.format($(CONTAINER_ID + i)))._().
+        td.span().$title(String.format($(CONTAINER_ID + i))).__().
             a($(CONTAINER_LOG_ADDRESS + i),
                 String.format($(CONTAINER_ID + i)));
         String containerMachine = $(CONTAINER_HTTP_ADDRESS + i);
 
         if ($(CONTAINER_REPORTER_PROGRESS + i).equals("progress log format error")) {
-          td._().
+          td.__().
               td(containerMachine.split(":")[0]).
               td($(CONTAINER_STATUS + i)).
               td($(CONTAINER_START_TIME + i)).
               td($(CONTAINER_FINISH_TIME + i)).
-              td($(CONTAINER_REPORTER_PROGRESS + i)).td()._()._();
+              td($(CONTAINER_REPORTER_PROGRESS + i)).td().__().__();
         } else if ($(CONTAINER_REPORTER_PROGRESS + i).equals("0.00%")) {
-          td._().
+          td.__().
               td(containerMachine.split(":")[0]).
               td($(CONTAINER_STATUS + i)).
               td($(CONTAINER_START_TIME + i)).
               td($(CONTAINER_FINISH_TIME + i)).
-              td("N/A").td()._()._();
+              td("N/A").td().__().__();
         } else {
-          td._().
+          td.__().
               td(containerMachine.split(":")[0]).
               td($(CONTAINER_STATUS + i)).
               td($(CONTAINER_START_TIME + i)).
               td($(CONTAINER_FINISH_TIME + i)).td()
               .div().$class("ui-progressbar ui-widget ui-widget-content ui-corner-all").$title($(CONTAINER_REPORTER_PROGRESS + i))
               .div().$class("ui-progressbar-value ui-widget-header ui-corner-left").$style("width:" + $(CONTAINER_REPORTER_PROGRESS + i))
-              ._()._()._()._();
+              .__().__().__().__();
         }
       }
 
       if ($(BOARD_INFO_FLAG).equals("true")) {
-        tbody._()._().div().$style("margin:40px 2px;")._(" ")._().
+        tbody.__().__().div().$style("margin:40px 2px;").__(" ").__().
             h2("View Board:").
             table("#Board").
             thead("ui-widget-header").
             tr().
             th("ui-state-default", "Board Info").
-            _()._().
+            __().__().
             tbody("ui-widget-content").
             tr().
             $style("text-align:center;").
             td($(BOARD_INFO)).
-            _()._()._();
+            __().__().__();
       } else {
-        tbody._()._();
+        tbody.__().__();
       }
 
       int timestampSize = Integer.parseInt($(TIMESTAMP_TOTAL));
       int outputSize = Integer.parseInt($(OUTPUT_TOTAL));
       if (timestampSize > 0) {
-        html.div().$style("margin:20px 2px;")._(" ")._();
+        html.div().$style("margin:20px 2px;").__(" ").__();
         Hamlet.TBODY<TABLE<Hamlet>> tbodySave = html.
             h2("Saved Model").
             table("#savedmodel").
@@ -102,13 +102,13 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
             tr().
             th("ui-state-default", "Saved timeStamp").
             th("ui-state-default", "Saved path").
-            _()._().
+            __().__().
             tbody();
 
         for (int i = 0; i < timestampSize; i++) {
           String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(Long.parseLong($(TIMESTAMP_LIST + i))));
           Hamlet.TD<Hamlet.TR<Hamlet.TBODY<TABLE<Hamlet>>>> td = tbodySave.
-              _().tbody("ui-widget-content").
+              __().tbody("ui-widget-content").
               tr().
               $style("text-align:center;").
               td(timeStamp).
@@ -116,23 +116,23 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
 
           String pathStr = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date(Long.parseLong($(TIMESTAMP_LIST + i))));
           for (int j = 0; j < outputSize; j++) {
-            td.p()._($(OUTPUT_PATH + j) + pathStr)._();
+            td.p().__($(OUTPUT_PATH + j) + pathStr).__();
           }
-          td._()._();
+          td.__().__();
         }
-        tbodySave._()._();
+        tbodySave.__().__();
       }
-      html.div().$style("margin:20px 2px;")._(" ")._();
+      html.div().$style("margin:20px 2px;").__(" ").__();
       if (Boolean.parseBoolean($(CONTAINER_CPU_METRICS_ENABLE))) {
         int numWorkers = Integer.parseInt($(WORKER_NUMBER));
         for (int i = 0; i < numWorkers; i++) {
           if (!$("cpuMemMetrics" + i).equals("") && $("cpuMemMetrics" + i) != null) {
-            html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px")._(String.format($(CONTAINER_ID + i)) + " metrics:")._();
+            html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px").__(String.format($(CONTAINER_ID + i)) + " metrics:").__();
           }
 
-          html.script().$src("/static/xlWebApp/jquery-3.1.1.min.js")._();
-          html.script().$src("/static/xlWebApp/highstock.js")._();
-          html.script().$src("/static/xlWebApp/exporting.js")._();
+          html.script().$src("/static/xlWebApp/jquery-3.1.1.min.js").__();
+          html.script().$src("/static/xlWebApp/highstock.js").__();
+          html.script().$src("/static/xlWebApp/exporting.js").__();
 
           String containerCpuMemID = "containerCpuMem" + i;
           String containerCpuUtilID = "containerCpuUtil" + i;
@@ -146,13 +146,13 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
               "            data: " + $("cpuUtilMetrics" + i) + "\n" +
               "        }]";
           html.div()
-              .div().$id(containerCpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
-              .div().$id(containerCpuUtilID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
-              ._();
+              .div().$id(containerCpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block").__()
+              .div().$id(containerCpuUtilID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block").__()
+              .__();
           String css = "." + containerClass + "{\n" +
               "    display:inline-block;\n" +
               "}";
-          html.style().$type("text/css")._(css)._();
+          html.style().$type("text/css").__(css).__();
           String striptHead = "Highcharts.setOptions({\n" +
               "    global: {\n" +
               "        useUTC: false\n" +
@@ -232,11 +232,11 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
               "    series: " + seriesCpuUtilOptions + "\n" +
               "});\n";
 
-          html.script().$type("text/javascript")._(striptHead + striptBody)._();
+          html.script().$type("text/javascript").__(striptHead + striptBody).__();
         }
       }
     } else {
-      html.div().$style("font-size:20px;")._("Job History Log getting error !")._();
+      html.div().$style("font-size:20px;").__("Job History Log getting error !").__();
     }
   }
 }

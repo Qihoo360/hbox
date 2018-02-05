@@ -44,9 +44,9 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 
-import org.mortbay.jetty.servlet.DefaultServlet;
-import org.mortbay.jetty.servlet.FilterHolder;
-import org.mortbay.jetty.webapp.WebAppContext;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.webapp.WebAppContext;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -107,49 +107,30 @@ public class HistoryClientService extends AbstractService {
     webApp = new HsWebApp(history);
     InetSocketAddress bindAddress = XLearningWebAppUtil.getJHSWebBindAddress(conf);
     // NOTE: there should be a .at(InetSocketAddress)
-
+    WebApps.$for("jobhistory", HistoryClientService.class, this, "ws").with(conf).withHttpSpnegoKeytabKey(XLearningConfiguration.XLEARNING_WEBAPP_SPNEGO_KEYTAB_FILE_KEY).withHttpSpnegoPrincipalKey(XLearningConfiguration.XLEARNING_WEBAPP_SPNEGO_USER_NAME_KEY).at(NetUtils.getHostPortString(bindAddress)).build(webApp);
+    HttpServer2 httpServer = webApp.httpServer();
+    WebAppContext webAppContext = httpServer.getWebAppContext();
+    WebAppContext appWebAppContext = new WebAppContext();
+    appWebAppContext.setContextPath("/static/xlWebApp");
+    String appDir = getClass().getClassLoader().getResource("xlWebApp").toString();
+    appWebAppContext.setResourceBase(appDir);
+    final String[] ALL_URLS = {"/*"};
+    FilterHolder[] filterHolders =
+        webAppContext.getServletHandler().getFilters();
+    for (FilterHolder filterHolder : filterHolders) {
+      if (!"guice".equals(filterHolder.getName())) {
+        HttpServer2.defineFilter(appWebAppContext, filterHolder.getName(),
+            filterHolder.getClassName(), filterHolder.getInitParameters(),
+            ALL_URLS);
+      }
+    }
+    httpServer.addHandlerAtFront(appWebAppContext);
     try {
-      Method webAppBuild = WebApps.Builder.class.getMethod("build", WebApp.class);
-      webAppBuild.invoke(WebApps.$for("jobhistory", HistoryClientService.class, this, "ws").with(conf).withHttpSpnegoKeytabKey(XLearningConfiguration.XLEARNING_WEBAPP_SPNEGO_KEYTAB_FILE_KEY).withHttpSpnegoPrincipalKey(XLearningConfiguration.XLEARNING_WEBAPP_SPNEGO_USER_NAME_KEY).at(NetUtils.getHostPortString(bindAddress)), webApp);
-      HttpServer2 httpServer = webApp.httpServer();
-      WebAppContext webAppContext = httpServer.getWebAppContext();
-      WebAppContext appWebAppContext = new WebAppContext();
-      appWebAppContext.setContextPath("/static/xlWebApp");
-      String appDir = getClass().getClassLoader().getResource("xlWebApp").toString();
-      appWebAppContext.setResourceBase(appDir);
-      appWebAppContext.addServlet(DefaultServlet.class, "/*");
-      final String[] ALL_URLS = {"/*"};
-      FilterHolder[] filterHolders =
-          webAppContext.getServletHandler().getFilters();
-      for (FilterHolder filterHolder : filterHolders) {
-        if (!"guice".equals(filterHolder.getName())) {
-          HttpServer2.defineFilter(appWebAppContext, filterHolder.getName(),
-              filterHolder.getClassName(), filterHolder.getInitParameters(),
-              ALL_URLS);
-        }
-      }
-      httpServer.addContext(appWebAppContext, true);
-      try {
-        httpServer.start();
-        LOG.info("Web app " + webApp.name() + " started at "
-            + httpServer.getConnectorAddress(0).getPort());
-      } catch (IOException e) {
-        throw new WebAppException("Error starting http server", e);
-      }
-    } catch (NoSuchMethodException e) {
-      LOG.debug("current hadoop version don't have the method build of Class " + WebApps.class.toString() + ". For More Detail: " + e);
-      WebApps
-          .$for("jobhistory", HistoryClientService.class, this, "ws")
-          .with(conf)
-          .withHttpSpnegoKeytabKey(
-              XLearningConfiguration.XLEARNING_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
-          .withHttpSpnegoPrincipalKey(
-              XLearningConfiguration.XLEARNING_WEBAPP_SPNEGO_USER_NAME_KEY)
-          .at(NetUtils.getHostPortString(bindAddress)).start(webApp);
-    } catch (WebAppException e){
+      httpServer.start();
+      LOG.info("Web app " + webApp.name() + " started at "
+          + httpServer.getConnectorAddress(0).getPort());
+    } catch (IOException e) {
       throw new WebAppException("Error starting http server", e);
-    } catch (Exception e){
-      throw new WebAppException("Error start http server. For more detail", e);
     }
     String connectHost = XLearningWebAppUtil.getJHSWebappURLWithoutScheme(conf).split(":")[0];
     XLearningWebAppUtil.setJHSWebappURLWithoutScheme(conf,
