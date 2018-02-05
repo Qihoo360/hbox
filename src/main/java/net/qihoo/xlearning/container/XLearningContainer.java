@@ -352,7 +352,7 @@ public class XLearningContainer {
       String boardHistoryDir;
       Path remoteLogPath;
       FileSystem boardDfs;
-      if (conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR).equals(XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR)) {
+      if (conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR).equals(xlConf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR))) {
         boardHistoryDir = xlConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
             XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR) + "/" + this.envs.get("APP_ID");
         remoteLogPath = new Path(boardHistoryDir);
