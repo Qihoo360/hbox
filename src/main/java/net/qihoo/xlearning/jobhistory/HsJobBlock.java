@@ -149,10 +149,16 @@ public class HsJobBlock extends HtmlBlock implements AMParams {
               "            name: 'cpu util',\n" +
               "            data: " + $("cpuUtilMetrics" + i) + "\n" +
               "        }]";
-          html.div()
-              .div().$id(containerCpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
-              .div().$id(containerCpuUtilID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
-              ._();
+          if (!$("cpuUtilMetrics" + i).equals("") && $("cpuUtilMetrics" + i) != null) {
+            html.div()
+                .div().$id(containerCpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
+                .div().$id(containerCpuUtilID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
+                ._();
+          } else {
+            html.div()
+                .div().$id(containerCpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
+                ._();
+          }
           String css = "." + containerClass + "{\n" +
               "    display:inline-block;\n" +
               "}";
@@ -198,44 +204,45 @@ public class HsJobBlock extends HtmlBlock implements AMParams {
               "    },\n" +
               "\n" +
               "    series: " + seriesCpuMemOptions + "\n" +
-              "});\n" +
-              "Highcharts.stockChart(" + containerCpuUtilID + ", {\n" +
-              "    chart: {\n" +
-              "        width: 550\n" +
-              "    },\n" +
-              "\n" +
-              "    rangeSelector: {\n" +
-              "        buttons: [{\n" +
-              "            count: 1,\n" +
-              "            type: 'minute',\n" +
-              "            text: '1M'\n" +
-              "        }, {\n" +
-              "            count: 5,\n" +
-              "            type: 'minute',\n" +
-              "            text: '5M'\n" +
-              "        }, {\n" +
-              "            type: 'all',\n" +
-              "            text: 'All'\n" +
-              "        }],\n" +
-              "        inputEnabled: false,\n" +
-              "        selected: 0\n" +
-              "    },\n" +
-              "\n" +
-              "    title: {\n" +
-              "        text: 'cpu utilization( % )'\n" +
-              "    },\n" +
-              "\n" +
-              "    credits: {\n" +
-              "        enabled: false\n" +
-              "    },\n" +
-              "\n" +
-              "    exporting: {\n" +
-              "        enabled: false\n" +
-              "    },\n" +
-              "\n" +
-              "    series: " + seriesCpuUtilOptions + "\n" +
               "});\n";
-
+          if (!$("cpuUtilMetrics" + i).equals("") && $("cpuUtilMetrics" + i) != null) {
+            striptBody += "Highcharts.stockChart(" + containerCpuUtilID + ", {\n" +
+                "    chart: {\n" +
+                "        width: 550\n" +
+                "    },\n" +
+                "\n" +
+                "    rangeSelector: {\n" +
+                "        buttons: [{\n" +
+                "            count: 1,\n" +
+                "            type: 'minute',\n" +
+                "            text: '1M'\n" +
+                "        }, {\n" +
+                "            count: 5,\n" +
+                "            type: 'minute',\n" +
+                "            text: '5M'\n" +
+                "        }, {\n" +
+                "            type: 'all',\n" +
+                "            text: 'All'\n" +
+                "        }],\n" +
+                "        inputEnabled: false,\n" +
+                "        selected: 0\n" +
+                "    },\n" +
+                "\n" +
+                "    title: {\n" +
+                "        text: 'cpu utilization( % )'\n" +
+                "    },\n" +
+                "\n" +
+                "    credits: {\n" +
+                "        enabled: false\n" +
+                "    },\n" +
+                "\n" +
+                "    exporting: {\n" +
+                "        enabled: false\n" +
+                "    },\n" +
+                "\n" +
+                "    series: " + seriesCpuUtilOptions + "\n" +
+                "});\n";
+          }
           html.script().$type("text/javascript")._(striptHead + striptBody)._();
         }
       }

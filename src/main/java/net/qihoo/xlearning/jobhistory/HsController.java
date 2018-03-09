@@ -161,7 +161,9 @@ public class HsController extends Controller implements AMParams {
                   }.getType();
                   ConcurrentHashMap<String, Object> map = gson2.fromJson(cpuMetrics, type);
                   set("cpuMemMetrics" + workeri, new Gson().toJson(map.get("CPUMEM")));
-                  set("cpuUtilMetrics" + workeri, new Gson().toJson(map.get("CPUUTIL")));
+                  if (map.containsKey("CPUUTIL")) {
+                    set("cpuUtilMetrics" + workeri, new Gson().toJson(map.get("CPUUTIL")));
+                  }
                 }
                 set("WORKER_CONTAINER_ID" + workeri, info);
                 workeri++;

@@ -172,21 +172,28 @@ public class ContainerReporter extends Thread {
               LOG.debug("current hadoop version don't have the method getRssMemorySize of Class " + pTree.getClass().toString() + ". For More Detail: " + e);
               currentPmemUsage = Double.parseDouble(df.format(pTree.getCumulativeRssmem() / 1024.0 / 1024.0 / 1024.0));
             }
-            int cpuUsagePercentPerCore = (int) pTree.getCpuUsagePercent();
-            if (cpuUsagePercentPerCore < 0) {
-              cpuUsagePercentPerCore = 0;
-            }
             if (currentPmemUsage < 0.0) {
               currentPmemUsage = 0.0;
             }
             List memPoint = new ArrayList();
-            List utilPoint = new ArrayList();
             memPoint.add(time);
             memPoint.add(currentPmemUsage);
-            utilPoint.add(time);
-            utilPoint.add(cpuUsagePercentPerCore);
             cpuMetrics.put("CPUMEM", memPoint);
-            cpuMetrics.put("CPUUTIL", utilPoint);
+            try {
+              Method getCpuUsage = pTree.getClass().getMethod("getCpuUsagePercent");
+              int cpuUsagePercentPerCore = (int) (float) getCpuUsage.invoke(pTree);
+              if (cpuUsagePercentPerCore < 0) {
+                cpuUsagePercentPerCore = 0;
+              }
+              List utilPoint = new ArrayList();
+              utilPoint.add(time);
+              utilPoint.add(cpuUsagePercentPerCore);
+              cpuMetrics.put("CPUUTIL", utilPoint);
+            } catch (NoSuchMethodException e) {
+              LOG.debug("current hadoop version don't have the method getCpuUsagePercent of Class " + pTree.getClass().toString() + ". For More Detail: " + e);
+            } catch (Exception e) {
+              LOG.debug("getCpuUsagePercent Exception: " + e);
+            }
             Utilities.sleep(1000);
           }
         } catch (Exception e) {

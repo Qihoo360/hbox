@@ -84,7 +84,9 @@ public class AppController extends Controller implements AMParams {
         ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
         if (cpuMetrics.size() != 0) {
           set("cpuMemMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUMEM")));
-          set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
+          if (cpuMetrics.containsKey("CPUUTIL")) {
+            set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
+          }
         }
       }
 
