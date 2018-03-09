@@ -92,7 +92,11 @@ Unpacking the distribution package, the following subdirectories will be generat
 #### 3.1 hadoop 3.1.0-SNAPSHOT Cluster Setting Notes
 The gpu resources applied in `xlearning-gpu-beta` version is based on the version of `hadoop3.1.0-SNAPSHOT`. When using the gpu resources scheduler and isolation in the version of `hadoop3.1.0-SNAPSHOT`, notes that :  
 - java version >= 1.8  
-- `yarn.nodemanager.container-executor.class`  is setted as `org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor`, and configure the related settings.    
+- `yarn.nodemanager.container-executor.class`  is setted as `org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor`, and configure the related settings. Note that add the following settings to `container-executor.cfg`:    
+
+      [gpu]  
+      module.enabled=true   
+
 - Use the DefaultScheduler `CapacityScheduler`. Note that `yarn.scheduler.capacity.resource-calculator` is setted as `org.apache.hadoop.yarn.util.resource.DominantResourceCalculator`.  
 - Configure the gpu resources information, same as follow settings:    
 1）yarn-site.xml :  

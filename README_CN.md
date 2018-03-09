@@ -93,7 +93,11 @@ XLearning系统包括三种组件：
 #### 3.1 Hadoop 3.1.0-SNAPSHOT 集群配置注意事项
 `xlearning-gpu-beta` 版本中的gpu申请分配功能是基于 `hadoop3.1.0-SNAPSHOT` 版本中的gpu调度隔离功能来实现的。在使用 `hadoop3.1.0-SNAPSHOT` 版本中gpu资源的调度隔离时，需要注重以下几个方面：  
 - 所需java版本为1.8  
-- 因gpu资源采用cgroup实现的隔离，`yarn.nodemanager.container-executor.class`需要配置为`org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor`，并进行相关设置；  
+- 因gpu资源采用cgroup实现的隔离，`yarn.nodemanager.container-executor.class`需要配置为`org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor`，并进行相关设置。注意将下述配置添加到`container-executor.cfg`中；  
+
+      [gpu]   
+      module.enabled=true   
+
 - 采用默认的资源调度策略`CapacityScheduler`，注意设置`yarn.scheduler.capacity.resource-calculator`为`org.apache.hadoop.yarn.util.resource.DominantResourceCalculator`；  
 - 配置gpu资源信息：  
 1）yarn-site.xml 中配置类似如下：  
