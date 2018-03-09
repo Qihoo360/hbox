@@ -150,7 +150,7 @@ public class AppController extends Controller implements AMParams {
       set(CONTAINER_HTTP_ADDRESS + i, container.getNodeHttpAddress());
       set(CONTAINER_ID + i, container.getId().toString());
 
-      if (app.context.getContainerGPUDevice(new XLearningContainerId(container.getId())).trim().length() != 0) {
+      if ((app.context.getContainerGPUDevice(new XLearningContainerId(container.getId())) != null) && (app.context.getContainerGPUDevice(new XLearningContainerId(container.getId())).trim().length() != 0)) {
         set(CONTAINER_GPU_DEVICE + i, app.context.getContainerGPUDevice(new XLearningContainerId(container.getId())).toString());
       } else {
         set(CONTAINER_GPU_DEVICE + i, "-");
