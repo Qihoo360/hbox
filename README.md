@@ -160,6 +160,17 @@ For more details, set the [**Submit Parameter**](./doc/submit.md) part。
 [**XLearning FAQ**](./doc/faq.md)
 
 
+## Authors
+
+`XLearning` is designed, authored, reviewed and tested by the team at the github:  
+
+- [@Yuance Li](http://github.com/liyuance)  
+- [@Wen OuYang](http://github.com/ouyangwen-it)  
+- [@Runying Jia](http://github.com/jiarunying)  
+- [@YuHan Jia](http://github.com/jiayuhan-it)  
+- [@Lei Wang](http://github.com/wangleibefree)  
+
+
 ## Contact us
 Mail： <g-xlearning-dev@360.cn>     
 QQ群：588356340  
