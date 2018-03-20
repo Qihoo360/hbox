@@ -166,11 +166,7 @@ queue | 作业提交队列
 
 ## Authors
 
-- [@Yuance Li](http://github.com/liyuance)  
-- [@Wen OuYang](http://github.com/ouyangwen-it)  
-- [@Runying Jia](http://github.com/jiarunying)  
-- [@YuHan Jia](http://github.com/jiayuhan-it)  
-- [@Lei Wang](http://github.com/wangleibefree)  
+  [@Yuance Li](http://github.com/liyuance), [@Wen OuYang](http://github.com/ouyangwen-it), [@Runying Jia](http://github.com/jiarunying), [@YuHan Jia](http://github.com/jiayuhan-it), [@Lei Wang](http://github.com/wangleibefree)  
 
 
 ## 联系我们
