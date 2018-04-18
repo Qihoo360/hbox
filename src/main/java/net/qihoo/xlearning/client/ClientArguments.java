@@ -39,6 +39,7 @@ class ClientArguments {
   int priority;
   String queue;
   String userPath;
+  String userLD_LIBRARY_PATH;
   String appMasterJar;
   int boardIndex;
   int boardReloadInterval;
@@ -80,6 +81,7 @@ class ClientArguments {
     xlearningCacheArchives = "";
     appMasterJar = "";
     userPath = "";
+    userLD_LIBRARY_PATH = "";
     priority = XLearningConfiguration.DEFAULT_XLEARNING_APP_PRIORITY;
     queue = "";
     userClasspathFirst = XLearningConfiguration.DEFAULT_XLEARNING_USER_CLASSPATH_FIRST;
@@ -135,6 +137,8 @@ class ClientArguments {
     allOptions.addOption("launchCmd", "launch-cmd", true, "Cmd for XLearning program");
     allOptions.addOption("userPath", "user-path", true,
         "add the user set PATH");
+    allOptions.addOption("userLDLIBRARYPATH", "user-ldlibrarypath", true,
+              "add the user LD_LIBRARY_PATH");
     allOptions.addOption("cacheFile", "cacheFile", true,
         "add the XLearning hdfsFile PATH");
     allOptions.addOption("cacheArchive", "cacheArchive", true,
@@ -321,6 +325,10 @@ class ClientArguments {
 
     if (cliParser.hasOption("user-path")) {
       userPath = cliParser.getOptionValue("user-path");
+    }
+
+    if (cliParser.hasOption("user-ldlibrarypath")) {
+        userLD_LIBRARY_PATH = cliParser.getOptionValue("user-ldlibrarypath");
     }
 
     if (cliParser.hasOption("cacheFile")) {
