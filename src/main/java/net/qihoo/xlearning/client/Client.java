@@ -733,7 +733,7 @@ public class Client {
           }
         } catch (UndeclaredThrowableException e) {
           xlearningClient = null;
-          LOG.warn("Connecting to ResourceManager failed, try again later ", e);
+          LOG.warn("Connecting to ApplicationManager failed, try again later ", e);
         }
       }
 
