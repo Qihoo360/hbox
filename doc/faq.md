@@ -112,3 +112,17 @@ Note that the information of AM connected error which reported at the client whe
 ### 11. Report the error：" java.io.IOException: Cannot run program "tensorboard": error=2, No such file or directory" after submit the application.       
 When the XLearning client submits a job, the --user-path "/root/anaconda2/lib/python2.7/site-packages/tensorboard" is added to specify the tensorboard path.
 
+### 12. How to get the input file list for each worker container when setting the `--conf xlearning.input.strategy` or `--input-strategy` as `PLACEHOLDER` ?
+With the input strategy setted as the `PLACEHOLDER`, worker containers get the assigned input file list to the program by the way of the environment `INPUT_FILE_LIST` as `json` format with the `key` of the input local path and the `value` of the list of the hdfs file name. However, there is the error when the length of the environment is too long to execute the user program. In this situation, the content of the environment `INPUT_FILE_LIST` would be written to the local file `inputFileList.txt` at the current path.
+User can get the file list like this:
+
+    import os
+    import json
+    if os.environ.has_key('INPUT_FILE_LIST') :
+      inputfile = json.loads(os.environ["INPUT_FILE_LIST"])
+      data_file = inputfile["data"]
+    else :
+      with open("inputFileList.txt") as f:
+        fileStr = f.readline()
+      inputfile = json.loads(fileStr)
+

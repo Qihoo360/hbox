@@ -156,7 +156,7 @@ public class AppController extends Controller implements AMParams {
       i++;
     }
 
-    if (this.conf.get(XLearningConfiguration.XLEARNING_OUTPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_OUTPUT_STRATEGY).equals("STREAM")) {
+    if (this.conf.get(XLearningConfiguration.XLEARNING_OUTPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_OUTPUT_STRATEGY).toUpperCase().equals("STREAM")) {
       set(OUTPUT_TOTAL, "0");
     } else {
       set(OUTPUT_TOTAL, String.valueOf(app.context.getOutputs().size()));
