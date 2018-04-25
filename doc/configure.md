@@ -78,7 +78,7 @@ xlearning.worker.mem.autoscale | 0.5 | automatic memory scale ratio of worker wh
 xlearning.ps.mem.autoscale | 0.2 | automatic memory scale ratio of ps when application retry after failed.   
 xlearning.app.max.attempts | 1 | the number of application attempts， default not retry after failed.   
 xlearning.report.container.status | true | whether the client report the status of the container.  
-
+xlearning.env.maxlength | 102400 | the maximum length of environment variable when container execute the user program.
 
 
 

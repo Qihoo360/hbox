@@ -79,6 +79,7 @@ xlearning.worker.mem.autoscale | 0.5 | 作业失败重试时，worker内存自�
 xlearning.ps.mem.autoscale | 0.2 | 作业失败重试时，ps内存自动增长比例   
 xlearning.app.max.attempts | 1 | 作业执行次数，默认执行失败后不重试   
 xlearning.report.container.status | true | client端打印container运行状态信息  
+xlearning.env.maxlength | 102400 | container启动程序执行时，环境变量长度上限
 
 
 

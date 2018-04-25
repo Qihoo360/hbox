@@ -240,6 +240,10 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final double DEFAULT_XLEARNING_CONTAINER_FAILURES_RATE = 0.5;
 
+  public static final String XLEARNING_ENV_MAXLENGTH = "xlearning.env.maxlength";
+
+  public static final Integer DEFAULT_XLEARNING_ENV_MAXLENGTH = 102400;
+
   /**
    * Configuration used in Container
    */

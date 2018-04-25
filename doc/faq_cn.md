@@ -115,3 +115,17 @@ XLearning1.1版本中支持作业失败重试，并且重试后作业worker与ps
 在XLearning客户端提交作业时，添加 --user-path "/root/anaconda2/lib/python2.7/site-packages/tensorboard" ，指定tensorboard路径。   
 
 
+### 12. 提交脚本中设置`--conf xlearning.input.strategy`或`--input-strategy` 为 `PLACEHOLDER`策略时，获取Worker角色对应各Container所分配的文件列表信息形式？
+在`PLACEHOLDER`输入策略下，各Worker Container所分配到的文件列表信息将以通过环境变量`INPUT_FILE_LIST`以`json格式`传给各执行程序,其中，`key`为`input`参数所指定的本地路径，`value`为所分配的HDFS文件列表（list类型），执行程序可依赖第三方库或框架自身来对HDFS文件直接操作。由于该列表信息通过环境变量进行传递，会出现因环境变量长度过长而造成程序无法启动的错误出现，该情况下会将原环境变量`INPUT_FILE_LIST`对应写入当前执行目录下的`inputFileList.txt`文件中，用户可通过类似如下方式获取：
+
+    import os
+    import json
+    if os.environ.has_key('INPUT_FILE_LIST') :
+      inputfile = json.loads(os.environ["INPUT_FILE_LIST"])
+      data_file = inputfile["data"]
+    else :
+      with open("inputFileList.txt") as f:
+        fileStr = f.readline()
+      inputfile = json.loads(fileStr)
+
+

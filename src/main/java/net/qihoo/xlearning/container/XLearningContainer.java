@@ -224,9 +224,9 @@ public class XLearningContainer {
   @SuppressWarnings("deprecation")
   private void prepareInputFiles() throws IOException, InterruptedException,
       ExecutionException {
-    if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).equals("STREAM")) {
+    if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).toUpperCase().equals("STREAM")) {
       LOG.info("XLEARNING_INPUT_STRATEGY is STREAM, use the stream way to read data from hdfs.");
-    } else if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).equals("PLACEHOLDER")) {
+    } else if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).toUpperCase().equals("PLACEHOLDER")) {
       List<InputInfo> inputs = Arrays.asList(amClient.getInputSplit(containerId));
       if (inputs.size() == 0) {
         LOG.info("Current container has no input.");
@@ -291,7 +291,7 @@ public class XLearningContainer {
   }
 
   private void createLocalOutputDir() {
-    if (this.conf.get(XLearningConfiguration.XLEARNING_OUTPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_OUTPUT_STRATEGY).equals("STREAM")) {
+    if (this.conf.get(XLearningConfiguration.XLEARNING_OUTPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_OUTPUT_STRATEGY).toUpperCase().equals("STREAM")) {
       LOG.info("XLEARNING_OUTPUT_STRATEGY is STREAM, do not need to create local output dir.");
     } else {
       List<OutputInfo> outputs = Arrays.asList(amClient.getOutputLocation());
@@ -315,7 +315,7 @@ public class XLearningContainer {
 
   @SuppressWarnings("deprecation")
   private void uploadOutputFiles() throws IOException {
-    if (this.conf.get(XLearningConfiguration.XLEARNING_OUTPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_OUTPUT_STRATEGY).equals("STREAM")) {
+    if (this.conf.get(XLearningConfiguration.XLEARNING_OUTPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_OUTPUT_STRATEGY).toUpperCase().equals("STREAM")) {
       LOG.info("XLEARNING_OUTPUT_STRATEGY is STREAM, do not need to upload local output files.");
     } else {
       List<OutputInfo> outputs = Arrays.asList(amClient.getOutputLocation());
@@ -508,6 +508,18 @@ public class XLearningContainer {
       envList.add("LIGHTGBM_LOCAL_LISTEN_PORT=" + this.lightGBMLocalPort);
     }
 
+    if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).toUpperCase().equals("PLACEHOLDER")) {
+      envList.add(XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList);
+      if (envList.toString().length() > conf.getInt(XLearningConfiguration.XLEARNING_ENV_MAXLENGTH, XLearningConfiguration.DEFAULT_XLEARNING_ENV_MAXLENGTH)) {
+        LOG.warn("Current container environments length " + envList.toString().length() + " exceed the configuration " + XLearningConfiguration.XLEARNING_ENV_MAXLENGTH + " " + conf.getInt(XLearningConfiguration.XLEARNING_ENV_MAXLENGTH, XLearningConfiguration.DEFAULT_XLEARNING_ENV_MAXLENGTH));
+        envList.remove(envList.size() - 1);
+        LOG.warn("InputFile list had written to local file: inputFileList.txt !!");
+        PrintWriter writer = new PrintWriter("inputFileList.txt", "UTF-8");
+        writer.println(this.inputFileList);
+        writer.close();
+      }
+    }
+
     String[] env = envList.toArray(new String[envList.size()]);
     String command = envs.get(XLearningConstants.Environment.XLEARNING_EXEC_CMD.toString());
     LOG.info("Executing command:" + command);
@@ -519,7 +531,7 @@ public class XLearningContainer {
     Date now = new Date();
     heartbeatThread.setContainersStartTime(now.toString());
 
-    if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).equals("STREAM")) {
+    if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).toUpperCase().equals("STREAM")) {
       LOG.info("Starting thread to redirect stdin of xlearning process");
       Thread stdinRedirectThread = new Thread(new Runnable() {
         @Override

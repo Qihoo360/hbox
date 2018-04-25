@@ -1002,6 +1002,12 @@ public class ApplicationMaster extends CompositeService {
       }
     }
     LOG.info("Total " + acquiredWorkerContainers.size() + " worker containers has allocated.");
+    for (int i = 0; i < psNum; i++) {
+      amrmAsync.removeContainerRequest(psContainerRequest);
+    }
+    for (int i = 0; i < workerNum; i++) {
+      amrmAsync.removeContainerRequest(workerContainerRequest);
+    }
 
     //launch mxnet scheduler
     if (xlearningAppType.equals("MXNET") && !singleMx) {
