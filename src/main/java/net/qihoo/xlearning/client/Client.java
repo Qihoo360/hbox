@@ -482,10 +482,10 @@ public class Client {
       classPathEnv.append(cp.trim());
     }
 
-    if(conf.getBoolean(XLearningConfiguration.XLEARNING_USER_CLASSPATH_FIRST, XLearningConfiguration.DEFAULT_XLEARNING_USER_CLASSPATH_FIRST)) {
+    if (conf.getBoolean(XLearningConfiguration.XLEARNING_USER_CLASSPATH_FIRST, XLearningConfiguration.DEFAULT_XLEARNING_USER_CLASSPATH_FIRST)) {
       appMasterEnv.put("CLASSPATH", libJarsClassPath + classPathEnv.toString());
     } else {
-      appMasterEnv.put("CLASSPATH",  classPathEnv.toString() + ":" + libJarsClassPath);
+      appMasterEnv.put("CLASSPATH", classPathEnv.toString() + ":" + libJarsClassPath);
     }
 
     appMasterEnv.put(XLearningConstants.Environment.XLEARNING_STAGING_LOCATION.toString(), Utilities
@@ -539,7 +539,8 @@ public class Client {
 
     if (clientArguments.xlearningCacheArchives != null && !clientArguments.xlearningCacheArchives.equals("")) {
       appMasterEnv.put(XLearningConstants.Environment.XLEARNING_CACHE_ARCHIVE_LOCATION.toString(), clientArguments.xlearningCacheArchives);
-      if (clientArguments.appType.equals("MXNET") && !conf.getBoolean(XLearningConfiguration.XLEARNING_MXNET_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MXNET_MODE_SINGLE)) {
+      if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(XLearningConfiguration.XLEARNING_MXNET_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MXNET_MODE_SINGLE))
+          || clientArguments.appType.equals("DISTXGBOOST")) {
         URI defaultUri = new Path(conf.get("fs.defaultFS")).toUri();
         String appCacheArchivesRemoteLocation = appMasterEnv.get(XLearningConstants.Environment.XLEARNING_CACHE_ARCHIVE_LOCATION.toString());
         String[] cacheArchives = StringUtils.split(appCacheArchivesRemoteLocation, ",");

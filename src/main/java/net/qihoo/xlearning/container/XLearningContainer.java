@@ -461,126 +461,54 @@ public class XLearningContainer {
       writer.close();
     }
 
-    String[] env = null;
+    List<String> envList = new ArrayList<>(20);
+    envList.add("PATH=" + System.getenv("PATH"));
+    envList.add("JAVA_HOME=" + System.getenv("JAVA_HOME"));
+    envList.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
+    envList.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
+    envList.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+        "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+    envList.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+    envList.add("PYTHONUNBUFFERED=1");
+    envList.add(XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList);
+
     if ("TENSORFLOW".equals(xlearningAppType)) {
-      if (single) {
-        env = new String[]{
-            "PATH=" + System.getenv("PATH"),
-            "JAVA_HOME=" + System.getenv("JAVA_HOME"),
-            "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
-            "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
-            "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
-            "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
-            "PYTHONUNBUFFERED=1",
-            XLearningConstants.Environment.XLEARNING_TF_INDEX.toString() + "=" + this.index,
-            XLearningConstants.Environment.XLEARNING_TF_ROLE.toString() + "=" + this.role,
-            XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList
-        };
-      } else {
+      envList.add(XLearningConstants.Environment.XLEARNING_TF_INDEX.toString() + "=" + this.index);
+      envList.add(XLearningConstants.Environment.XLEARNING_TF_ROLE.toString() + "=" + this.role);
+      if (!single) {
         /**
          * set TF_CLUSTER_DEF in env
          * python script can load cluster def use "json.loads(os.environ["CLUSTER_DEF"])"
          */
-        env = new String[]{
-            "PATH=" + System.getenv("PATH"),
-            "JAVA_HOME=" + System.getenv("JAVA_HOME"),
-            "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
-            "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
-            "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
-            "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
-            "PYTHONUNBUFFERED=1",
-            XLearningConstants.Environment.XLEARNING_TF_CLUSTER_DEF.toString() + "=" + this.clusterDef,
-            XLearningConstants.Environment.XLEARNING_TF_INDEX.toString() + "=" + this.index,
-            XLearningConstants.Environment.XLEARNING_TF_ROLE.toString() + "=" + this.role,
-            XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList
-        };
+        envList.add(XLearningConstants.Environment.XLEARNING_TF_CLUSTER_DEF.toString() + "=" + this.clusterDef);
       }
     } else if (xlearningAppType.equals("MXNET")) {
-      if (singleMx) {
-        env = new String[]{
-            "PATH=" + System.getenv("PATH"),
-            "JAVA_HOME=" + System.getenv("JAVA_HOME"),
-            "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
-            "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
-            "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
-            "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
-            "PYTHONUNBUFFERED=1",
-            XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList
-        };
-      } else if (xlearningAppType.equals("DISTXGBOOST")) {
-        env = new String[]{
-            "PATH=" + System.getenv("PATH"),
-            "JAVA_HOME=" + System.getenv("JAVA_HOME"),
-            "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
-            "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
-            "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
-            "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
-            "DMLC_TRACKER_URI=" + System.getenv("DMLC_TRACKER_URI"),
-            "DMLC_TRACKER_PORT=" + System.getenv("DMLC_TRACKER_PORT"),
-            "DMLC_NUM_WORKER=" + System.getenv("DMLC_NUM_WORKER"),
-            "PYTHONUNBUFFERED=1",
-            "DMLC_TASK_ID=" + this.index,
-            "DMLC_ROLE=" + this.role,
-            XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList
-        };
-      } else if (xlearningAppType.equals("DISTLIGHTGBM")) {
-        env = new String[]{
-            "PATH=" + System.getenv("PATH"),
-            "JAVA_HOME=" + System.getenv("JAVA_HOME"),
-
-            "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
-            "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
-            "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
-            "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
-            "LIGHTGBM_NUM_MACHINE=" + System.getenv(XLearningConstants.Environment.XLEARNING_LIGHTGBM_WORKER_NUM.toString()),
-            "LIGHTGBM_LOCAL_LISTEN_PORT=" + this.lightGBMLocalPort,
-            "PYTHONUNBUFFERED=1",
-            XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList
-        };
-      } else {
+      if (!singleMx) {
         String dmlcID;
         if (this.role.equals("worker")) {
           dmlcID = "DMLC_WORKER_ID";
         } else {
           dmlcID = "DMLC_SERVER_ID";
         }
-        env = new String[]{
-            "PATH=" + System.getenv("PATH"),
-            "JAVA_HOME=" + System.getenv("JAVA_HOME"),
-            "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
-            "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
-            "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
-            "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
-            "DMLC_PS_ROOT_URI=" + System.getenv("DMLC_PS_ROOT_URI"),
-            "DMLC_PS_ROOT_PORT=" + System.getenv("DMLC_PS_ROOT_PORT"),
-            "DMLC_NUM_WORKER=" + System.getenv("DMLC_NUM_WORKER"),
-            "DMLC_NUM_SERVER=" + System.getenv("DMLC_NUM_SERVER"),
-            "PYTHONUNBUFFERED=1",
-            dmlcID + "=" + this.index,
-            "DMLC_ROLE=" + this.role,
-            XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList
-        };
+        envList.add("DMLC_PS_ROOT_URI=" + System.getenv("DMLC_PS_ROOT_URI"));
+        envList.add("DMLC_PS_ROOT_PORT=" + System.getenv("DMLC_PS_ROOT_PORT"));
+        envList.add("DMLC_NUM_WORKER=" + System.getenv("DMLC_NUM_WORKER"));
+        envList.add("DMLC_NUM_SERVER=" + System.getenv("DMLC_NUM_SERVER"));
+        envList.add(dmlcID + "=" + this.index);
+        envList.add("DMLC_ROLE=" + this.role);
       }
-    } else {
-      env = new String[]{
-          "PATH=" + System.getenv("PATH"),
-          "JAVA_HOME=" + System.getenv("JAVA_HOME"),
-          "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
-          "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
-          "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-              "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
-          "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
-          "PYTHONUNBUFFERED=1",
-          XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList
-      };
+    } else if (xlearningAppType.equals("DISTXGBOOST")) {
+      envList.add("DMLC_TRACKER_URI=" + System.getenv("DMLC_TRACKER_URI"));
+      envList.add("DMLC_TRACKER_PORT=" + System.getenv("DMLC_TRACKER_PORT"));
+      envList.add("DMLC_NUM_WORKER=" + System.getenv("DMLC_NUM_WORKER"));
+      envList.add("DMLC_TASK_ID=" + this.index);
+      envList.add("DMLC_ROLE=" + this.role);
+    } else if (xlearningAppType.equals("DISTLIGHTGBM")) {
+      envList.add("LIGHTGBM_NUM_MACHINE=" + System.getenv(XLearningConstants.Environment.XLEARNING_LIGHTGBM_WORKER_NUM.toString()));
+      envList.add("LIGHTGBM_LOCAL_LISTEN_PORT=" + this.lightGBMLocalPort);
     }
 
+    String[] env = envList.toArray(new String[envList.size()]);
     String command = envs.get(XLearningConstants.Environment.XLEARNING_EXEC_CMD.toString());
     LOG.info("Executing command:" + command);
     Runtime rt = Runtime.getRuntime();
@@ -622,12 +550,12 @@ public class XLearningContainer {
                     }
                     osw.write(value.toString());
                     osw.write("\n");
-                    if(j == 0 && isCache) {
-                      if(conf.getInt(XLearningConfiguration.XLEARNING_STREAM_EPOCH, XLearningConfiguration.DEFAULT_XLEARNING_STREAM_EPOCH) > 1) {
+                    if (j == 0 && isCache) {
+                      if (conf.getInt(XLearningConfiguration.XLEARNING_STREAM_EPOCH, XLearningConfiguration.DEFAULT_XLEARNING_STREAM_EPOCH) > 1) {
                         gos.write(value.toString().getBytes());
                         gos.write("\n".getBytes());
 
-                        if((gzFile.length() / 1024 / 1024) > conf.getInt(XLearningConfiguration.XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT, XLearningConfiguration.DEFAULT_XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT)) {
+                        if ((gzFile.length() / 1024 / 1024) > conf.getInt(XLearningConfiguration.XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT, XLearningConfiguration.DEFAULT_XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT)) {
                           LOG.info("Inputformat cache file size is:" + gzFile.length() / 1024 / 1024 + "M "
                               + "beyond the limit size:" + conf.getInt(XLearningConfiguration.XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT, XLearningConfiguration.DEFAULT_XLEARNING_INPUTFORMAT_CACHESIZE_LIMIT) + "M.");
                           gzFile.delete();
@@ -645,7 +573,7 @@ public class XLearningContainer {
                 LOG.info("split " + (i + 1) + " is finished.");
               }
               LOG.info("Epoch " + (j + 1) + " finished.");
-              if(isCache) {
+              if (isCache) {
                 break;
               }
             }
@@ -886,7 +814,7 @@ public class XLearningContainer {
     heartbeatThread.setContainersFinishTime(now.toString());
     heartbeatThread.setContainerStatus(XLearningContainerStatus.SUCCEEDED);
     Utilities.sleep(heartbeatInterval);
-    System.exit(-1);
+    System.exit(0);
   }
 
   public static void main(String[] args) {
