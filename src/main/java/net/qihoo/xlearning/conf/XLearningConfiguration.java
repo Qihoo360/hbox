@@ -43,6 +43,10 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final boolean DEFAULT_XLEARNING_USER_CLASSPATH_FIRST = true;
 
+  public static final String XLEARNING_HOST_LOCAL_ENABLE = "xlearning.host.local.enable";
+
+  public static final boolean DEFAULT_XLEARNING_HOST_LOCAL_ENABLE = false;
+
   public static final String XLEARNING_REPORT_CONTAINER_STATUS = "xlearning.report.container.status";
 
   public static final boolean DEFAULT_XLEARNING_REPORT_CONTAINER_STATUS = true;

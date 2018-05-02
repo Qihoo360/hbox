@@ -104,6 +104,8 @@ public class ApplicationMaster extends CompositeService {
   private List<Long> savingModelList;
 
   private Thread cleanApplication;
+  private String[] hostLocals;
+  private Set<String> containerHostnames;
 
   /**
    * Constructor, connect to Resource Manager
@@ -143,6 +145,8 @@ public class ApplicationMaster extends CompositeService {
     dmlcPsRootPort = 0;
     dmlcTrackerUri = null;
     dmlcTrackerPort = 0;
+    containerHostnames = null;
+    hostLocals = null;
 
     if (envs.containsKey(ApplicationConstants.Environment.CONTAINER_ID.toString())) {
       ContainerId containerId = ConverterUtils
@@ -284,6 +288,22 @@ public class ApplicationMaster extends CompositeService {
           FileSystem fs = FileSystem.get(xlearningConf);
           FSDataOutputStream out = fs.create(jobLogPath);
           fs.setPermission(jobLogPath, new FsPermission(LOG_FILE_PERMISSION));
+          if(conf.getBoolean(XLearningConfiguration.XLEARNING_HOST_LOCAL_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_HOST_LOCAL_ENABLE)){
+            String hostLocaldir = xlearningConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_HISTORY_LOG_DIR,
+                XLearningConfiguration.DEFAULT_XLEARNING_HISTORY_LOG_DIR) + "/" + conf.get("hadoop.job.ugi").split(",")[0]
+                + "/" + envs.get(XLearningConstants.Environment.XLEARNING_APP_NAME.toString());
+            Path hostLocalPath = new Path(hostLocaldir);
+            try {
+              FSDataOutputStream hostLocalOut = fs.create(hostLocalPath);
+              fs.setPermission(hostLocalPath, new FsPermission(LOG_FILE_PERMISSION));
+              hostLocalOut.writeBytes(containerHostnames.toString().substring(1, containerHostnames.toString().length()-1));
+              hostLocalOut.close();
+              LOG.info("host local enable is true, write " + hostLocalPath.toString() + " success");
+            } catch (Exception e) {
+              LOG.info("write host local file error, " + e);
+            }
+          }
+
           Map<String, Object> logMessage = new HashMap<>();
           logMessage.put(AMParams.APP_TYPE, xlearningAppType);
 
@@ -615,20 +635,41 @@ public class ApplicationMaster extends CompositeService {
     }
   }
 
-  private void buildContainerRequest() {
+  private void buildContainerRequest(String[] hostLocals) {
+    if(conf.getBoolean(XLearningConfiguration.XLEARNING_HOST_LOCAL_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_HOST_LOCAL_ENABLE)) {
+      XLearningConfiguration hboxConf = new XLearningConfiguration();
+      String hostLocaldir = hboxConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_HISTORY_LOG_DIR,
+          XLearningConfiguration.DEFAULT_XLEARNING_HISTORY_LOG_DIR) + "/" + conf.get("hadoop.job.ugi").split(",")[0]
+          + "/" + envs.get(XLearningConstants.Environment.XLEARNING_APP_NAME.toString());
+      Path hostLocalPath = new Path(hostLocaldir);
+      String line;
+      try {
+        if(hostLocalPath.getFileSystem(hboxConf).exists(hostLocalPath)) {
+          FSDataInputStream in = hostLocalPath.getFileSystem(hboxConf).open(hostLocalPath);
+          BufferedReader br = new BufferedReader(new InputStreamReader(in));
+          line = br.readLine();
+          hostLocals = line.split(",");
+          LOG.info("now in buildContainerRequest, host local is: " + Arrays.toString(hostLocals));
+          in.close();
+        }
+      } catch (IOException e) {
+        LOG.info("open and read the host local from " + hostLocalPath + " error, " + e);
+      }
+    }
+
     Priority priority = Records.newRecord(Priority.class);
     priority.setPriority(appPriority);
     Resource workerCapability = Records.newRecord(Resource.class);
     workerCapability.setMemory(workerMemory);
     workerCapability.setVirtualCores(workerVCores);
-    workerContainerRequest = new ContainerRequest(workerCapability, null, null, priority);
+    workerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority);
     LOG.info("Create worker container request: " + workerContainerRequest.toString());
 
     if (!single) {
       Resource psCapability = Records.newRecord(Resource.class);
       psCapability.setMemory(psMemory);
       psCapability.setVirtualCores(psVCores);
-      psContainerRequest = new ContainerRequest(psCapability, null, null, priority);
+      psContainerRequest = new ContainerRequest(psCapability, hostLocals, null, priority);
       LOG.info("Create ps container request: " + psContainerRequest.toString());
     }
   }
@@ -874,7 +915,7 @@ public class ApplicationMaster extends CompositeService {
       this.appendMessage("XLearning application needs " + workerNum + " worker container in fact", true);
     }
 
-    buildContainerRequest();
+    buildContainerRequest(hostLocals);
 
     rmCallbackHandler.setNeededPsContainersCount(psNum);
     rmCallbackHandler.setNeededWorkerContainersCount(workerNum);
@@ -990,6 +1031,21 @@ public class ApplicationMaster extends CompositeService {
     }
     for (int i = 0; i < workerNum; i++) {
       amrmAsync.removeContainerRequest(workerContainerRequest);
+    }
+
+    if(conf.getBoolean(XLearningConfiguration.XLEARNING_HOST_LOCAL_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_HOST_LOCAL_ENABLE)) {
+      containerHostnames = new HashSet<>();
+      if(acquiredPsContainers.size() > 0) {
+        for(Container container: acquiredPsContainers) {
+          containerHostnames.add(container.getNodeId().getHost());
+        }
+      }
+      if(acquiredWorkerContainers.size() > 0) {
+        for(Container container: acquiredWorkerContainers) {
+          containerHostnames.add(container.getNodeId().getHost());
+        }
+      }
+      LOG.info("host local enable is true, host list is: " + containerHostnames.toString());
     }
 
     //launch mxnet scheduler
