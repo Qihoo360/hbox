@@ -216,7 +216,7 @@ public class ApplicationContainerListener extends AbstractService implements App
     containersAppStartTimeMap.put(containerId, "");
     containersAppFinishTimeMap.put(containerId, "");
     containersCpuMetrics.put(containerId, new ConcurrentHashMap<String, LinkedBlockingDeque<Object>>());
-    if (role.equals(XLearningConstants.WORKER.toString())) {
+    if (role.equals(XLearningConstants.WORKER) || (role.equals(XLearningConstants.PS) && xlearningAppType.equals("TENSORFLOW"))) {
       containerId2InnerModel.put(containerId, new InnerModelSavedPair());
     }
     runningContainers.put(containerId, new LastTime(clock.getTime()));
@@ -495,7 +495,7 @@ public class ApplicationContainerListener extends AbstractService implements App
       }
     }
 
-    if (containerId2Role.get(containerId).equals(XLearningConstants.WORKER.toString())) {
+    if (containerId2Role.get(containerId).equals(XLearningConstants.WORKER)) {
       String localProgressLog = heartbeatRequest.getProgressLog();
       if (!localProgressLog.equals("")) {
         this.reporterProgress.put(containerId, localProgressLog);
@@ -505,45 +505,36 @@ public class ApplicationContainerListener extends AbstractService implements App
           LOG.error("log progress error:" + e);
         }
       }
-      String localContainersStartTime = heartbeatRequest.getContainersStartTime();
-      if (!localContainersStartTime.equals("")) {
-        this.containersAppStartTimeMap.put(containerId, localContainersStartTime);
-      }
-      String localContainersFinishTime = heartbeatRequest.getContainersFinishTime();
-      if (!localContainersFinishTime.equals("")) {
-        this.containersAppFinishTimeMap.put(containerId, localContainersFinishTime);
-      }
-      if (this.isSaveInnerModel) {
-        if (containerId2InnerModel.containsKey(containerId)) {
-          if (!containerId2InnerModel.get(containerId).getInnerModelTimeStamp().equals(this.interResultTimeStamp)) {
-            try {
-              LOG.info("Update container " + containerId.toString() + " interResult to " + this.interResultTimeStamp + ", waiting ...");
-              containerId2InnerModel.put(containerId, new InnerModelSavedPair(this.interResultTimeStamp, false));
-            } catch (Exception e) {
-              LOG.error("Update container " + containerId.toString() + " interResult failed, ", e);
-            }
-          } else {
-            if (heartbeatRequest.getInnerModelSavedStatus()) {
-              if (!containerId2InnerModel.get(containerId).getModelSavedStatus()) {
-                LOG.info("container " + containerId.toString() + "saves the interResult " + this.interResultTimeStamp + " finished.");
-                containerId2InnerModel.put(containerId, new InnerModelSavedPair(this.interResultTimeStamp, true));
-              }
+    }
+    String localContainersStartTime = heartbeatRequest.getContainersStartTime();
+    if (!localContainersStartTime.equals("")) {
+      this.containersAppStartTimeMap.put(containerId, localContainersStartTime);
+    }
+    String localContainersFinishTime = heartbeatRequest.getContainersFinishTime();
+    if (!localContainersFinishTime.equals("")) {
+      this.containersAppFinishTimeMap.put(containerId, localContainersFinishTime);
+    }
+
+    if (this.isSaveInnerModel) {
+      if (containerId2InnerModel.containsKey(containerId)) {
+        if (!containerId2InnerModel.get(containerId).getInnerModelTimeStamp().equals(this.interResultTimeStamp)) {
+          try {
+            LOG.info("Update container " + containerId.toString() + " interResult to " + this.interResultTimeStamp + ", waiting ...");
+            containerId2InnerModel.put(containerId, new InnerModelSavedPair(this.interResultTimeStamp, false));
+          } catch (Exception e) {
+            LOG.error("Update container " + containerId.toString() + " interResult failed, ", e);
+          }
+        } else {
+          if (heartbeatRequest.getInnerModelSavedStatus()) {
+            if (!containerId2InnerModel.get(containerId).getModelSavedStatus()) {
+              LOG.info("container " + containerId.toString() + "saves the interResult " + this.interResultTimeStamp + " finished.");
+              containerId2InnerModel.put(containerId, new InnerModelSavedPair(this.interResultTimeStamp, true));
             }
           }
         }
       }
-      return new HeartbeatResponse(isXLearningTrainFinished, this.interResultTimeStamp);
-    } else {
-      String localContainersStartTime = heartbeatRequest.getContainersStartTime();
-      if (!localContainersStartTime.equals("")) {
-        this.containersAppStartTimeMap.put(containerId, localContainersStartTime);
-      }
-      String localContainersFinishTime = heartbeatRequest.getContainersFinishTime();
-      if (!localContainersFinishTime.equals("")) {
-        this.containersAppFinishTimeMap.put(containerId, localContainersFinishTime);
-      }
-      return new HeartbeatResponse(isXLearningTrainFinished, Long.MIN_VALUE);
     }
+    return new HeartbeatResponse(isXLearningTrainFinished, this.interResultTimeStamp);
   }
 
   @Override
