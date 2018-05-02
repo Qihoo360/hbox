@@ -61,7 +61,6 @@ public class ApplicationMaster extends CompositeService {
   private int psVCores;
   private int psNum;
   private Boolean single;
-  private Boolean singleMx;
   private int appPriority;
   // location of AppMaster.jar on HDFS
   private Path appJarRemoteLocation;
@@ -136,8 +135,7 @@ public class ApplicationMaster extends CompositeService {
     psMemory = conf.getInt(XLearningConfiguration.XLEARNING_PS_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEMORY);
     psVCores = conf.getInt(XLearningConfiguration.XLEARNING_PS_VCORES, XLearningConfiguration.DEFAULT_XLEARNING_PS_VCORES);
     psNum = conf.getInt(XLearningConfiguration.XLEARNING_PS_NUM, XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM);
-    single = conf.getBoolean(XLearningConfiguration.XLEARNING_TF_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_MODE_SINGLE);
-    singleMx = conf.getBoolean(XLearningConfiguration.XLEARNING_MXNET_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MXNET_MODE_SINGLE);
+    single = conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE);
     appPriority = conf.getInt(XLearningConfiguration.XLEARNING_APP_PRIORITY, XLearningConfiguration.DEFAULT_XLEARNING_APP_PRIORITY);
     acquiredWorkerContainers = new ArrayList<>();
     acquiredPsContainers = new ArrayList<>();
@@ -626,7 +624,7 @@ public class ApplicationMaster extends CompositeService {
     workerContainerRequest = new ContainerRequest(workerCapability, null, null, priority);
     LOG.info("Create worker container request: " + workerContainerRequest.toString());
 
-    if (("TENSORFLOW".equals(xlearningAppType) && !single) || ("MXNET".equals(xlearningAppType) && !singleMx)) {
+    if (!single) {
       Resource psCapability = Records.newRecord(Resource.class);
       psCapability.setMemory(psMemory);
       psCapability.setVirtualCores(psVCores);
@@ -739,7 +737,7 @@ public class ApplicationMaster extends CompositeService {
     containerEnv.put(XLearningConstants.Environment.XLEARNING_TF_ROLE.toString(), role);
     containerEnv.put(XLearningConstants.Environment.XLEARNING_EXEC_CMD.toString(), xlearningCommand);
     containerEnv.put(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString(), xlearningAppType);
-    if (xlearningAppType.equals("MXNET") && !singleMx) {
+    if (xlearningAppType.equals("MXNET") && !single) {
       containerEnv.put(XLearningConstants.Environment.XLEARNING_MXNET_WORKER_NUM.toString(), String.valueOf(workerNum));
       containerEnv.put(XLearningConstants.Environment.XLEARNING_MXNET_SERVER_NUM.toString(), String.valueOf(psNum));
       containerEnv.put("DMLC_PS_ROOT_URI", dmlcPsRootUri);
@@ -754,6 +752,11 @@ public class ApplicationMaster extends CompositeService {
 
     if (xlearningAppType.equals("DISTLIGHTGBM")) {
       containerEnv.put(XLearningConstants.Environment.XLEARNING_LIGHTGBM_WORKER_NUM.toString(), String.valueOf(workerNum));
+    }
+
+    if (xlearningAppType.equals("LIGHTLDA")) {
+      containerEnv.put(XLearningConstants.Environment.XLEARNING_LIGHTLDA_WORKER_NUM.toString(), String.valueOf(workerNum));
+      containerEnv.put(XLearningConstants.Environment.XLEARNING_LIGHTLDA_PS_NUM.toString(), String.valueOf(psNum));
     }
 
     containerEnv.put("CLASSPATH", System.getenv("CLASSPATH"));
@@ -864,7 +867,7 @@ public class ApplicationMaster extends CompositeService {
       buildInputFileStatus();
     }
 
-    if ("TENSORFLOW".equals(xlearningAppType) || "MXNET".equals(xlearningAppType)) {
+    if ("TENSORFLOW".equals(xlearningAppType) || "MXNET".equals(xlearningAppType) || "LIGHTLDA".equals(xlearningAppType)) {
       this.appendMessage("XLearning application needs " + workerNum + " worker and "
           + psNum + " ps  containers in fact", true);
     } else {
@@ -883,7 +886,7 @@ public class ApplicationMaster extends CompositeService {
       amrmAsync.addContainerRequest(psContainerRequest);
     }
 
-    if (("TENSORFLOW".equals(xlearningAppType) && !single) || ("MXNET".equals(xlearningAppType) && !singleMx)) {
+    if (!single) {
       LOG.info("Try to allocate " + psNum + " ps/server containers");
     }
 
@@ -924,7 +927,7 @@ public class ApplicationMaster extends CompositeService {
       Utilities.sleep(allocateInterval);
     }
 
-    if (("TENSORFLOW".equals(xlearningAppType) && !single) || ("MXNET".equals(xlearningAppType) && !singleMx)) {
+    if (!single) {
       LOG.info("Total " + rmCallbackHandler.getAllocatedPsContainerNumber() + " ps containers has allocated.");
     }
 
@@ -990,7 +993,7 @@ public class ApplicationMaster extends CompositeService {
     }
 
     //launch mxnet scheduler
-    if (xlearningAppType.equals("MXNET") && !singleMx) {
+    if (xlearningAppType.equals("MXNET") && !single) {
       LOG.info("Setting environments for the MXNet scheduler");
       dmlcPsRootUri = applicationMasterHostname;
       Socket schedulerReservedSocket = new Socket();
@@ -1273,7 +1276,7 @@ public class ApplicationMaster extends CompositeService {
       LOG.info("Train completed");
       containerListener.setTrainFinished();
 
-      if (("TENSORFLOW".equals(xlearningAppType) && !single) || ("MXNET".equals(xlearningAppType) && !singleMx)) {
+      if (!single) {
         LOG.info("Waiting all ps containers completed");
         while (!containerListener.isAllPsContainersFinished()) {
           Utilities.sleep(statusUpdateInterval);
@@ -1316,7 +1319,7 @@ public class ApplicationMaster extends CompositeService {
                 fs.rename(tmpResultPath, finalResultPath);
               }
             }
-            if (psNum > 0 && xlearningAppType.equals("TENSORFLOW")) {
+            if (psNum > 0 && (xlearningAppType.equals("TENSORFLOW") || xlearningAppType.equals("LIGHTLDA"))) {
               for (Container finishedContainer : acquiredPsContainers) {
                 Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString());
                 if (fs.exists(tmpResultPath)) {

@@ -15,6 +15,10 @@ public interface ApplicationContainerProtocol extends VersionedProtocol {
 
   String getLightGbmIpPortStr();
 
+  void reportLightLDAIpPort(XLearningContainerId containerId, String lightLDAIpPort);
+
+  String getLightLDAIpPortStr();
+
   String getClusterDef();
 
   HeartbeatResponse heartbeat(XLearningContainerId containerId, HeartbeatRequest heartbeatRequest);

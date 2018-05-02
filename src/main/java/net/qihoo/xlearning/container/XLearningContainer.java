@@ -55,13 +55,15 @@ public class XLearningContainer {
 
   private Boolean single;
 
-  private Boolean singleMx;
-
   private final int downloadRetry;
 
   private final Socket reservedSocket;
 
   private int lightGBMLocalPort;
+
+  private int lightLDALocalPort;
+
+  private String lightLDAEndpoint;
 
   private String role;
 
@@ -103,6 +105,9 @@ public class XLearningContainer {
     if (xlearningAppType.equals("DISTLIGHTGBM")) {
       LOG.info("Dist lightGBM role is:" + this.role);
     }
+    if (xlearningAppType.equals("LIGHTLDA")) {
+      LOG.info("LightLDA role is:" + this.role);
+    }
 
     this.index = Integer.valueOf(envs.get(XLearningConstants.Environment.XLEARNING_TF_INDEX.toString()));
     if ("TENSORFLOW".equals(xlearningAppType)) {
@@ -117,9 +122,11 @@ public class XLearningContainer {
     if (xlearningAppType.equals("DISTLIGHTGBM")) {
       LOG.info("Dist lightGBM index is:" + this.index);
     }
+    if (xlearningAppType.equals("LIGHTLDA")) {
+      LOG.info("LightLDA index is:" + this.index);
+    }
 
-    this.single = conf.getBoolean(XLearningConfiguration.XLEARNING_TF_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_MODE_SINGLE);
-    this.singleMx = conf.getBoolean(XLearningConfiguration.XLEARNING_MXNET_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MXNET_MODE_SINGLE);
+    this.single = conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE);
     heartbeatInterval = this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_HEARTBEAT_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_HEARTBEAT_INTERVAL);
     reservedSocket = new Socket();
   }
@@ -145,7 +152,7 @@ public class XLearningContainer {
 
     containerReporter = null;
 
-    if (("TENSORFLOW".equals(xlearningAppType) && !single) || xlearningAppType.equals("DISTLIGHTGBM")) {
+    if ((("TENSORFLOW".equals(xlearningAppType) || "LIGHTLDA".equals(xlearningAppType)) && !single) || xlearningAppType.equals("DISTLIGHTGBM")) {
       try {
         reservedSocket.bind(new InetSocketAddress("127.0.0.1", 0));
       } catch (IOException e) {
@@ -412,6 +419,43 @@ public class XLearningContainer {
       this.reportFailedAndExit();
     }
 
+    if (xlearningAppType.equals("LIGHTLDA")) {
+      if (this.role.equals(XLearningConstants.PS)) {
+        LOG.info("Reserved available port: " + reservedSocket.getLocalPort());
+        this.lightLDALocalPort = reservedSocket.getLocalPort();
+        InetAddress address = null;
+        try {
+          address = InetAddress.getByName(envs.get(ApplicationConstants.Environment.NM_HOST.toString()));
+        } catch (UnknownHostException e) {
+          LOG.info("acquire host ip failed " + e);
+          reportFailedAndExit();
+        }
+        String ipPortStr = this.index + " " + address.getHostAddress() + ":" + this.lightLDALocalPort;
+        this.lightLDAEndpoint = address.getHostAddress() + ":" + this.lightLDALocalPort;
+        LOG.info("lightLDA ip port string is: " + ipPortStr);
+        amClient.reportLightLDAIpPort(containerId, ipPortStr);
+      }
+      if (this.role.equals(XLearningConstants.WORKER)) {
+        String lightLDAIpPortStr;
+        while (true) {
+          lightLDAIpPortStr = amClient.getLightLDAIpPortStr();
+          if (lightLDAIpPortStr != null) {
+            LOG.info("lightLDA IP PORT list is: " + lightLDAIpPortStr);
+            break;
+          }
+          Utilities.sleep(this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL));
+        }
+        Type type = new TypeToken<ConcurrentHashMap<String, String>>() {
+        }.getType();
+        ConcurrentHashMap<String, String> map = new Gson().fromJson(lightLDAIpPortStr, type);
+        PrintWriter writer = new PrintWriter("lightLDAEndPoints.txt", "UTF-8");
+        for (String str : map.keySet()) {
+          writer.println(map.get(str));
+        }
+        writer.close();
+      }
+    }
+
     if ("TENSORFLOW".equals(xlearningAppType) && !single) {
       LOG.info("Reserved available port: " + reservedSocket.getLocalPort());
       amClient.reportReservedPort(envs.get(ApplicationConstants.Environment.NM_HOST.toString()),
@@ -483,7 +527,7 @@ public class XLearningContainer {
         envList.add(XLearningConstants.Environment.XLEARNING_TF_CLUSTER_DEF.toString() + "=" + this.clusterDef);
       }
     } else if (xlearningAppType.equals("MXNET")) {
-      if (!singleMx) {
+      if (!single) {
         String dmlcID;
         if (this.role.equals("worker")) {
           dmlcID = "DMLC_WORKER_ID";
@@ -506,6 +550,12 @@ public class XLearningContainer {
     } else if (xlearningAppType.equals("DISTLIGHTGBM")) {
       envList.add("LIGHTGBM_NUM_MACHINE=" + System.getenv(XLearningConstants.Environment.XLEARNING_LIGHTGBM_WORKER_NUM.toString()));
       envList.add("LIGHTGBM_LOCAL_LISTEN_PORT=" + this.lightGBMLocalPort);
+    } else if (xlearningAppType.equals("LIGHTLDA")) {
+      envList.add("LIGHTLDA_WORKER_NUM=" + System.getenv(XLearningConstants.Environment.XLEARNING_LIGHTLDA_WORKER_NUM.toString()));
+      envList.add("LIGHTLDA_SERVER_NUM=" + System.getenv(XLearningConstants.Environment.XLEARNING_LIGHTLDA_PS_NUM.toString()));
+      envList.add("LIGHTLDA_RANK=" + this.index);
+      envList.add("LIGHTLDA_SERVER_ENDPOINT=" + this.lightLDAEndpoint);
+      envList.add("LIGHTLDA_ROLE=" + this.role);
     }
 
     if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).toUpperCase().equals("PLACEHOLDER")) {

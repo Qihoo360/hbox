@@ -45,6 +45,8 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   private final Map<XLearningContainerId, String> lightGBMIpPortMap;
 
+  private final Map<XLearningContainerId, String> lightLDAIpPortMap;
+
   private final Map<XLearningContainerId, String> reporterProgress;
 
   private final Map<XLearningContainerId, String> mapedTaskID;
@@ -58,6 +60,8 @@ public class ApplicationContainerListener extends AbstractService implements App
   private String clusterDefStr;
 
   private String lightGBMIpPortStr;
+
+  private String lightLDAIpPortStr;
 
   private final Clock clock;
 
@@ -98,6 +102,8 @@ public class ApplicationContainerListener extends AbstractService implements App
     this.clusterDefStr = null;
     this.lightGBMIpPortMap = new ConcurrentHashMap<>();
     this.lightGBMIpPortStr = null;
+    this.lightLDAIpPortMap = new ConcurrentHashMap<>();
+    this.lightLDAIpPortStr = null;
     this.applicationContext = applicationContext;
     this.clock = new SystemClock();
     this.runningContainers = new ConcurrentHashMap<>();
@@ -261,11 +267,7 @@ public class ApplicationContainerListener extends AbstractService implements App
       }
     }
 
-    if ("TENSORFLOW".equals(xlearningAppType) && !this.getConfig().getBoolean(XLearningConfiguration.XLEARNING_TF_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_MODE_SINGLE)) {
-      if (failedNum > 0) {
-        return true;
-      }
-    } else if ("MXNET".equals(xlearningAppType) && !this.getConfig().getBoolean(XLearningConfiguration.XLEARNING_MXNET_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MXNET_MODE_SINGLE)) {
+    if (!this.getConfig().getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE)) {
       if (failedNum > 0) {
         return true;
       }
@@ -297,11 +299,7 @@ public class ApplicationContainerListener extends AbstractService implements App
         failedNum += 1;
       }
     }
-    if ("TENSORFLOW".equals(xlearningAppType) && !this.getConfig().getBoolean(XLearningConfiguration.XLEARNING_TF_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_MODE_SINGLE)) {
-      if (failedNum > 0) {
-        return false;
-      }
-    } else if ("MXNET".equals(xlearningAppType) && !this.getConfig().getBoolean(XLearningConfiguration.XLEARNING_MXNET_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MXNET_MODE_SINGLE)) {
+    if (!this.getConfig().getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE)) {
       if (failedNum > 0) {
         return false;
       }
@@ -354,6 +352,21 @@ public class ApplicationContainerListener extends AbstractService implements App
       this.lightGBMIpPortStr = new Gson().toJson(lightGBMIpPortMap);
     }
     return this.lightGBMIpPortStr;
+  }
+
+  @Override
+  public void reportLightLDAIpPort(XLearningContainerId containerId, String lightLDAIpPort) {
+    this.lightLDAIpPortMap.put(containerId, lightLDAIpPort);
+    LOG.info("From container " + containerId.toString() + "Received reported lightLDA ip port: " + lightLDAIpPort);
+  }
+
+  @Override
+  public synchronized String getLightLDAIpPortStr() {
+    if(this.lightLDAIpPortMap.size() == applicationContext.getPsNum()) {
+      LOG.info("Sending lightGBM ip port list \"" + new Gson().toJson(lightLDAIpPortMap) + "\"to container");
+      this.lightLDAIpPortStr = new Gson().toJson(lightLDAIpPortMap);
+    }
+    return this.lightLDAIpPortStr;
   }
 
   @Override

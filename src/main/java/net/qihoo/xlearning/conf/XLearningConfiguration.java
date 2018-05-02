@@ -91,13 +91,9 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final int DEFAULT_XLEARNING_APP_MAX_ATTEMPTS = 1;
 
-  public static final String XLEARNING_TF_MODE_SINGLE = "xlearning.tf.mode.single";
+  public static final String XLEARNING_MODE_SINGLE = "xlearning.mode.single";
 
-  public static Boolean DEFAULT_XLEARNING_TF_MODE_SINGLE = false;
-
-  public static final String XLEARNING_MXNET_MODE_SINGLE = "xlearning.mxnet.mode.single";
-
-  public static Boolean DEFAULT_XLEARNING_MXNET_MODE_SINGLE = false;
+  public static Boolean DEFAULT_XLEARNING_MODE_SINGLE = false;
 
   public static final String XLEARNING_APP_QUEUE = "xlearning.app.queue";
 
