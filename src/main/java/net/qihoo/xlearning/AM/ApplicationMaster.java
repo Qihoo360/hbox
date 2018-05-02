@@ -467,6 +467,7 @@ public class ApplicationMaster extends CompositeService {
           input2FileStatus.put(inputPathTuple[1], fileStatus);
           if (fileStatus.size() > 0) {
             if (fileStatus.size() < workerNum) {
+              workerNum = fileStatus.size();
               LOG.warn("File count in  " + inputPathRemote + "  " + fileStatus.size() +
                   " less than the worker count " + workerNum);
             }
