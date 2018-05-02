@@ -9,7 +9,7 @@
     <version>gpu-beta</version>
 
     <properties>
-        <hadoop3.version>3.1.0-SNAPSHOT</hadoop3.version>
+        <hadoop3.version>3.1.0</hadoop3.version>
         <junit.version>4.11</junit.version>
         <jdk.version>1.8</jdk.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
