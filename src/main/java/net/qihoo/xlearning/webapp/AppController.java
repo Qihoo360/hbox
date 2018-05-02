@@ -140,6 +140,16 @@ public class AppController extends Controller implements AMParams {
         set(CONTAINER_ROLE + i, "server");
       }
 
+      if (app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId())) != null) {
+        ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
+        if (cpuMetrics.size() != 0) {
+          set("cpuMemMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUMEM")));
+          if (cpuMetrics.containsKey("CPUUTIL")) {
+            set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
+          }
+        }
+      }
+
       set(CONTAINER_REPORTER_PROGRESS + i, "0.00%");
       if (containersAppStartTime.get(new XLearningContainerId(container.getId())) != null && !containersAppStartTime.get(new XLearningContainerId(container.getId())).equals("")) {
         String localStartTime = containersAppStartTime.get(new XLearningContainerId(container.getId()));

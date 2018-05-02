@@ -128,28 +128,28 @@ public class HsJobBlock extends HtmlBlock implements AMParams {
       }
       html.div().$style("margin:20px 2px;")._(" ")._();
       if (Boolean.parseBoolean($(CONTAINER_CPU_METRICS_ENABLE))) {
-        int numWorkers = Integer.parseInt($(WORKER_NUMBER));
-        for (int i = 0; i < numWorkers; i++) {
-          if (!$("cpuMemMetrics" + i).equals("") && $("cpuMemMetrics" + i) != null) {
-            html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px")._(String.format($("WORKER_CONTAINER_ID" + i)) + " metrics:")._();
+        int numPS = Integer.parseInt($(PS_NUMBER));
+        for (int i = 0; i < numPS; i++) {
+          if (!$("psCpuMemMetrics" + i).equals("") && $("psCpuMemMetrics" + i) != null) {
+            html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px")._(String.format($("PS_CONTAINER_ID" + i)) + " metrics:")._();
           }
 
           html.script().$src("/static/xlWebApp/jquery-3.1.1.min.js")._();
           html.script().$src("/static/xlWebApp/highstock.js")._();
           html.script().$src("/static/xlWebApp/exporting.js")._();
 
-          String containerCpuMemID = "containerCpuMem" + i;
-          String containerCpuUtilID = "containerCpuUtil" + i;
+          String containerCpuMemID = "psContainerCpuMem" + i;
+          String containerCpuUtilID = "psContainerCpuUtil" + i;
           String containerClass = "container" + i;
           String seriesCpuMemOptions = "[{\n" +
               "            name: 'cpu mem used',\n" +
-              "            data: " + $("cpuMemMetrics" + i) + "\n" +
+              "            data: " + $("psCpuMemMetrics" + i) + "\n" +
               "        }]";
           String seriesCpuUtilOptions = "[{\n" +
               "            name: 'cpu util',\n" +
-              "            data: " + $("cpuUtilMetrics" + i) + "\n" +
+              "            data: " + $("psCpuUtilMetrics" + i) + "\n" +
               "        }]";
-          if (!$("cpuUtilMetrics" + i).equals("") && $("cpuUtilMetrics" + i) != null) {
+          if (!$("psCpuUtilMetrics" + i).equals("") && $("psCpuUtilMetrics" + i) != null) {
             html.div()
                 .div().$id(containerCpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
                 .div().$id(containerCpuUtilID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
@@ -205,7 +205,125 @@ public class HsJobBlock extends HtmlBlock implements AMParams {
               "\n" +
               "    series: " + seriesCpuMemOptions + "\n" +
               "});\n";
-          if (!$("cpuUtilMetrics" + i).equals("") && $("cpuUtilMetrics" + i) != null) {
+          if (!$("psCpuUtilMetrics" + i).equals("") && $("psCpuUtilMetrics" + i) != null) {
+            striptBody += "Highcharts.stockChart(" + containerCpuUtilID + ", {\n" +
+                "    chart: {\n" +
+                "        width: 550\n" +
+                "    },\n" +
+                "\n" +
+                "    rangeSelector: {\n" +
+                "        buttons: [{\n" +
+                "            count: 1,\n" +
+                "            type: 'minute',\n" +
+                "            text: '1M'\n" +
+                "        }, {\n" +
+                "            count: 5,\n" +
+                "            type: 'minute',\n" +
+                "            text: '5M'\n" +
+                "        }, {\n" +
+                "            type: 'all',\n" +
+                "            text: 'All'\n" +
+                "        }],\n" +
+                "        inputEnabled: false,\n" +
+                "        selected: 0\n" +
+                "    },\n" +
+                "\n" +
+                "    title: {\n" +
+                "        text: 'cpu utilization( % )'\n" +
+                "    },\n" +
+                "\n" +
+                "    credits: {\n" +
+                "        enabled: false\n" +
+                "    },\n" +
+                "\n" +
+                "    exporting: {\n" +
+                "        enabled: false\n" +
+                "    },\n" +
+                "\n" +
+                "    series: " + seriesCpuUtilOptions + "\n" +
+                "});\n";
+          }
+          html.script().$type("text/javascript")._(striptHead + striptBody)._();
+        }
+
+        int numWorkers = Integer.parseInt($(WORKER_NUMBER));
+        for (int i = 0; i < numWorkers; i++) {
+          if (!$("workerCpuMemMetrics" + i).equals("") && $("workerCpuMemMetrics" + i) != null) {
+            html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px")._(String.format($("WORKER_CONTAINER_ID" + i)) + " metrics:")._();
+          }
+
+          html.script().$src("/static/xlWebApp/jquery-3.1.1.min.js")._();
+          html.script().$src("/static/xlWebApp/highstock.js")._();
+          html.script().$src("/static/xlWebApp/exporting.js")._();
+
+          String containerCpuMemID = "workerContainerCpuMem" + i;
+          String containerCpuUtilID = "workerContainerCpuUtil" + i;
+          String containerClass = "container" + i;
+          String seriesCpuMemOptions = "[{\n" +
+              "            name: 'cpu mem used',\n" +
+              "            data: " + $("workerCpuMemMetrics" + i) + "\n" +
+              "        }]";
+          String seriesCpuUtilOptions = "[{\n" +
+              "            name: 'cpu util',\n" +
+              "            data: " + $("workerCpuUtilMetrics" + i) + "\n" +
+              "        }]";
+          if (!$("workerCpuUtilMetrics" + i).equals("") && $("workerCpuUtilMetrics" + i) != null) {
+            html.div()
+                .div().$id(containerCpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
+                .div().$id(containerCpuUtilID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
+                ._();
+          } else {
+            html.div()
+                .div().$id(containerCpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
+                ._();
+          }
+          String css = "." + containerClass + "{\n" +
+              "    display:inline-block;\n" +
+              "}";
+          html.style().$type("text/css")._(css)._();
+          String striptHead = "Highcharts.setOptions({\n" +
+              "    global: {\n" +
+              "        useUTC: false\n" +
+              "    }\n" +
+              "});\n" +
+              "// Create the chart\n";
+          String striptBody = "Highcharts.stockChart(" + containerCpuMemID + ", {\n" +
+              "    chart: {\n" +
+              "        width: 550\n" +
+              "    },\n" +
+              "\n" +
+              "    rangeSelector: {\n" +
+              "        buttons: [{\n" +
+              "            count: 1,\n" +
+              "            type: 'minute',\n" +
+              "            text: '1M'\n" +
+              "        }, {\n" +
+              "            count: 5,\n" +
+              "            type: 'minute',\n" +
+              "            text: '5M'\n" +
+              "        }, {\n" +
+              "            type: 'all',\n" +
+              "            text: 'All'\n" +
+              "        }],\n" +
+              "        inputEnabled: false,\n" +
+              "        selected: 0\n" +
+              "    },\n" +
+              "\n" +
+              "    title: {\n" +
+              "        text: 'cpu memory used( GB )'\n" +
+              "    },\n" +
+              "\n" +
+              "    credits: {\n" +
+              "        enabled: false\n" +
+              "    },\n" +
+              "\n" +
+              "    exporting: {\n" +
+              "        enabled: false\n" +
+              "    },\n" +
+              "\n" +
+              "    series: " + seriesCpuMemOptions + "\n" +
+              "});\n";
+          if (!$("workerCpuUtilMetrics" + i).equals("") && $("workerCpuUtilMetrics" + i) != null) {
             striptBody += "Highcharts.stockChart(" + containerCpuUtilID + ", {\n" +
                 "    chart: {\n" +
                 "        width: 550\n" +

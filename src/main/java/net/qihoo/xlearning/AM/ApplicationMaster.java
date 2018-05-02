@@ -394,6 +394,10 @@ public class ApplicationMaster extends CompositeService {
             } else {
               containerMessage.put(AMParams.CONTAINER_FINISH_TIME, "N/A");
             }
+
+            ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
+            containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
+
             containerMessage.put(AMParams.CONTAINER_REPORTER_PROGRESS, "0.00%");
             containerMessage.put(AMParams.CONTAINER_LOG_ADDRESS, String.format("http://%s/node/containerlogs/%s/%s",
                 container.getNodeHttpAddress(),
@@ -422,6 +426,7 @@ public class ApplicationMaster extends CompositeService {
           logMessage.put(AMParams.TIMESTAMP_LIST, savedTimeStamp);
           logMessage.put(AMParams.OUTPUT_PATH, outputList);
           logMessage.put(AMParams.WORKER_NUMBER, String.valueOf(workerNum));
+          logMessage.put(AMParams.PS_NUMBER, String.valueOf(psNum));
 
           out.writeBytes(new Gson().toJson(logMessage));
           out.close();

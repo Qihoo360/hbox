@@ -767,13 +767,11 @@ public class XLearningContainer {
 
     int updateAppStatusInterval = this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL);
 
-    if (this.role.equals(XLearningConstants.WORKER)) {
-      this.xlearningCmdProcessId = getPidOfProcess(xlearningProcess);
-      LOG.info("xlearningCmdProcessId is:" + this.xlearningCmdProcessId);
-      containerReporter = new ContainerReporter(amClient, conf, containerId, this.xlearningCmdProcessId);
-      containerReporter.setDaemon(true);
-      containerReporter.start();
-    }
+    this.xlearningCmdProcessId = getPidOfProcess(xlearningProcess);
+    LOG.info("xlearningCmdProcessId is:" + this.xlearningCmdProcessId);
+    containerReporter = new ContainerReporter(amClient, conf, containerId, this.xlearningCmdProcessId);
+    containerReporter.setDaemon(true);
+    containerReporter.start();
 
     int code = -1;
     while (code == -1 && !heartbeatThread.isXLearningTrainCompleted()) {

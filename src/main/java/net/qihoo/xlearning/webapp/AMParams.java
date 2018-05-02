@@ -9,6 +9,8 @@ public interface AMParams {
 
   public static final String WORKER_NUMBER = "worker.number";
 
+  public static final String PS_NUMBER = "ps.number";
+
   public static final String CONTAINER_HTTP_ADDRESS = "container.address";
 
   public static final String CONTAINER_ID = "container.id";
