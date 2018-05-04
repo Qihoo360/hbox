@@ -419,6 +419,7 @@ public class Client {
 
     LOG.info("Building environments for the application master");
     Map<String, String> appMasterEnv = new HashMap<>();
+    appMasterEnv.put(XLearningConstants.Environment.XLEARNING_APP_NAME.toString(), clientArguments.appName);
     if (clientArguments.appType != null && !clientArguments.appType.equals("")) {
       appMasterEnv.put(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString(), clientArguments.appType);
     } else {
