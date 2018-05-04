@@ -26,7 +26,7 @@ public class HsJobPage extends TwoColumnLayout implements AMParams {
 
   @Override
   protected Class<? extends SubView> content() {
-    if($(APP_TYPE).equals("Tensorflow") || $(APP_TYPE).equals("Mxnet")) {
+    if($(APP_TYPE).equals("Tensorflow") || $(APP_TYPE).equals("Mxnet") || $(APP_TYPE).equals("Lightlda")) {
       return HsJobBlock.class;
     }else{
       return HsSingleJobBlock.class;
