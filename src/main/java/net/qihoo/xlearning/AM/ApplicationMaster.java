@@ -802,7 +802,10 @@ public class ApplicationMaster extends CompositeService {
         System.getenv(ApplicationConstants.Environment.NM_HOST.toString()));
     containerEnv.put(XLearningConstants.Environment.APPMASTER_PORT.toString(),
         String.valueOf(containerListener.getServerPort()));
-    containerEnv.put("PATH", System.getenv("PATH") + ":" + System.getenv(XLearningConstants.Environment.USER_PATH.toString()));
+    containerEnv.put("PATH", System.getenv("PATH") + ":" +
+            System.getenv(XLearningConstants.Environment.USER_PATH.toString()));
+    containerEnv.put("LD_LIBRARY_PATH", System.getenv("LD_LIBRARY_PATH") + ":" +
+            System.getenv(XLearningConstants.Environment.USER_LD_LIBRARY_PATH.toString()));
 
     LOG.debug("env:" + containerEnv.toString());
     Set<String> envStr = containerEnv.keySet();
