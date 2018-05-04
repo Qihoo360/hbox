@@ -1339,6 +1339,15 @@ public class ApplicationMaster extends CompositeService {
                 fs.rename(tmpResultPath, finalResultPath);
               }
             }
+            if (psNum > 0 && xlearningAppType.equals("TENSORFLOW")) {
+              for (Container finishedContainer : acquiredPsContainers) {
+                Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString());
+                if (fs.exists(tmpResultPath)) {
+                  LOG.info("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
+                  fs.rename(tmpResultPath, finalResultPath);
+                }
+              }
+            }
             Path tmpPath = new Path(outputInfo.getDfsLocation() + "/_temporary/");
             if (fs.exists(tmpPath)) {
               fs.delete(tmpPath, true);

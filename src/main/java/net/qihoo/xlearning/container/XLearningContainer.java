@@ -847,6 +847,12 @@ public class XLearningContainer {
       }
     }
 
+    if (this.role.equals(XLearningConstants.PS) && this.xlearningAppType.equals("TENSORFLOW")) {
+      if (code == -1 || code == 0) {
+        this.uploadOutputFiles();
+      }
+    }
+
     if (this.role.equals(XLearningConstants.PS)) {
       if (code == -1) {
         xlearningProcess.destroy();
