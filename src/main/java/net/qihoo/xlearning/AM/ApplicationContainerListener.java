@@ -222,7 +222,7 @@ public class ApplicationContainerListener extends AbstractService implements App
     containersAppStartTimeMap.put(containerId, "");
     containersAppFinishTimeMap.put(containerId, "");
     containersCpuMetrics.put(containerId, new ConcurrentHashMap<String, LinkedBlockingDeque<Object>>());
-    if (role.equals(XLearningConstants.WORKER) || (role.equals(XLearningConstants.PS) && xlearningAppType.equals("TENSORFLOW"))) {
+    if (role.equals(XLearningConstants.WORKER) || (role.equals(XLearningConstants.PS) && (xlearningAppType.equals("TENSORFLOW") || xlearningAppType.equals("LIGHTLDA")))) {
       containerId2InnerModel.put(containerId, new InnerModelSavedPair());
     }
     runningContainers.put(containerId, new LastTime(clock.getTime()));
@@ -362,7 +362,7 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   @Override
   public synchronized String getLightLDAIpPortStr() {
-    if(this.lightLDAIpPortMap.size() == applicationContext.getPsNum()) {
+    if (this.lightLDAIpPortMap.size() == applicationContext.getPsNum()) {
       LOG.info("Sending lightGBM ip port list \"" + new Gson().toJson(lightLDAIpPortMap) + "\"to container");
       this.lightLDAIpPortStr = new Gson().toJson(lightLDAIpPortMap);
     }
@@ -604,7 +604,7 @@ public class ApplicationContainerListener extends AbstractService implements App
         long currentTime = clock.getTime();
         Set<Entry<XLearningContainerId, LastTime>> entrySet = runningContainers.entrySet();
         for (Entry<XLearningContainerId, LastTime> entry : entrySet) {
-          if(containerId2Status.get(entry.getKey()).equals(XLearningContainerStatus.UNDEFINED)) {
+          if (containerId2Status.get(entry.getKey()).equals(XLearningContainerStatus.UNDEFINED)) {
             if (currentTime > (entry.getValue().getLastTime() + localResourceTimeOut)) {
               LOG.info("Container " + entry.getKey().toString() + " local resource timed out after "
                   + localResourceTimeOut / 1000 + " seconds");
@@ -612,7 +612,7 @@ public class ApplicationContainerListener extends AbstractService implements App
               heartbeatRequest.setXLearningContainerStatus(XLearningContainerStatus.FAILED);
               heartbeat(entry.getKey(), heartbeatRequest);
             }
-          }  else {
+          } else {
             if (currentTime > (entry.getValue().getLastTime() + containerTimeOut)) {
               LOG.info("Container " + entry.getKey().toString() + " timed out after "
                   + containerTimeOut / 1000 + " seconds");

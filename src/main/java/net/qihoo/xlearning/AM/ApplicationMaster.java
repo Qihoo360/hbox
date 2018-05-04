@@ -288,7 +288,7 @@ public class ApplicationMaster extends CompositeService {
           FileSystem fs = FileSystem.get(xlearningConf);
           FSDataOutputStream out = fs.create(jobLogPath);
           fs.setPermission(jobLogPath, new FsPermission(LOG_FILE_PERMISSION));
-          if(conf.getBoolean(XLearningConfiguration.XLEARNING_HOST_LOCAL_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_HOST_LOCAL_ENABLE)){
+          if (conf.getBoolean(XLearningConfiguration.XLEARNING_HOST_LOCAL_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_HOST_LOCAL_ENABLE)) {
             String hostLocaldir = xlearningConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_HISTORY_LOG_DIR,
                 XLearningConfiguration.DEFAULT_XLEARNING_HISTORY_LOG_DIR) + "/" + conf.get("hadoop.job.ugi").split(",")[0]
                 + "/" + envs.get(XLearningConstants.Environment.XLEARNING_APP_NAME.toString());
@@ -296,7 +296,7 @@ public class ApplicationMaster extends CompositeService {
             try {
               FSDataOutputStream hostLocalOut = fs.create(hostLocalPath);
               fs.setPermission(hostLocalPath, new FsPermission(LOG_FILE_PERMISSION));
-              hostLocalOut.writeBytes(containerHostnames.toString().substring(1, containerHostnames.toString().length()-1));
+              hostLocalOut.writeBytes(containerHostnames.toString().substring(1, containerHostnames.toString().length() - 1));
               hostLocalOut.close();
               LOG.info("host local enable is true, write " + hostLocalPath.toString() + " success");
             } catch (Exception e) {
@@ -353,8 +353,10 @@ public class ApplicationMaster extends CompositeService {
               containerMessage.put(AMParams.CONTAINER_FINISH_TIME, "N/A");
             }
 
-            ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
-            containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
+            if (applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId())) != null) {
+              ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
+              containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
+            }
 
             if (reporterProgress.get(new XLearningContainerId(container.getId())) != null && !reporterProgress.get(new XLearningContainerId(container.getId())).equals("")) {
               String progressLog = reporterProgress.get(new XLearningContainerId(container.getId()));
@@ -392,6 +394,8 @@ public class ApplicationMaster extends CompositeService {
               containerMessage.put(AMParams.CONTAINER_ROLE, "ps");
             } else if (xlearningAppType.equals("MXNET")) {
               containerMessage.put(AMParams.CONTAINER_ROLE, "server");
+            } else if (xlearningAppType.equals("LIGHTLDA")) {
+              containerMessage.put(AMParams.CONTAINER_ROLE, "server");
             }
 
             if (applicationContext.getContainerStatus(new XLearningContainerId(container.getId())) != null) {
@@ -413,8 +417,10 @@ public class ApplicationMaster extends CompositeService {
               containerMessage.put(AMParams.CONTAINER_FINISH_TIME, "N/A");
             }
 
-            ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
-            containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
+            if (applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId())) != null) {
+              ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
+              containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
+            }
 
             containerMessage.put(AMParams.CONTAINER_REPORTER_PROGRESS, "0.00%");
             containerMessage.put(AMParams.CONTAINER_LOG_ADDRESS, String.format("http://%s/node/containerlogs/%s/%s",
@@ -636,16 +642,16 @@ public class ApplicationMaster extends CompositeService {
   }
 
   private void buildContainerRequest(String[] hostLocals) {
-    if(conf.getBoolean(XLearningConfiguration.XLEARNING_HOST_LOCAL_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_HOST_LOCAL_ENABLE)) {
-      XLearningConfiguration hboxConf = new XLearningConfiguration();
-      String hostLocaldir = hboxConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_HISTORY_LOG_DIR,
+    if (conf.getBoolean(XLearningConfiguration.XLEARNING_HOST_LOCAL_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_HOST_LOCAL_ENABLE)) {
+      XLearningConfiguration xlConf = new XLearningConfiguration();
+      String hostLocaldir = xlConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_HISTORY_LOG_DIR,
           XLearningConfiguration.DEFAULT_XLEARNING_HISTORY_LOG_DIR) + "/" + conf.get("hadoop.job.ugi").split(",")[0]
           + "/" + envs.get(XLearningConstants.Environment.XLEARNING_APP_NAME.toString());
       Path hostLocalPath = new Path(hostLocaldir);
       String line;
       try {
-        if(hostLocalPath.getFileSystem(hboxConf).exists(hostLocalPath)) {
-          FSDataInputStream in = hostLocalPath.getFileSystem(hboxConf).open(hostLocalPath);
+        if (hostLocalPath.getFileSystem(xlConf).exists(hostLocalPath)) {
+          FSDataInputStream in = hostLocalPath.getFileSystem(xlConf).open(hostLocalPath);
           BufferedReader br = new BufferedReader(new InputStreamReader(in));
           line = br.readLine();
           hostLocals = line.split(",");
@@ -809,6 +815,7 @@ public class ApplicationMaster extends CompositeService {
     containerEnv.put(XLearningConstants.Environment.APPMASTER_PORT.toString(),
         String.valueOf(containerListener.getServerPort()));
     containerEnv.put("PATH", System.getenv("PATH") + ":" + System.getenv(XLearningConstants.Environment.USER_PATH.toString()));
+    containerEnv.put("LD_LIBRARY_PATH", System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv(XLearningConstants.Environment.USER_LD_LIBRARY_PATH.toString()));
 
     LOG.debug("env:" + containerEnv.toString());
     Set<String> envStr = containerEnv.keySet();
@@ -1033,15 +1040,15 @@ public class ApplicationMaster extends CompositeService {
       amrmAsync.removeContainerRequest(workerContainerRequest);
     }
 
-    if(conf.getBoolean(XLearningConfiguration.XLEARNING_HOST_LOCAL_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_HOST_LOCAL_ENABLE)) {
+    if (conf.getBoolean(XLearningConfiguration.XLEARNING_HOST_LOCAL_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_HOST_LOCAL_ENABLE)) {
       containerHostnames = new HashSet<>();
-      if(acquiredPsContainers.size() > 0) {
-        for(Container container: acquiredPsContainers) {
+      if (acquiredPsContainers.size() > 0) {
+        for (Container container : acquiredPsContainers) {
           containerHostnames.add(container.getNodeId().getHost());
         }
       }
-      if(acquiredWorkerContainers.size() > 0) {
-        for(Container container: acquiredWorkerContainers) {
+      if (acquiredWorkerContainers.size() > 0) {
+        for (Container container : acquiredWorkerContainers) {
           containerHostnames.add(container.getNodeId().getHost());
         }
       }
@@ -1275,25 +1282,25 @@ public class ApplicationMaster extends CompositeService {
       Map<XLearningContainerId, XLearningContainerStatus> lastPsContainerStatus = new ConcurrentHashMap<>();
       while (!containerListener.isTrainCompleted()) {
         //report progress to client
-        if(conf.getBoolean(XLearningConfiguration.XLEARNING_REPORT_CONTAINER_STATUS, XLearningConfiguration.DEFAULT_XLEARNING_REPORT_CONTAINER_STATUS)) {
+        if (conf.getBoolean(XLearningConfiguration.XLEARNING_REPORT_CONTAINER_STATUS, XLearningConfiguration.DEFAULT_XLEARNING_REPORT_CONTAINER_STATUS)) {
           List<Container> workerContainersStatus = applicationContext.getWorkerContainers();
           List<Container> psContainersStatus = applicationContext.getPsContainers();
-          for(Container container : workerContainersStatus) {
-            if(!lastWorkerContainerStatus.containsKey(new XLearningContainerId(container.getId()))) {
+          for (Container container : workerContainersStatus) {
+            if (!lastWorkerContainerStatus.containsKey(new XLearningContainerId(container.getId()))) {
               lastWorkerContainerStatus.put(new XLearningContainerId(container.getId()), XLearningContainerStatus.STARTED);
             }
-            if(!applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).equals(lastWorkerContainerStatus.get(new XLearningContainerId(container.getId())))) {
+            if (!applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).equals(lastWorkerContainerStatus.get(new XLearningContainerId(container.getId())))) {
               this.appendMessage("container " + container.getId().toString() + " status is " + applicationContext.getContainerStatus(new XLearningContainerId(container.getId())), false);
-              lastWorkerContainerStatus.put(new XLearningContainerId(container.getId()),applicationContext.getContainerStatus(new XLearningContainerId(container.getId())));
+              lastWorkerContainerStatus.put(new XLearningContainerId(container.getId()), applicationContext.getContainerStatus(new XLearningContainerId(container.getId())));
             }
           }
-          for(Container container : psContainersStatus) {
-            if(!lastPsContainerStatus.containsKey(new XLearningContainerId(container.getId()))) {
+          for (Container container : psContainersStatus) {
+            if (!lastPsContainerStatus.containsKey(new XLearningContainerId(container.getId()))) {
               lastPsContainerStatus.put(new XLearningContainerId(container.getId()), XLearningContainerStatus.STARTED);
             }
-            if(!applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).equals(lastPsContainerStatus.get(new XLearningContainerId(container.getId())))) {
+            if (!applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).equals(lastPsContainerStatus.get(new XLearningContainerId(container.getId())))) {
               this.appendMessage("container " + container.getId().toString() + " status is " + applicationContext.getContainerStatus(new XLearningContainerId(container.getId())), false);
-              lastPsContainerStatus.put(new XLearningContainerId(container.getId()),applicationContext.getContainerStatus(new XLearningContainerId(container.getId())));
+              lastPsContainerStatus.put(new XLearningContainerId(container.getId()), applicationContext.getContainerStatus(new XLearningContainerId(container.getId())));
             }
           }
         }

@@ -594,6 +594,10 @@ public class Client {
       appMasterEnv.put(XLearningConstants.Environment.USER_PATH.toString(), clientArguments.userPath);
     }
 
+    if (clientArguments.userLD_LIBRARY_PATH != null && !clientArguments.userLD_LIBRARY_PATH.equals("")) {
+      appMasterEnv.put(XLearningConstants.Environment.USER_LD_LIBRARY_PATH.toString(), clientArguments.userLD_LIBRARY_PATH);
+    }
+
     LOG.info("Building application master launch command");
     List<String> appMasterArgs = new ArrayList<>(20);
     appMasterArgs.add("${JAVA_HOME}" + "/bin/java");

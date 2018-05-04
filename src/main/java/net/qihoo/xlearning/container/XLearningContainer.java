@@ -419,7 +419,7 @@ public class XLearningContainer {
       this.reportFailedAndExit();
     }
 
-    if (xlearningAppType.equals("LIGHTLDA")) {
+    if (xlearningAppType.equals("LIGHTLDA") && !single) {
       if (this.role.equals(XLearningConstants.PS)) {
         LOG.info("Reserved available port: " + reservedSocket.getLocalPort());
         this.lightLDALocalPort = reservedSocket.getLocalPort();
@@ -551,11 +551,13 @@ public class XLearningContainer {
       envList.add("LIGHTGBM_NUM_MACHINE=" + System.getenv(XLearningConstants.Environment.XLEARNING_LIGHTGBM_WORKER_NUM.toString()));
       envList.add("LIGHTGBM_LOCAL_LISTEN_PORT=" + this.lightGBMLocalPort);
     } else if (xlearningAppType.equals("LIGHTLDA")) {
-      envList.add("LIGHTLDA_WORKER_NUM=" + System.getenv(XLearningConstants.Environment.XLEARNING_LIGHTLDA_WORKER_NUM.toString()));
-      envList.add("LIGHTLDA_SERVER_NUM=" + System.getenv(XLearningConstants.Environment.XLEARNING_LIGHTLDA_PS_NUM.toString()));
       envList.add("LIGHTLDA_RANK=" + this.index);
-      envList.add("LIGHTLDA_SERVER_ENDPOINT=" + this.lightLDAEndpoint);
       envList.add("LIGHTLDA_ROLE=" + this.role);
+      if (!single) {
+        envList.add("LIGHTLDA_WORKER_NUM=" + System.getenv(XLearningConstants.Environment.XLEARNING_LIGHTLDA_WORKER_NUM.toString()));
+        envList.add("LIGHTLDA_SERVER_NUM=" + System.getenv(XLearningConstants.Environment.XLEARNING_LIGHTLDA_PS_NUM.toString()));
+        envList.add("LIGHTLDA_SERVER_ENDPOINT=" + this.lightLDAEndpoint);
+      }
     }
 
     if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).toUpperCase().equals("PLACEHOLDER")) {
@@ -839,7 +841,7 @@ public class XLearningContainer {
       }
     }
 
-    if (this.role.equals(XLearningConstants.PS)) {
+    if (this.role.equals(XLearningConstants.PS) && !this.xlearningAppType.equals("LIGHTLDA")) {
       if (code == -1) {
         xlearningProcess.destroy();
         return true;
