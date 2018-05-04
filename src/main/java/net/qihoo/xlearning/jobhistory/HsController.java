@@ -73,8 +73,11 @@ public class HsController extends Controller implements AMParams {
       readLog = (Map) gson.fromJson(line, readLog.getClass());
       int i = 0;
       int workeri = 0;
+      int psi = 0;
       set(OUTPUT_TOTAL, String.valueOf(0));
       set(TIMESTAMP_TOTAL, String.valueOf(0));
+      set(PS_NUMBER, String.valueOf(0));
+      set(PS_GCORES, String.valueOf(0));
       for (String info : readLog.keySet()) {
         if (info.equals(AMParams.APP_TYPE)) {
           if (readLog.get(info) != null) {
@@ -135,7 +138,7 @@ public class HsController extends Controller implements AMParams {
             set(CONTAINER_FINISH_TIME + i, containerMessage.get(AMParams.CONTAINER_FINISH_TIME));
             set(CONTAINER_REPORTER_PROGRESS + i, containerMessage.get(AMParams.CONTAINER_REPORTER_PROGRESS));
             set(CONTAINER_LOG_ADDRESS + i, containerMessage.get(AMParams.CONTAINER_LOG_ADDRESS));
-            if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
+
               if (!containerMessage.get(AMParams.CONTAINER_GPU_DEVICE).equals("-")) {
                 if (containerMessage.containsKey(AMParams.CONTAINER_GPU_MEM_METRICS) && containerMessage.containsKey(AMParams.CONTAINER_GPU_UTIL_METRICS)) {
                   String containersGpuMemMetrics = containerMessage.get(AMParams.CONTAINER_GPU_MEM_METRICS);
@@ -145,7 +148,11 @@ public class HsController extends Controller implements AMParams {
                     }.getType();
                     ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> map = new Gson().fromJson(containersGpuMemMetrics, type);
                     for (String str : map.keySet()) {
-                      set("gpuMemMetrics" + workeri + str, new Gson().toJson(map.get(str)));
+                      if ($(CONTAINER_ROLE + i).equals("worker")) {
+                        set("workerGpuMemMetrics" + workeri + str, new Gson().toJson(map.get(str)));
+                      } else {
+                        set("psGpuMemMetrics" + psi + str, new Gson().toJson(map.get(str)));
+                      }
                     }
                   }
                   if (containersGpuUtilMetrics != null) {
@@ -153,10 +160,19 @@ public class HsController extends Controller implements AMParams {
                     }.getType();
                     ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> map = new Gson().fromJson(containersGpuUtilMetrics, type);
                     for (String str : map.keySet()) {
-                      set("gpuUtilMetrics" + workeri + str, new Gson().toJson(map.get(str)));
+                      if ($(CONTAINER_ROLE + i).equals("worker")) {
+                        set("workerGpuUtilMetrics" + workeri + str, new Gson().toJson(map.get(str)));
+                      }
+                      else {
+                        set("psGpuUtilMetrics" + psi + str, new Gson().toJson(map.get(str)));
+                      }
                     }
                   }
-                  set("WORKER_GPU_DEVICE" + workeri, containerMessage.get(AMParams.CONTAINER_GPU_DEVICE));
+                  if ($(CONTAINER_ROLE + i).equals("worker")) {
+                    set("WORKER_GPU_DEVICE" + workeri, containerMessage.get(AMParams.CONTAINER_GPU_DEVICE));
+                  } else {
+                    set("PS_GPU_DEVICE" + workeri, containerMessage.get(AMParams.CONTAINER_GPU_DEVICE));
+                  }
                 }
               }
 
@@ -186,21 +202,39 @@ public class HsController extends Controller implements AMParams {
                   Type type = new TypeToken<ConcurrentHashMap<String, Object>>() {
                   }.getType();
                   ConcurrentHashMap<String, Object> map = gson2.fromJson(cpuMetrics, type);
-                  set("cpuMemMetrics" + workeri, new Gson().toJson(map.get("CPUMEM")));
-                  set("cpuUtilMetrics" + workeri, new Gson().toJson(map.get("CPUUTIL")));
+                  if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
+                    set("workerCpuMemMetrics" + workeri, new Gson().toJson(map.get("CPUMEM")));
+                    if (map.containsKey("CPUUTIL")) {
+                      set("workerCpuUtilMetrics" + workeri, new Gson().toJson(map.get("CPUUTIL")));
+                    }
+                  } else {
+                    set("psCpuMemMetrics" + psi, new Gson().toJson(map.get("CPUMEM")));
+                    if (map.containsKey("CPUUTIL")) {
+                      set("psCpuUtilMetrics" + psi, new Gson().toJson(map.get("CPUUTIL")));
+                    }
+                  }
                 }
-                set("WORKER_CONTAINER_ID" + workeri, info);
-                workeri++;
-              }
             } else {
               set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(false));
             }
+            if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
+              set("WORKER_CONTAINER_ID" + workeri, info);
+              workeri++;
+            } else {
+              set("PS_CONTAINER_ID" + psi, info);
+              psi++;
+            }
+
             i++;
           }
         } else if (info.equals(AMParams.WORKER_NUMBER)) {
           set(WORKER_NUMBER, String.valueOf(readLog.get(info)));
         } else if (info.equals(AMParams.WORKER_GCORES)) {
           set(WORKER_GCORES, String.valueOf(readLog.get(info)));
+        } else if (info.equals(AMParams.PS_NUMBER)) {
+          set(PS_NUMBER, String.valueOf(readLog.get(info)));
+        } else if (info.equals(AMParams.PS_GCORES)) {
+          set(PS_GCORES, String.valueOf(readLog.get(info)));
         }
       }
       set(CONTAINER_NUMBER, String.valueOf(i));

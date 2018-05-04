@@ -26,6 +26,8 @@ public interface ApplicationContext {
 
   long getWorkerGcores();
 
+  long getPsGcores();
+
   List<Container> getWorkerContainers();
 
   List<Container> getPsContainers();

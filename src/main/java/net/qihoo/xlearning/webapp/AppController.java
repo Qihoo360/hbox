@@ -64,10 +64,12 @@ public class AppController extends Controller implements AMParams {
     Map<XLearningContainerId, String> containersAppStartTime = app.context.getContainersAppStartTime();
     Map<XLearningContainerId, String> containersAppFinishTime = app.context.getContainersAppFinishTime();
     long workerGcores = app.context.getWorkerGcores();
+    long psGcores = app.context.getPsGcores();
     set(CONTAINER_NUMBER, String.valueOf(workerContainers.size() + psContainers.size()));
     set(WORKER_NUMBER, String.valueOf(workerContainers.size()));
     set(USER_NAME, StringUtils.split(conf.get("hadoop.job.ugi"), ',')[0]);
     set(WORKER_GCORES, String.valueOf(workerGcores));
+    set(PS_GCORES, String.valueOf(psGcores));
     int i = 0;
     for (Container container : workerContainers) {
       set(CONTAINER_HTTP_ADDRESS + i, container.getNodeHttpAddress());
@@ -146,6 +148,7 @@ public class AppController extends Controller implements AMParams {
       }
       i++;
     }
+
     for (Container container : psContainers) {
       set(CONTAINER_HTTP_ADDRESS + i, container.getNodeHttpAddress());
       set(CONTAINER_ID + i, container.getId().toString());
@@ -165,6 +168,39 @@ public class AppController extends Controller implements AMParams {
         set(CONTAINER_ROLE + i, "ps");
       } else if ($(APP_TYPE).equals("Mxnet")) {
         set(CONTAINER_ROLE + i, "server");
+      }
+
+      if (app.context.getContainerGPUDevice(new XLearningContainerId(container.getId())) != null) {
+        if (app.context.getContainerGPUDevice(new XLearningContainerId(container.getId())).trim().length() != 0) {
+          set(CONTAINER_GPU_DEVICE + i, app.context.getContainerGPUDevice(new XLearningContainerId(container.getId())).toString());
+          ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuMemMetrics = app.context.getContainersGpuMemMetrics().get(new XLearningContainerId(container.getId()));
+          ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuUtilMetrics = app.context.getContainersGpuUtilMetrics().get(new XLearningContainerId(container.getId()));
+          if (containersGpuMemMetrics.size() != 0) {
+            for (String str : containersGpuMemMetrics.keySet()) {
+              set("gpuMemMetrics" + i + str, new Gson().toJson(containersGpuMemMetrics.get(str)));
+            }
+          }
+          if (containersGpuUtilMetrics.size() != 0) {
+            for (String str : containersGpuUtilMetrics.keySet()) {
+              set("gpuUtilMetrics" + i + str, new Gson().toJson(containersGpuUtilMetrics.get(str)));
+            }
+          }
+        } else {
+          set(CONTAINER_GPU_DEVICE + i, "-");
+          if (Long.valueOf($(PS_GCORES)) > 0) {
+            set(PS_GCORES, "0");
+          }
+        }
+      }
+
+      if (app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId())) != null) {
+        ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
+        if (cpuMetrics.size() != 0) {
+          set("cpuMemMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUMEM")));
+          if (cpuMetrics.containsKey("CPUUTIL")) {
+            set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
+          }
+        }
       }
 
       set(CONTAINER_REPORTER_PROGRESS + i, "0.00%");

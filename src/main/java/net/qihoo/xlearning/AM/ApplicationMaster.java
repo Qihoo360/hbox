@@ -348,14 +348,20 @@ public class ApplicationMaster extends CompositeService {
               containerMessage.put(AMParams.CONTAINER_FINISH_TIME, "N/A");
             }
 
-            ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
-            containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
+            if (applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId())) != null) {
+              ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
+              containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
+            }
 
             if (workerGCores > 0) {
-              ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuMemMetrics = applicationContext.getContainersGpuMemMetrics().get(new XLearningContainerId(container.getId()));
-              ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuUtilMetrics = applicationContext.getContainersGpuUtilMetrics().get(new XLearningContainerId(container.getId()));
-              containerMessage.put(AMParams.CONTAINER_GPU_MEM_METRICS, new Gson().toJson(containersGpuMemMetrics));
-              containerMessage.put(AMParams.CONTAINER_GPU_UTIL_METRICS, new Gson().toJson(containersGpuUtilMetrics));
+              if (applicationContext.getContainersGpuMemMetrics().get(new XLearningContainerId(container.getId())) != null) {
+                ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuMemMetrics = applicationContext.getContainersGpuMemMetrics().get(new XLearningContainerId(container.getId()));
+                containerMessage.put(AMParams.CONTAINER_GPU_MEM_METRICS, new Gson().toJson(containersGpuMemMetrics));
+              }
+              if (applicationContext.getContainersGpuUtilMetrics().get(new XLearningContainerId(container.getId())) != null) {
+                ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuUtilMetrics = applicationContext.getContainersGpuUtilMetrics().get(new XLearningContainerId(container.getId()));
+                containerMessage.put(AMParams.CONTAINER_GPU_UTIL_METRICS, new Gson().toJson(containersGpuUtilMetrics));
+              }
             } else {
               containerMessage.put(AMParams.CONTAINER_GPU_MEM_METRICS, "-");
               containerMessage.put(AMParams.CONTAINER_GPU_UTIL_METRICS, "-");
@@ -426,6 +432,26 @@ public class ApplicationMaster extends CompositeService {
             } else {
               containerMessage.put(AMParams.CONTAINER_FINISH_TIME, "N/A");
             }
+
+            if (applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId())) != null) {
+              ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
+              containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
+            }
+
+            if (psGCores > 0) {
+              if (applicationContext.getContainersGpuMemMetrics().get(new XLearningContainerId(container.getId())) != null) {
+                ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuMemMetrics = applicationContext.getContainersGpuMemMetrics().get(new XLearningContainerId(container.getId()));
+                containerMessage.put(AMParams.CONTAINER_GPU_MEM_METRICS, new Gson().toJson(containersGpuMemMetrics));
+              }
+              if (applicationContext.getContainersGpuUtilMetrics().get(new XLearningContainerId(container.getId())) != null) {
+                ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuUtilMetrics = applicationContext.getContainersGpuUtilMetrics().get(new XLearningContainerId(container.getId()));
+                containerMessage.put(AMParams.CONTAINER_GPU_UTIL_METRICS, new Gson().toJson(containersGpuUtilMetrics));
+              }
+            } else {
+              containerMessage.put(AMParams.CONTAINER_GPU_MEM_METRICS, "-");
+              containerMessage.put(AMParams.CONTAINER_GPU_UTIL_METRICS, "-");
+            }
+
             containerMessage.put(AMParams.CONTAINER_REPORTER_PROGRESS, "0.00%");
             containerMessage.put(AMParams.CONTAINER_LOG_ADDRESS, String.format("http://%s/node/containerlogs/%s/%s",
                 container.getNodeHttpAddress(),
@@ -455,6 +481,8 @@ public class ApplicationMaster extends CompositeService {
           logMessage.put(AMParams.OUTPUT_PATH, outputList);
           logMessage.put(AMParams.WORKER_NUMBER, String.valueOf(workerNum));
           logMessage.put(AMParams.WORKER_GCORES, String.valueOf(workerGCores));
+          logMessage.put(AMParams.PS_NUMBER, String.valueOf(psNum));
+          logMessage.put(AMParams.PS_GCORES, String.valueOf(psGCores));
 
           out.writeBytes(new Gson().toJson(logMessage));
           out.close();
@@ -803,9 +831,9 @@ public class ApplicationMaster extends CompositeService {
     containerEnv.put(XLearningConstants.Environment.APPMASTER_PORT.toString(),
         String.valueOf(containerListener.getServerPort()));
     containerEnv.put("PATH", System.getenv("PATH") + ":" +
-            System.getenv(XLearningConstants.Environment.USER_PATH.toString()));
+        System.getenv(XLearningConstants.Environment.USER_PATH.toString()));
     containerEnv.put("LD_LIBRARY_PATH", System.getenv("LD_LIBRARY_PATH") + ":" +
-            System.getenv(XLearningConstants.Environment.USER_LD_LIBRARY_PATH.toString()));
+        System.getenv(XLearningConstants.Environment.USER_LD_LIBRARY_PATH.toString()));
 
     LOG.debug("env:" + containerEnv.toString());
     Set<String> envStr = containerEnv.keySet();
@@ -1407,6 +1435,10 @@ public class ApplicationMaster extends CompositeService {
       return workerGCores;
     }
 
+    @Override
+    public long getPsGcores() {
+      return psGCores;
+    }
 
     @Override
     public List<Container> getWorkerContainers() {
