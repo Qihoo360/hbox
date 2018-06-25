@@ -40,6 +40,7 @@ Similar with the read strategy, XLearning allows to specify the output strategy 
 - **Upload**: After the program finished, each worker upload the local directory of the output to specified HDFS path directly. The button, "Saved Model", on the web interface allows user to upload the intermediate result to remote during the execution.  
 - **OutputFormat**: Integrated the OutputFormat function of MapReduce, XLearning allows the user to specify any of the implementation of OutputFormat for saving the result to HDFS.    
 
+More detail see [**data management**](./doc/datamanage_cn.md)    
 
 ### 3 Visualization Display  
 The application interface can be divided into four parts:  
