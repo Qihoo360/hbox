@@ -1,9 +1,9 @@
-##基于HDFS的统一数据管理
+## 基于HDFS的统一数据管理
 
 XLearning提供有基于HDFS的统一数据管理，概述说明见[README功能特性](../README_CN.md)部分，本文对该功能特性展开详细使用说明，方便大家理解应用。  
 
-###输入数据读取方式  
-####1. Download  
+### 输入数据读取方式  
+#### 1. Download  
 该模式下，遍历用户指定的HDFS路径下所有文件，并以**文件**为单位将输入数据平均分配给各Worker，Worker在执行程序启动前，将所分配到的数据文件从HDFS下载到本地指定路径。XLearning默认采用Download模式对输入数据进行处理。详细使用示例说明如下：  
 XLearning作业提交脚本中，指定参数：  
     
@@ -28,7 +28,7 @@ XLearning作业提交脚本中，指定参数：
       --input /tmp/input2#data2 \  
       --input /tmp/input3#data3 \  
 
-####2. Placeholder  
+#### 2. Placeholder  
 该模式与Download类似，不同之处在于Worker不会直接下载HDFS文件到本地指定路径，而是将所分配的HDFS文件列表通过环境变量`INPUT_FILE_LIST`传给Worker中的执行程序对应进程。执行程序从环境变量`os.environ["INPUT_FILE_LIST"]`中获取需要处理的文件列表，直接对HDFS文件进行读写等操作。该模式要求深度学习框架具备读取HDFS文件的功能，或借助第三方模块库如pydoop等。TensorFlow在0.10版本后已经支持直接操作HDFS文件。使用示例说明：  
 
     XLearning作业提交脚本中，指定参数：  
@@ -47,7 +47,7 @@ XLearning作业提交脚本中，指定参数：
         fileStr = f.readline()  
       inputfile = json.loads(fileStr)  
 
-####3. InputFormat  
+#### 3. InputFormat  
 该模式下，Worker从标准输入方式读取所分配到的数据分片信息，使用示例说明：  
 
     XLearning作业提交脚本中，指定参数：  
@@ -61,8 +61,8 @@ XLearning作业提交脚本中，指定参数：
         sys.stdout.write(line + '\n')  
     
 
-###输出数据保存方式
-####1. Upload  
+### 输出数据保存方式  
+#### 1. Upload  
 XLearning默认采用Upload模式对输出数据进行保存至HDFS操作，示例说明如下：  
 
     XLearning作业提交脚本中，指定参数：
@@ -71,6 +71,6 @@ XLearning默认采用Upload模式对输出数据进行保存至HDFS操作，示�
 
 为方便用户在训练过程中随时将本地输出上传至HDFS，XLearning在作业执行Web界面提供输出结果中间保存机制。用户作业执行过程中，根据训练进度及设置，将结果保存在`output`参数的对应的本地路径下，在执行中途需要提前将本地输出传至对应HDFS路径时，可在作业执行ApplicationMaster页面点击`Save Model`按钮进行中间输出结果上传。上传成功后，界面显示当前已上传的中间结果列表。  
 
-####2. OutputFormat  
+#### 2. OutputFormat  
 在训练过程中，Worker根据指定的OutputFormat类，将结果输出至HDFS，使用示例可参见InputFormat部分给出的程序示例。  
 
