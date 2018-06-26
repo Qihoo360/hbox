@@ -114,3 +114,8 @@ XLearning1.1版本中支持作业失败重试，并且重试后作业worker与ps
 ### 11. 作业提交后，出现报错信息：java.io.IOException: Cannot run program "tensorboard": error=2, No such file or directory, 如何解决？  
 在XLearning客户端提交作业时，添加 --user-path "/root/anaconda2/lib/python2.7/site-packages/tensorboard" ，指定tensorboard路径。   
 
+
+### 12.若存在用户自定义module于其他python文件中，如何处理？  
+利用files参数，添加所需要的所有python文件，在调用其他自定义模块前，将python文件所在路径添加至系统路径，如：sys.path.append(os.getcwd())。  
+
+

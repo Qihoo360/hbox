@@ -112,3 +112,7 @@ Note that the information of AM connected error which reported at the client whe
 ### 11. Report the error：" java.io.IOException: Cannot run program "tensorboard": error=2, No such file or directory" after submit the application.       
 When the XLearning client submits a job, the --user-path "/root/anaconda2/lib/python2.7/site-packages/tensorboard" is added to specify the tensorboard path.
 
+### 12. How to use the custom module ?  
+Upload the files using the `--files` to each container. Load the related path to the system path, such as `sys.path.append(os.getcwd())` before calling the module.  
+
+  
