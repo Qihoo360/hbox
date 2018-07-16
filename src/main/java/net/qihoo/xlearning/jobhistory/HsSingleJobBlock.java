@@ -126,7 +126,7 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
       if (Boolean.parseBoolean($(CONTAINER_CPU_METRICS_ENABLE))) {
         int numWorkers = Integer.parseInt($(WORKER_NUMBER));
         for (int i = 0; i < numWorkers; i++) {
-          if (!$("cpuMemMetrics" + i).equals("") && $("cpuMemMetrics" + i) != null) {
+          if (!$("workerCpuMemMetrics" + i).equals("") && $("workerCpuMemMetrics" + i) != null) {
             html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px")._(String.format($(CONTAINER_ID + i)) + " metrics:")._();
           }
 
@@ -134,18 +134,18 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
           html.script().$src("/static/xlWebApp/highstock.js")._();
           html.script().$src("/static/xlWebApp/exporting.js")._();
 
-          String containerCpuMemID = "containerCpuMem" + i;
-          String containerCpuUtilID = "containerCpuUtil" + i;
+          String containerCpuMemID = "workercontainerCpuMem" + i;
+          String containerCpuUtilID = "workercontainerCpuUtil" + i;
           String containerClass = "container" + i;
           String seriesCpuMemOptions = "[{\n" +
               "            name: 'cpu mem used',\n" +
-              "            data: " + $("cpuMemMetrics" + i) + "\n" +
+              "            data: " + $("workerCpuMemMetrics" + i) + "\n" +
               "        }]";
           String seriesCpuUtilOptions = "[{\n" +
               "            name: 'cpu util',\n" +
-              "            data: " + $("cpuUtilMetrics" + i) + "\n" +
+              "            data: " + $("workerCpuUtilMetrics" + i) + "\n" +
               "        }]";
-          if (!$("cpuUtilMetrics" + i).equals("") && $("cpuUtilMetrics" + i) != null) {
+          if (!$("workerCpuUtilMetrics" + i).equals("") && $("workerCpuUtilMetrics" + i) != null) {
             html.div()
                 .div().$id(containerCpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
                 .div().$id(containerCpuUtilID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block")._()
@@ -201,7 +201,7 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
               "\n" +
               "    series: " + seriesCpuMemOptions + "\n" +
               "});\n";
-          if (!$("cpuUtilMetrics" + i).equals("") && $("cpuUtilMetrics" + i) != null) {
+          if (!$("workerCpuUtilMetrics" + i).equals("") && $("workerCpuUtilMetrics" + i) != null) {
             striptBody += "Highcharts.stockChart(" + containerCpuUtilID + ", {\n" +
                 "    chart: {\n" +
                 "        width: 550\n" +
