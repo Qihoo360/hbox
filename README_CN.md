@@ -40,6 +40,8 @@ XLearning系统包括三种组件：
 - **Upload**： 执行程序结束后，Worker根据提交脚本中输出数据参数，将本地输出路径保存文件上传至对应HDFS路径。为方便用户在训练过程中随时将本地输出上传至HDFS，XLearning系统在作业执行Web界面提供对输出模型的当前状态主动保存的功能，详情请见“可视化界面”说明部分；  
 - **OutputFormat**： XLearning集成有MapReduce中的OutputFormat功能。在训练过程中，Worker根据指定的OutputFormat类，将结果输出至HDFS。  
 
+更多详细说明见[**数据管理说明**](./doc/datamanage_cn.md)  
+
 
 ### 3 可视化界面  
 作业运行界面大致分为四部分：  

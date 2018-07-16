@@ -126,3 +126,7 @@ User can get the file list like this:
         fileStr = f.readline()
       inputfile = json.loads(fileStr)
 
+
+### 13. How to use the custom module ?
+Upload the files using the `--files` to each container. Load the related path to the system path, such as `sys.path.append(os.getcwd())` before calling the module.  
+

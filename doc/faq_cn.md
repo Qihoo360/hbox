@@ -129,3 +129,8 @@ XLearning1.1版本中支持作业失败重试，并且重试后作业worker与ps
       inputfile = json.loads(fileStr)
 
 
+### 13.若存在用户自定义module于其他python文件中，如何处理？
+利用files参数，添加所需要的所有python文件，在调用其他自定义模块前，将python文件所在路径添加至系统路径，如：sys.path.append(os.getcwd())。  
+
+
+
