@@ -1,6 +1,5 @@
 package net.qihoo.xlearning.webapp;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -20,6 +19,7 @@ public class InfoBlock extends HtmlBlock implements AMParams {
   protected void render(Block html) {
     int numContainers = Integer.parseInt($(CONTAINER_NUMBER));
     int numWorkers = Integer.parseInt($(WORKER_NUMBER));
+    int numPS = Integer.parseInt($(PS_NUMBER));
     if (numContainers > 0) {
       TBODY<TABLE<Hamlet>> tbody = html.
           h2("All Containers:").
@@ -56,7 +56,7 @@ public class InfoBlock extends HtmlBlock implements AMParams {
               td($(CONTAINER_STATUS + i)).
               td($(CONTAINER_START_TIME + i)).
               td($(CONTAINER_FINISH_TIME + i)).
-              td($(CONTAINER_REPORTER_PROGRESS + i)).td()._()._();
+              td($(CONTAINER_REPORTER_PROGRESS + i))._();
         } else if ($(CONTAINER_REPORTER_PROGRESS + i).equals("0.00%")) {
           td._().
               td(containerMachine.split(":")[0]).
@@ -64,7 +64,7 @@ public class InfoBlock extends HtmlBlock implements AMParams {
               td($(CONTAINER_STATUS + i)).
               td($(CONTAINER_START_TIME + i)).
               td($(CONTAINER_FINISH_TIME + i)).
-              td("N/A").td()._()._();
+              td("N/A")._();
         } else {
           td._().
               td(containerMachine.split(":")[0]).
@@ -179,6 +179,107 @@ public class InfoBlock extends HtmlBlock implements AMParams {
         }
         tbodySave._()._();
       }
+
+      // resource applied info
+      html.div().$style("margin:20px 2px;")._(" ")._();
+      TBODY<TABLE<Hamlet>> resourceAppliedInfo = html.
+          h2("Resource Applied Info:").
+          table("#resourceAppliedInfo").
+          thead("ui-widget-header").
+          tr().
+          th("ui-state-default", "Role").
+          th("ui-state-default", "Number").
+          th("ui-state-default", "CPU Memory(GB)").
+          th("ui-state-default", "CPU Cores").
+          _()._().
+          tbody();
+      if(numWorkers > 0){
+        resourceAppliedInfo.
+            _().tbody("ui-widget-content").
+            tr().
+            $style("text-align:center;").
+            td("worker").
+            td(String.valueOf(numWorkers)).
+            td($(WORKER_MEMORY)).
+            td($(WORKER_VCORES)).
+            _();
+      }
+      if (numPS > 0){
+        resourceAppliedInfo.
+            _().tbody("ui-widget-content").
+            tr().
+            $style("text-align:center;").
+            td("ps").
+            td(String.valueOf(numPS)).
+            td($(PS_MEMORY)).
+            td($(PS_VCORES)).
+            _();
+      }
+      resourceAppliedInfo._()._();
+
+      html.div().$style("margin:20px 2px;")._(" ")._();
+
+      // worker/ps containers resource usage statistics info
+      if (numWorkers > 0) {
+        TBODY<TABLE<Hamlet>> workerCPUUsage = html.
+            h2("Worker Containers CPU Usage Info:").
+            table("#workerCPUUsageInfo").
+            thead("ui-widget-header").
+            tr().
+            th("ui-state-default", "ContainerID").
+            th("ui-state-default", "CPU memory average usages(GB)").
+            th("ui-state-default", "CPU memory max usages(GB)").
+            th("ui-state-default", "CPU utilization average usages(%)").
+            th("ui-state-default", "CPU utilization max usages(%)").
+            _()._().
+            tbody();
+
+        for (int i = 0; i < numWorkers; i++) {
+          workerCPUUsage.
+              _().tbody("ui-widget-content").
+              tr().
+              $style("text-align:center;").
+              td($(CONTAINER_ID + i)).
+              td($(CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + i)).
+              td($(CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + i)).
+              td($(CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + i)).
+              td($(CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + i)).
+              _();
+        }
+        workerCPUUsage._()._();
+      }
+
+      if(numPS > 0) {
+        html.div().$style("margin:20px 2px;")._(" ")._();
+        TBODY<TABLE<Hamlet>> psCPUUsage = html.
+            h2("PS Containers CPU Usage Info:").
+            table("#psCPUUsageInfo").
+            thead("ui-widget-header").
+            tr().
+            th("ui-state-default", "ContainerID").
+            th("ui-state-default", "CPU memory average usages(GB)").
+            th("ui-state-default", "CPU memory max usages(GB)").
+            th("ui-state-default", "CPU utilization average usages(%)").
+            th("ui-state-default", "CPU utilization max usages(%)").
+            _()._().
+            tbody();
+
+        for (int i = numWorkers; i < numContainers; i++) {
+          psCPUUsage.
+              _().tbody("ui-widget-content").
+              tr().
+              $style("text-align:center;").
+              td($(CONTAINER_ID + i)).
+              td($(CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + i)).
+              td($(CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + i)).
+              td($(CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + i)).
+              td($(CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + i)).
+              _();
+        }
+        psCPUUsage._()._();
+
+      }
+
       html.div().$style("margin:20px 2px;")._(" ")._();
       if (Boolean.parseBoolean($(CONTAINER_CPU_METRICS_ENABLE))) {
         int i = 0;

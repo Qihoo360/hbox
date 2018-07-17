@@ -75,7 +75,11 @@ public class HsController extends Controller implements AMParams {
       int psi = 0;
       set(OUTPUT_TOTAL, String.valueOf(0));
       set(TIMESTAMP_TOTAL, String.valueOf(0));
+      set(WORKER_NUMBER, String.valueOf(0));
       set(PS_NUMBER, String.valueOf(0));
+      Boolean cpuStatisticsFlag = false;
+      Boolean cpuMetricsFlag = false;
+      set(CONTAINER_CPU_METRICS_ENABLE, "false");
       for (String info : readLog.keySet()) {
         if (info.equals(AMParams.APP_TYPE)) {
           if (readLog.get(info) != null) {
@@ -136,7 +140,6 @@ public class HsController extends Controller implements AMParams {
             set(CONTAINER_REPORTER_PROGRESS + i, containerMessage.get(AMParams.CONTAINER_REPORTER_PROGRESS));
             set(CONTAINER_LOG_ADDRESS + i, containerMessage.get(AMParams.CONTAINER_LOG_ADDRESS));
             if (containerMessage.containsKey(AMParams.CONTAINER_CPU_METRICS)) {
-              set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(true));
               String cpuMetrics = containerMessage.get(AMParams.CONTAINER_CPU_METRICS);
               if (cpuMetrics != null) {
                 Gson gson2 = new GsonBuilder()
@@ -161,24 +164,60 @@ public class HsController extends Controller implements AMParams {
                 Type type = new TypeToken<ConcurrentHashMap<String, Object>>() {
                 }.getType();
                 ConcurrentHashMap<String, Object> map = gson2.fromJson(cpuMetrics, type);
-                if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
-                  set("WORKER_CONTAINER_ID" + workeri, info);
-                  set("workerCpuMemMetrics" + workeri, new Gson().toJson(map.get("CPUMEM")));
-                  if (map.containsKey("CPUUTIL")) {
-                    set("workerCpuUtilMetrics" + workeri, new Gson().toJson(map.get("CPUUTIL")));
+                if (map.size() > 0) {
+                  cpuMetricsFlag = true;
+                  if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
+                    set("workerCpuMemMetrics" + workeri, new Gson().toJson(map.get("CPUMEM")));
+                    if (map.containsKey("CPUUTIL")) {
+                      set("workerCpuUtilMetrics" + workeri, new Gson().toJson(map.get("CPUUTIL")));
+                    }
+                  } else {
+                    set("psCpuMemMetrics" + psi, new Gson().toJson(map.get("CPUMEM")));
+                    if (map.containsKey("CPUUTIL")) {
+                      set("psCpuUtilMetrics" + psi, new Gson().toJson(map.get("CPUUTIL")));
+                    }
                   }
-                  workeri++;
-                } else {
-                  set("PS_CONTAINER_ID" + psi, info);
-                  set("psCpuMemMetrics" + psi, new Gson().toJson(map.get("CPUMEM")));
-                  if (map.containsKey("CPUUTIL")) {
-                    set("psCpuUtilMetrics" + psi, new Gson().toJson(map.get("CPUUTIL")));
-                  }
-                  psi++;
                 }
               }
+            }
+
+            if (containerMessage.containsKey(AMParams.CONTAINER_CPU_STATISTICS)) {
+              String cpuStatistics = containerMessage.get(AMParams.CONTAINER_CPU_STATISTICS);
+              if (cpuStatistics != null && !cpuStatistics.equals("")) {
+                Type type = new TypeToken<Map<String, List<Double>>>() {
+                }.getType();
+                Map<String, List<Double>> map = new Gson().fromJson(cpuStatistics, type);
+                if (map.size() > 0) {
+                  if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
+                    set("worker" + CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + workeri, String.format("%.2f", map.get("CPUMEM").get(0)));
+                    set("worker" + CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + workeri, String.format("%.2f", map.get("CPUMEM").get(1)));
+                    set("worker" + CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + workeri, String.format("%.2f", map.get("CPUUTIL").get(0)));
+                    set("worker" + CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + workeri, String.format("%.2f", map.get("CPUUTIL").get(1)));
+                  } else {
+                    set("ps" + CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + workeri, String.format("%.2f", map.get("CPUMEM").get(0)));
+                    set("ps" + CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + workeri, String.format("%.2f", map.get("CPUMEM").get(1)));
+                    set("ps" + CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + workeri, String.format("%.2f", map.get("CPUUTIL").get(0)));
+                    set("ps" + CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + workeri, String.format("%.2f", map.get("CPUUTIL").get(1)));
+                  }
+                  cpuStatisticsFlag = true;
+                }
+              }
+            }
+
+            if (containerMessage.containsKey(AMParams.CONTAINER_CPU_USAGE_WARN_MEM)) {
+              if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
+                set("worker" + CONTAINER_CPU_USAGE_WARN_MEM + workeri, containerMessage.get(CONTAINER_CPU_USAGE_WARN_MEM));
+              } else {
+                set("ps" + CONTAINER_CPU_USAGE_WARN_MEM + psi, containerMessage.get(CONTAINER_CPU_USAGE_WARN_MEM));
+              }
+            }
+
+            if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
+              set("WORKER_CONTAINER_ID" + workeri, info);
+              workeri++;
             } else {
-              set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(false));
+              set("PS_CONTAINER_ID" + psi, info);
+              psi++;
             }
             i++;
           }
@@ -186,9 +225,27 @@ public class HsController extends Controller implements AMParams {
           set(WORKER_NUMBER, String.valueOf(readLog.get(info)));
         } else if (info.equals(AMParams.PS_NUMBER)) {
           set(PS_NUMBER, String.valueOf(readLog.get(info)));
+        } else if (info.equals(AMParams.WORKER_VCORES)) {
+          set(WORKER_VCORES, String.valueOf(readLog.get(info)));
+        } else if (info.equals(AMParams.PS_VCORES)) {
+          set(PS_VCORES, String.valueOf(readLog.get(info)));
+        } else if (info.equals(AMParams.WORKER_MEMORY)) {
+          set(WORKER_MEMORY, String.valueOf(readLog.get(info)));
+        } else if (info.equals(AMParams.PS_MEMORY)) {
+          set(PS_MEMORY, String.valueOf(readLog.get(info)));
         }
       }
       set(CONTAINER_NUMBER, String.valueOf(i));
+      if (cpuMetricsFlag) {
+        set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(true));
+      } else {
+        set(CONTAINER_CPU_METRICS_ENABLE, String.valueOf(false));
+      }
+      if (cpuStatisticsFlag) {
+        set(CONTAINER_CPU_STATISTICS, String.valueOf(true));
+      } else {
+        set(CONTAINER_CPU_STATISTICS, String.valueOf(false));
+      }
 
       if ($(BOARD_INFO).equals("-")) {
         String boardInfo = "Board server don't start, You can set argument \"--boardEnable true\" in your submit script to start.";

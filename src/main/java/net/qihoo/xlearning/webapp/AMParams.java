@@ -11,6 +11,14 @@ public interface AMParams {
 
   public static final String PS_NUMBER = "ps.number";
 
+  public static final String WORKER_VCORES = "worker.vcores";
+
+  public static final String PS_VCORES = "ps.vcores";
+
+  public static final String WORKER_MEMORY = "worker.memory";
+
+  public static final String PS_MEMORY = "ps.memory";
+
   public static final String CONTAINER_HTTP_ADDRESS = "container.address";
 
   public static final String CONTAINER_ID = "container.id";
@@ -26,6 +34,20 @@ public interface AMParams {
   public static final String CONTAINER_CPU_METRICS_ENABLE = "container.cpu.metrics.enable";
 
   public static final String CONTAINER_CPU_METRICS = "container.cpu.metrics";
+
+  public static final String CONTAINER_CPU_STATISTICS = "container.cpu.statistics";
+
+  public static final String CONTAINER_CPU_USAGE = "container.cpu.usage";
+
+  public static final String CONTAINER_CPU_USAGE_WARN_MEM = CONTAINER_CPU_USAGE + ".warn.mem";
+
+  public static final String CONTAINER_CPU_STATISTICS_MEM = CONTAINER_CPU_STATISTICS + ".mem";
+
+  public static final String CONTAINER_CPU_STATISTICS_UTIL = CONTAINER_CPU_STATISTICS + ".util";
+
+  public static final String USAGE_AVG = "Avg";
+
+  public static final String USAGE_MAX = "Max";
 
   public static final String BOARD_INFO = "board.info";
 

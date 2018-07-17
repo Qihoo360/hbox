@@ -1,7 +1,6 @@
 package net.qihoo.xlearning.webapp;
 
 import com.google.gson.*;
-import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
 import net.qihoo.xlearning.api.XLearningConstants;
 import net.qihoo.xlearning.common.OutputInfo;
@@ -15,12 +14,10 @@ import org.apache.hadoop.yarn.webapp.Controller;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
-import java.lang.reflect.Type;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 
@@ -68,6 +65,11 @@ public class AppController extends Controller implements AMParams {
     Map<XLearningContainerId, String> containersAppFinishTime = app.context.getContainersAppFinishTime();
     set(CONTAINER_NUMBER, String.valueOf(workerContainers.size() + psContainers.size()));
     set(WORKER_NUMBER, String.valueOf(workerContainers.size()));
+    set(PS_NUMBER, String.valueOf(psContainers.size()));
+    set(WORKER_VCORES, String.valueOf(app.context.getWorkerVCores()));
+    set(PS_VCORES, String.valueOf(app.context.getPsVCores()));
+    set(WORKER_MEMORY, String.format("%.2f", app.context.getWorkerMemory() / 1024.0));
+    set(PS_MEMORY, String.format("%.2f", app.context.getPsMemory() / 1024.0));
     set(USER_NAME, StringUtils.split(conf.get("hadoop.job.ugi"), ',')[0]);
     int i = 0;
     for (Container container : workerContainers) {
@@ -87,6 +89,13 @@ public class AppController extends Controller implements AMParams {
           if (cpuMetrics.containsKey("CPUUTIL")) {
             set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
           }
+        }
+        ConcurrentHashMap<String, List<Double>> cpuStatistics = app.context.getContainersCpuStatistics().get(new XLearningContainerId(container.getId()));
+        if (cpuStatistics.size() != 0) {
+          set(CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(0)));
+          set(CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(1)));
+          set(CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(0)));
+          set(CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(1)));
         }
       }
 
@@ -147,6 +156,13 @@ public class AppController extends Controller implements AMParams {
           if (cpuMetrics.containsKey("CPUUTIL")) {
             set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
           }
+        }
+        ConcurrentHashMap<String, List<Double>> cpuStatistics = app.context.getContainersCpuStatistics().get(new XLearningContainerId(container.getId()));
+        if (cpuStatistics.size() != 0) {
+          set(CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(0)));
+          set(CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(1)));
+          set(CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(0)));
+          set(CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(1)));
         }
       }
 

@@ -358,6 +358,19 @@ public class ApplicationMaster extends CompositeService {
               containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
             }
 
+            if (applicationContext.getContainersCpuStatistics().get(new XLearningContainerId(container.getId())) != null) {
+              ConcurrentHashMap<String, List<Double>> cpuStatistics = applicationContext.getContainersCpuStatistics().get(new XLearningContainerId(container.getId()));
+              containerMessage.put(AMParams.CONTAINER_CPU_STATISTICS, new Gson().toJson(cpuStatistics));
+              if (cpuStatistics.size() != 0) {
+                Double cpuMemUsagedMax = cpuStatistics.get("CPUMEM").get(1);
+                if (cpuMemUsagedMax * 1024.0 / workerMemory < conf.getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
+                  containerMessage.put(AMParams.CONTAINER_CPU_USAGE_WARN_MEM, "true");
+                } else {
+                  containerMessage.put(AMParams.CONTAINER_CPU_USAGE_WARN_MEM, "false");
+                }
+              }
+            }
+
             if (reporterProgress.get(new XLearningContainerId(container.getId())) != null && !reporterProgress.get(new XLearningContainerId(container.getId())).equals("")) {
               String progressLog = reporterProgress.get(new XLearningContainerId(container.getId()));
               String[] progress = progressLog.toString().split(":");
@@ -422,6 +435,19 @@ public class ApplicationMaster extends CompositeService {
               containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
             }
 
+            if (applicationContext.getContainersCpuStatistics().get(new XLearningContainerId(container.getId())) != null) {
+              ConcurrentHashMap<String, List<Double>> cpuStatistics = applicationContext.getContainersCpuStatistics().get(new XLearningContainerId(container.getId()));
+              containerMessage.put(AMParams.CONTAINER_CPU_STATISTICS, new Gson().toJson(cpuStatistics));
+              if (cpuStatistics.size() != 0) {
+                Double cpuMemUsagedMax = cpuStatistics.get("CPUMEM").get(1);
+                if (cpuMemUsagedMax * 1024.0 / workerMemory < conf.getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
+                  containerMessage.put(AMParams.CONTAINER_CPU_USAGE_WARN_MEM, "true");
+                } else {
+                  containerMessage.put(AMParams.CONTAINER_CPU_USAGE_WARN_MEM, "false");
+                }
+              }
+            }
+
             containerMessage.put(AMParams.CONTAINER_REPORTER_PROGRESS, "0.00%");
             containerMessage.put(AMParams.CONTAINER_LOG_ADDRESS, String.format("http://%s/node/containerlogs/%s/%s",
                 container.getNodeHttpAddress(),
@@ -451,6 +477,10 @@ public class ApplicationMaster extends CompositeService {
           logMessage.put(AMParams.OUTPUT_PATH, outputList);
           logMessage.put(AMParams.WORKER_NUMBER, String.valueOf(workerNum));
           logMessage.put(AMParams.PS_NUMBER, String.valueOf(psNum));
+          logMessage.put(AMParams.WORKER_VCORES, String.valueOf(workerVCores));
+          logMessage.put(AMParams.PS_VCORES, String.valueOf(psVCores));
+          logMessage.put(AMParams.WORKER_MEMORY, String.format("%.2f", workerMemory / 1024.0));
+          logMessage.put(AMParams.PS_MEMORY, String.format("%.2f", psMemory / 1024.0));
 
           out.writeBytes(new Gson().toJson(logMessage));
           out.close();
@@ -1445,6 +1475,27 @@ public class ApplicationMaster extends CompositeService {
       return psNum;
     }
 
+
+    @Override
+    public int getWorkerMemory(){
+      return workerMemory;
+    }
+
+    @Override
+    public int getPsMemory(){
+      return psMemory;
+    }
+
+    @Override
+    public int getWorkerVCores(){
+      return workerVCores;
+    }
+
+    @Override
+    public int getPsVCores(){
+      return psVCores;
+    }
+
     @Override
     public List<Container> getWorkerContainers() {
       return acquiredWorkerContainers;
@@ -1516,6 +1567,11 @@ public class ApplicationMaster extends CompositeService {
     @Override
     public Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics() {
       return containerListener.getContainersCpuMetrics();
+    }
+
+    @Override
+    public Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> getContainersCpuStatistics(){
+      return containerListener.getContainersCpuStatistics();
     }
 
     @Override

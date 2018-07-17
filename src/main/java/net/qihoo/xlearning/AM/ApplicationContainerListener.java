@@ -27,6 +27,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class ApplicationContainerListener extends AbstractService implements ApplicationContainerProtocol,
     ContainerListener {
@@ -56,6 +57,8 @@ public class ApplicationContainerListener extends AbstractService implements App
   private final Map<XLearningContainerId, String> containersAppFinishTimeMap;
 
   private final Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> containersCpuMetrics;
+
+  private final Map<XLearningContainerId, ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>> containersCpuStatistics;
 
   private String clusterDefStr;
 
@@ -116,6 +119,7 @@ public class ApplicationContainerListener extends AbstractService implements App
     this.interResultTimeStamp = Long.MIN_VALUE;
     this.containerId2InnerModel = new ConcurrentHashMap<>();
     this.containersCpuMetrics = new ConcurrentHashMap<>();
+    this.containersCpuStatistics = new ConcurrentHashMap<>();
     if (System.getenv().containsKey(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString())) {
       xlearningAppType = System.getenv(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString()).toUpperCase();
     } else {
@@ -171,6 +175,19 @@ public class ApplicationContainerListener extends AbstractService implements App
     return this.containersCpuMetrics;
   }
 
+  public Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> getContainersCpuStatistics(){
+    Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> cpuStatistics = new ConcurrentHashMap<>();
+    for(XLearningContainerId id: this.containersCpuStatistics.keySet()){
+      Map<String, ContainerMetricsStatisticsTuple> statisticsTuple = this.containersCpuStatistics.get(id);
+      ConcurrentHashMap<String, List<Double>> statisticsValue = new ConcurrentHashMap<>();
+      for (String str: statisticsTuple.keySet()){
+        statisticsValue.put(str, statisticsTuple.get(str).getStatisticsInfo());
+      }
+      cpuStatistics.put(id, statisticsValue);
+    }
+    return cpuStatistics;
+  }
+
   public int getServerPort() {
     return server.getPort();
   }
@@ -222,6 +239,7 @@ public class ApplicationContainerListener extends AbstractService implements App
     containersAppStartTimeMap.put(containerId, "");
     containersAppFinishTimeMap.put(containerId, "");
     containersCpuMetrics.put(containerId, new ConcurrentHashMap<String, LinkedBlockingDeque<Object>>());
+    containersCpuStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
     if (role.equals(XLearningConstants.WORKER) || (role.equals(XLearningConstants.PS) && (xlearningAppType.equals("TENSORFLOW") || xlearningAppType.equals("LIGHTLDA")))) {
       containerId2InnerModel.put(containerId, new InnerModelSavedPair());
     }
@@ -411,6 +429,7 @@ public class ApplicationContainerListener extends AbstractService implements App
         LinkedBlockingDeque<Object> queue = new LinkedBlockingDeque<>();
         queue.add(map.get(str));
         this.containersCpuMetrics.get(containerId).put(str, queue);
+        this.containersCpuStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(Double.parseDouble(new Gson().fromJson((JsonArray)map.get(str), ArrayList.class).get(1).toString())));
       }
     } else {
       Gson gson = new GsonBuilder()
@@ -444,10 +463,12 @@ public class ApplicationContainerListener extends AbstractService implements App
             this.containersCpuMetrics.get(containerId).get(str).poll();
             this.containersCpuMetrics.get(containerId).get(str).add(map.get(str));
           }
+          this.containersCpuStatistics.get(containerId).get(str).update(Double.parseDouble(new Gson().fromJson((JsonArray)map.get(str), ArrayList.class).get(1).toString()));
         } else {
           LinkedBlockingDeque<Object> queue = new LinkedBlockingDeque<>();
           queue.add(map.get(str));
           this.containersCpuMetrics.get(containerId).put(str, queue);
+          this.containersCpuStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(Double.parseDouble(new Gson().fromJson((JsonArray)map.get(str), ArrayList.class).get(1).toString())));
         }
       }
     }
@@ -693,4 +714,39 @@ public class ApplicationContainerListener extends AbstractService implements App
     }
 
   }
+
+  private class ContainerMetricsStatisticsTuple{
+    private Double totalUsed = 0.0;
+    private Double maxUsed = 0.0;
+    private AtomicLong count = new AtomicLong(0);
+
+    public ContainerMetricsStatisticsTuple(){
+    }
+
+    public ContainerMetricsStatisticsTuple(Double resourceUsed){
+      totalUsed = resourceUsed;
+      maxUsed = resourceUsed;
+      count.incrementAndGet();
+    }
+
+    public void update(Double resourceUsed){
+      totalUsed += resourceUsed;
+      count.incrementAndGet();
+      if(resourceUsed > maxUsed){
+        maxUsed = resourceUsed;
+      }
+    }
+
+    public List<Double> getStatisticsInfo(){
+      List<Double> statisticsInfo = new ArrayList<>();
+      statisticsInfo.add(totalUsed / count.get());
+      statisticsInfo.add(maxUsed);
+      return statisticsInfo;
+    }
+
+    public String toString(){
+      return totalUsed + "\t"+ count.get() + "\t" + maxUsed;
+    }
+  }
+
 }
