@@ -476,4 +476,28 @@ public class HboxConfiguration extends YarnConfiguration {
   public static final String HBOX_MPI_CONTAINER_UPDATE_APP_STATUS_RETRY = "hbox.mpi.container.update.status.retry";
   public static final int DEFAULT_HBOX_MPI_CONTAINER_UPDATE_APP_STATUS_RETRY = 3;
 
+  /** Configuration for horovod app */
+
+  public static final String HBOX_HOROVOD_EXTRA_LD_LIBRARY_PATH = "hbox.horovod.extra.ld.lirbary.path";
+
+  public static final String HBOX_HOROVOD_PROCESS_NUM_PER_WORKER = "hbox.horovod.process.num.per.worker";
+  public static final int DEDAULT_HBOX_HOROVOD_PROCESS_NUM_PER_WORKER = 1;
+
+  public static final String HBOX_HOROVOD_MPI_THREADS_DISABLE = "hbox.horovod.mpi.threads.disable";
+  public static final boolean DEFAULT_HBOX_HOROVOD_MPI_THREADS_DISABLE = false;
+
+  public static final String HBOX_HOROVOD_TIMELINE = "hbox.horovod.timeline";
+
+  public static final String HBOX_HOROVOD_FUSION_THRESHOLD = "hbox.horovod.fusion.threshold";
+  public static final int DEFAULT_HBOX_HOROVOD_FUSION_THRESHOLD = -1;
+
+  public static final String HBOX_HOROVOD_CYCLE_TIME = "hbox.horovod.cycle.time";
+  public static final int DEFAULT_HBOX_HOROVOD_CYCLE_TIME = -1;
+
+  public static final String HBOX_HOROVOD_STALL_CHECK_DISABLE = "hbox.horovod.stall.check.disable";
+  public static final boolean DEFAULT_HBOX_HOROVOD_STALL_CHECK_DISABLE = false;
+
+  public static final String HBOX_HOROVOD_HIERARCHICAL_ALLREDUCE = "hbox.horovod.hierarchical.allreduce";
+  public static final boolean DEFAULT_HBOX_HOROVOD_HIERARCHICAL_ALLREDUCE = false;
+
 }

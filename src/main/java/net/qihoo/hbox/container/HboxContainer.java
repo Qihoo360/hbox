@@ -150,14 +150,14 @@ public class HboxContainer {
     if (hboxAppType.equals("XFLOW")) {
       LOG.info("xflow index is:" + this.index);
     }
-    if (hboxAppType.equals("MPI")) {
+    if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
       if (this.envs.containsKey(HboxConstants.Environment.MPI_EXEC_DIR.toString())) {
         this.mpiAppDir = envs.get(HboxConstants.Environment.MPI_EXEC_DIR.toString());
       } else {
         this.mpiAppDir = envs.get(ApplicationConstants.Environment.PWD.name());
       }
-      LOG.info("mpi app dir is:" + this.mpiAppDir);
-      LOG.info("mpi container index is: " + this.index);
+      LOG.info(hboxAppType.toLowerCase() + " app dir is:" + this.mpiAppDir);
+      LOG.info(hboxAppType.toLowerCase() + " container index is: " + this.index);
     }
     this.single = conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE);
     this.singleMx = conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE);
@@ -322,7 +322,7 @@ public class HboxContainer {
 
       for (InputInfo inputInfo : inputs) {
         String downloadDir;
-        if (hboxAppType.equals("MPI")) {
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
           downloadDir = this.mpiAppDir + File.separator + inputInfo.getAliasName();
           Utilities.mkdirs(downloadDir, true);
         } else {
@@ -372,7 +372,7 @@ public class HboxContainer {
     } else {
       List<OutputInfo> outputs = Arrays.asList(amClient.getOutputLocation());
       for (OutputInfo outputInfo : outputs) {
-        if (hboxAppType.equals("MPI")) {
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
           Utilities.mkdirs(outputInfo.getLocalLocation(), true);
         } else {
           Utilities.mkdirs(outputInfo.getLocalLocation());
@@ -551,7 +551,7 @@ public class HboxContainer {
       this.reportFailedAndExit();
     }
 
-    if (hboxAppType.equals("MPI")) {
+    if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
       reLinksFiles();
     }
 
@@ -787,7 +787,7 @@ public class HboxContainer {
       envList.add("PYTHONPATH=" + System.getenv("PYTHONPATH"));
     } else if (hboxAppType.equals("DIGITS")) {
       envList.add("PYTHONPATH=" + System.getenv("PYTHONPATH"));
-    } else if (hboxAppType.equals("MPI")) {
+    } else if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
       StringBuilder ldLibraryPath = new StringBuilder();
       String mpiExtraLdLibraryPath = conf.get(HboxConfiguration.HBOX_MPI_EXTRA_LD_LIBRARY_PATH);
       if (mpiExtraLdLibraryPath != null) {
@@ -877,7 +877,7 @@ public class HboxContainer {
         writer.close();
         command = "sh " + digitsShellname;
       }
-    } else if (hboxAppType.equals("MPI")) {
+    } else if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
       command = envs.get(HboxConstants.Environment.CONTAINER_COMMAND.toString()).replaceAll("#", "\"");
     } else {
       if (containerType.equals("DOCKER")) {
@@ -896,7 +896,7 @@ public class HboxContainer {
     this.reservedSocket.close();
     String[] env = envList.toArray(new String[envList.size()]);
     final Process hboxProcess;
-    if (hboxAppType.equals("MPI")) {
+    if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
       hboxProcess = rt.exec(command, env, new File(this.mpiAppDir));
     } else {
       hboxProcess = rt.exec(command, env);
@@ -1053,7 +1053,7 @@ public class HboxContainer {
           reader = new BufferedReader(new InputStreamReader(hboxProcess.getErrorStream()));
           String hboxStderrLog;
           while ((hboxStderrLog = reader.readLine()) != null) {
-            if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE) && !(hboxAppType.equals("HOROVORD") || hboxAppType.equals("MPI") || hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS"))) {
+            if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE) && !(hboxAppType.equals("HOROVOD") || hboxAppType.equals("MPI") || hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS"))) {
               heartbeatThread.appendContainerStdErr(hboxStderrLog);
             }
             if (hboxStderrLog.contains("reporter progress")) {
@@ -1062,7 +1062,7 @@ public class HboxContainer {
               continue;
             } else {
               LOG.info(hboxStderrLog);
-              if (hboxAppType.equals("MPI")) {
+              if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
                 if (hboxStderrLog.contains("Permission denied")) {
                   LOG.info("bind failed, now am retry.");
                   reportFailedAndExit();
@@ -1236,14 +1236,14 @@ public class HboxContainer {
     }
 
     int updateAppStatusInterval = this.conf.getInt(HboxConfiguration.HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL);
-    if (!hboxAppType.equals("MPI")) {
+    if (!hboxAppType.equals("MPI") && !hboxAppType.equals("HOROVOD")) {
       this.hboxCmdProcessId = getPidOfProcess(hboxProcess);
       LOG.info("hboxCmdProcessId is:" + this.hboxCmdProcessId);
       containerReporter = new ContainerReporter(amClient, conf, containerId, cudaEnv, this.hboxCmdProcessId, containerType.equals("DOCKER"));
       containerReporter.setDaemon(true);
       containerReporter.start();
     }
-    if (hboxAppType.equals("MPI")) {
+    if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
       int updateAppStatusRetry = this.conf.getInt(HboxConfiguration.HBOX_MPI_CONTAINER_UPDATE_APP_STATUS_RETRY,
           HboxConfiguration.DEFAULT_HBOX_MPI_CONTAINER_UPDATE_APP_STATUS_RETRY);
       boolean isAppFinished = false;

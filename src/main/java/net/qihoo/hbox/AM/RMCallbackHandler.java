@@ -116,7 +116,7 @@ public class RMCallbackHandler implements CallbackHandler {
   @Override
   public void onContainersAllocated(List<Container> containers) {
     int count = containers.size();
-    if(this.hboxAppType.equals("MPI")) {
+    if(this.hboxAppType.equals("MPI") || this.hboxAppType.equals("HOROVOD")) {
       for (Container acquiredContainer : containers) {
         LOG.info("Acquired container " + acquiredContainer.getId()
                 + " on host " + acquiredContainer.getNodeId().getHost());
