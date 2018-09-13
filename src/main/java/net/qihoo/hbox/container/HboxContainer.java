@@ -1236,7 +1236,7 @@ public class HboxContainer {
     }
 
     int updateAppStatusInterval = this.conf.getInt(HboxConfiguration.HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL);
-    if (!hboxAppType.equals("MPI") && !hboxAppType.equals("HOROVOD")) {
+    if (!hboxAppType.equals("MPI")) {
       this.hboxCmdProcessId = getPidOfProcess(hboxProcess);
       LOG.info("hboxCmdProcessId is:" + this.hboxCmdProcessId);
       containerReporter = new ContainerReporter(amClient, conf, containerId, cudaEnv, this.hboxCmdProcessId, containerType.equals("DOCKER"));

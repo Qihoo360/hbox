@@ -1331,11 +1331,32 @@ public class ApplicationMaster extends CompositeService {
       commandBuilder.append(" ").append(readHorovodConfig()).append(" ");
     commandBuilder.append("-bind-to none -map-by slot -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH -mca pml ob1 -mca btl ^openib ");
     commandBuilder.append(hboxCommand);
-    String[] envs = new String[] {
-            "PATH=" + System.getenv("PATH"),
-            "PWD=" + mpiExecDir,
-            "LD_LIBRARY_PATH=" + ldLibraryPath.toString()
-    };
+
+    List<String> envs = new ArrayList<>(20);
+    Map<String, String> userEnv = new HashMap<>();
+    if (conf.get(HboxConfiguration.HBOX_CONTAINER_ENV) != null) {
+      String[] env = StringUtils.split(conf.get(HboxConfiguration.HBOX_CONTAINER_ENV), "|");
+      for (String envPair : env) {
+        String[] userEnvPair = StringUtils.split(envPair, "=");
+        if (userEnvPair.length != 2) {
+          LOG.error(envPair + " is not correct");
+        } else {
+          envs.add(envPair);
+          userEnv.put(userEnvPair[0], userEnvPair[1]);
+        }
+      }
+    }
+    envs.add("PWD=" + mpiExecDir);
+    if (userEnv.containsKey("PATH")) {
+      envs.add("PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
+    } else {
+      envs.add("PATH=" + System.getenv("PATH"));
+    }
+    if (userEnv.containsKey("LD_LIBRARY_PATH")) {
+      envs.add("LD_LIBRARY_PATH=" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + ldLibraryPath.toString());
+    } else {
+      envs.add("LD_LIBRARY_PATH=" + ldLibraryPath.toString());
+    }
 
     File mpiExec = new File(mpiExecDir);
     LOG.info("Executing horovod exec command: " + commandBuilder.toString());
@@ -1347,7 +1368,7 @@ public class ApplicationMaster extends CompositeService {
       commandArray[i] = tokenizer.nextToken();
     }
     LOG.info("Horovod mpi exec Process run in: " + mpiExec.toString());
-    mpiExecProcess = rt.exec(commandArray, envs, mpiExec);
+    mpiExecProcess = rt.exec(commandArray, envs.toArray(new String[envs.size()]), mpiExec);
 
     Thread stdinThread = new Thread(new Runnable() {
       @Override
