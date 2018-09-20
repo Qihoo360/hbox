@@ -5,6 +5,7 @@ import net.qihoo.xlearning.api.ApplicationMessageProtocol;
 import net.qihoo.xlearning.api.XLearningConstants;
 import net.qihoo.xlearning.common.LogType;
 import net.qihoo.xlearning.common.Message;
+import net.qihoo.xlearning.common.SecurityUtil;
 import net.qihoo.xlearning.common.exceptions.RequestOverLimitException;
 import net.qihoo.xlearning.conf.XLearningConfiguration;
 import net.qihoo.xlearning.util.Utilities;
@@ -33,6 +34,7 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -642,6 +644,7 @@ public class Client {
         Utilities.addPathToEnvironment(appMasterEnv, envKey, appMasterUserEnv.get(envKey));
       }
     }
+    SecurityUtil.setupUserEnv(appMasterEnv);
 
     LOG.info("Building application master launch command");
     List<String> appMasterArgs = new ArrayList<>(20);
@@ -667,8 +670,11 @@ public class Client {
     capability.setMemory(conf.getInt(XLearningConfiguration.XLEARNING_AM_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_AM_MEMORY));
     capability.setVirtualCores(conf.getInt(XLearningConfiguration.XLEARNING_AM_CORES, XLearningConfiguration.DEFAULT_XLEARNING_AM_CORES));
     applicationContext.setResource(capability);
+
+    ByteBuffer tokenBuffer = SecurityUtil.getDelegationTokens(conf, yarnClient);
+
     ContainerLaunchContext amContainer = ContainerLaunchContext.newInstance(
-        localResources, appMasterEnv, appMasterLaunchcommands, null, null, null);
+        localResources, appMasterEnv, appMasterLaunchcommands, null, tokenBuffer, null);
 
     applicationContext.setAMContainerSpec(amContainer);
 

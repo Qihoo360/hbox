@@ -166,7 +166,6 @@ public class XLearningConfiguration extends YarnConfiguration {
   public static final String DEFAULT_XLEARNING_INTERRESULT_DIR = "/interResult_";
 
   public static final String[] DEFAULT_XLEARNING_APPLICATION_CLASSPATH = {
-      "$HADOOP_CONF_DIR",
       "$HADOOP_COMMON_HOME/share/hadoop/common/*",
       "$HADOOP_COMMON_HOME/share/hadoop/common/lib/*",
       "$HADOOP_HDFS_HOME/share/hadoop/hdfs/*",
