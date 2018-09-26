@@ -30,7 +30,8 @@ xlearning.output.local.dir | output | 输出文件本地默认路径，该选项
 xlearning.output.strategy | UPLOAD | 输出文件加载策略，目前主要有DOWNLOAD、STREAM  
 xlearning.outputformat.class | TextMultiOutputFormat.class | STREAM模式下，输出文件outputformat类指定  
 xlearning.interresult.dir | /interResult_ | 指定模型中间结果上传至HDFS子路径  
-xlearning.interresult.upload.timeout | 30 * 60 * 1000 | 模型中间结果上传至HDFS超时时长设置，单位为毫秒  
+xlearning.interresult.upload.timeout | 30 * 60 * 1000 | 模型中间结果上传至HDFS超时时长设置，单位为毫秒
+xlearning.tf.evaluator | false | TensorFlow类型分布式作业中，是否将最后一个worker视为evaluator角色，主要针对Estimator高级API
 
 
 

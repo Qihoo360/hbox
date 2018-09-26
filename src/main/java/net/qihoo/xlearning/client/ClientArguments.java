@@ -47,6 +47,7 @@ class ClientArguments {
   String boardModelPB;
   int boardCacheTimeout;
   Boolean isRenameInputFile;
+  public Boolean tfEvaluator;
   public Boolean userClasspathFirst;
   public int streamEpoch;
   public Boolean inputStreamShuffle;
@@ -95,6 +96,7 @@ class ClientArguments {
     outputFormatClass = XLearningConfiguration.DEFAULT_XLEARNING_OUTPUTF0RMAT_CLASS;
     inputStrategy = XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY.toUpperCase();
     outputStrategy = XLearningConfiguration.DEFAULT_XLEARNING_OUTPUT_STRATEGY.toUpperCase();
+    tfEvaluator = XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR;
 
     allOptions = new Options();
     allOptions.addOption("appName", "app-name", true,
@@ -170,6 +172,9 @@ class ClientArguments {
         "The input strategy for user data input, DOWNLOAD,PLACEHOLDER or STREAM, default:DOWNLOAD");
     allOptions.addOption("outputStrategy", "output-strategy", true,
         "The output strategy for user result output, UPLOAD or STREAM, default:UPLOAD");
+
+    allOptions.addOption("tfEvaluator", "tf-evaluator", true,
+        "Using the evaluator during the tensorflow distribute training.");
 
     allOptions.addOption("help", "help", false, "Print usage");
 
@@ -391,6 +396,10 @@ class ClientArguments {
     if (cliParser.hasOption("board-cacheTimeout")) {
       String boardCacheTimeoutStr = cliParser.getOptionValue("board-cacheTimeout");
       boardCacheTimeout = Integer.parseInt(boardCacheTimeoutStr);
+    }
+
+    if (cliParser.hasOption("tf-evaluator")){
+      tfEvaluator = Boolean.parseBoolean(cliParser.getOptionValue("tf-evaluator"));
     }
 
     appMasterJar = JobConf.findContainingJar(ApplicationMaster.class);

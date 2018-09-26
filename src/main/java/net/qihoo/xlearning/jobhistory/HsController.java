@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
+import net.qihoo.xlearning.api.XLearningConstants;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -166,7 +167,7 @@ public class HsController extends Controller implements AMParams {
                 ConcurrentHashMap<String, Object> map = gson2.fromJson(cpuMetrics, type);
                 if (map.size() > 0) {
                   cpuMetricsFlag = true;
-                  if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
+                  if (containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.WORKER) || containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.EVALUATOR)) {
                     set("workerCpuMemMetrics" + workeri, new Gson().toJson(map.get("CPUMEM")));
                     if (map.containsKey("CPUUTIL")) {
                       set("workerCpuUtilMetrics" + workeri, new Gson().toJson(map.get("CPUUTIL")));
@@ -188,16 +189,16 @@ public class HsController extends Controller implements AMParams {
                 }.getType();
                 Map<String, List<Double>> map = new Gson().fromJson(cpuStatistics, type);
                 if (map.size() > 0) {
-                  if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
+                  if (containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.WORKER) || containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.EVALUATOR)) {
                     set("worker" + CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + workeri, String.format("%.2f", map.get("CPUMEM").get(0)));
                     set("worker" + CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + workeri, String.format("%.2f", map.get("CPUMEM").get(1)));
                     set("worker" + CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + workeri, String.format("%.2f", map.get("CPUUTIL").get(0)));
                     set("worker" + CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + workeri, String.format("%.2f", map.get("CPUUTIL").get(1)));
                   } else {
-                    set("ps" + CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + workeri, String.format("%.2f", map.get("CPUMEM").get(0)));
-                    set("ps" + CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + workeri, String.format("%.2f", map.get("CPUMEM").get(1)));
-                    set("ps" + CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + workeri, String.format("%.2f", map.get("CPUUTIL").get(0)));
-                    set("ps" + CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + workeri, String.format("%.2f", map.get("CPUUTIL").get(1)));
+                    set("ps" + CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + psi, String.format("%.2f", map.get("CPUMEM").get(0)));
+                    set("ps" + CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + psi, String.format("%.2f", map.get("CPUMEM").get(1)));
+                    set("ps" + CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + psi, String.format("%.2f", map.get("CPUUTIL").get(0)));
+                    set("ps" + CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + psi, String.format("%.2f", map.get("CPUUTIL").get(1)));
                   }
                   cpuStatisticsFlag = true;
                 }
@@ -205,14 +206,14 @@ public class HsController extends Controller implements AMParams {
             }
 
             if (containerMessage.containsKey(AMParams.CONTAINER_CPU_USAGE_WARN_MEM)) {
-              if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
+              if (containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.WORKER) || containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.EVALUATOR)) {
                 set("worker" + CONTAINER_CPU_USAGE_WARN_MEM + workeri, containerMessage.get(CONTAINER_CPU_USAGE_WARN_MEM));
               } else {
                 set("ps" + CONTAINER_CPU_USAGE_WARN_MEM + psi, containerMessage.get(CONTAINER_CPU_USAGE_WARN_MEM));
               }
             }
 
-            if (containerMessage.get(AMParams.CONTAINER_ROLE).equals("worker")) {
+            if (containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.WORKER) || containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.EVALUATOR)) {
               set("WORKER_CONTAINER_ID" + workeri, info);
               workeri++;
             } else {

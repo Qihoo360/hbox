@@ -80,7 +80,11 @@ public class AppController extends Controller implements AMParams {
       } else {
         set(CONTAINER_STATUS + i, "-");
       }
-      set(CONTAINER_ROLE + i, "worker");
+      if (conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR) && container.getId().toString().equals(app.context.getTfEvaluatorId())) {
+        set(CONTAINER_ROLE + i, XLearningConstants.EVALUATOR);
+      } else {
+        set(CONTAINER_ROLE + i, XLearningConstants.WORKER);
+      }
 
       if (app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId())) != null) {
         ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = app.context.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));

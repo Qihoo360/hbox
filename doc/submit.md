@@ -41,5 +41,6 @@ stream-epoch | specify the epoch num of the input file read when input-strategy 
 inputformat | specify the class of the inputformat when input-strategy is "STREAM", default as the configure of xlearning.inputformat.class  
 inputformat-shuffle | whether to shuffle the input splits when input-strategy is "STREAM", default as the configure of xlearning.input.stream.shuffle  
 output-strategy | the strategy of the output file, default as the configure of xlearning.output.strategy 
-outputformat | specify the class of outputformat when output-strategy is "STREAM", default as the configure of xlearning.outputformat.class  
+outputformat | specify the class of outputformat when output-strategy is "STREAM", default as the configure of xlearning.outputformat.class
+tf-evaluator | whether to set the last worker as evaluator of distributed TensorFlow job type, default as the configure of xlearning.tf.evaluator
 

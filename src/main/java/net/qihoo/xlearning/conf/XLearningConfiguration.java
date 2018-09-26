@@ -103,6 +103,10 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static Boolean DEFAULT_XLEARNING_MODE_SINGLE = false;
 
+  public static final String XLEARNING_TF_EVALUATOR = "xlearning.tf.evaluator";
+
+  public static Boolean DEFAULT_XLEARNING_TF_EVALUATOR = false;
+
   public static final String XLEARNING_APP_QUEUE = "xlearning.app.queue";
 
   public static final String DEFAULT_XLEARNING_APP_QUEUE = "DEFAULT";

@@ -274,8 +274,11 @@ public class ApplicationContainerListener extends AbstractService implements App
 
     for (Entry<XLearningContainerId, XLearningContainerStatus> e : containerId2Status.entrySet()) {
       if (e.getValue().equals(XLearningContainerStatus.FAILED)) {
-        LOG.error("Container " + e.getKey().toString() + " run failed!");
+        //LOG.error("Container " + e.getKey().toString() + " run failed!");
         failedNum += 1;
+        if (this.getConfig().getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR) && e.getKey().toString().equals(applicationContext.getTfEvaluatorId())) {
+          failedNum -= 1;
+        }
       } else if (containerId2Role.get(e.getKey()).equals(XLearningConstants.WORKER)) {
         if (e.getValue().equals(XLearningContainerStatus.UNDEFINED)
             || e.getValue().equals(XLearningContainerStatus.INITIALIZING)
@@ -315,6 +318,9 @@ public class ApplicationContainerListener extends AbstractService implements App
     for (Entry<XLearningContainerId, XLearningContainerStatus> e : containerId2Status.entrySet()) {
       if (!e.getValue().equals(XLearningContainerStatus.SUCCEEDED)) {
         failedNum += 1;
+        if (this.getConfig().getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR) && e.getKey().toString().equals(applicationContext.getTfEvaluatorId())) {
+          failedNum -= 1;
+        }
       }
     }
     if (!this.getConfig().getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE)) {

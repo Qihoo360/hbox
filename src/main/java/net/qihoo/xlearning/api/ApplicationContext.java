@@ -71,4 +71,6 @@ public interface ApplicationContext {
 
   List<Long> getModelSavingList();
 
+  String getTfEvaluatorId();
+
 }

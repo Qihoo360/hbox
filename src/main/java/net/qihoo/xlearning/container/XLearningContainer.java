@@ -67,7 +67,7 @@ public class XLearningContainer {
 
   private String role;
 
-  private final int index;
+  private int index;
 
   private final String xlearningAppType;
 
@@ -93,8 +93,15 @@ public class XLearningContainer {
     this.envs = System.getenv();
     this.xlearningAppType = envs.get(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString()).toUpperCase();
     this.role = envs.get(XLearningConstants.Environment.XLEARNING_TF_ROLE.toString());
+    this.index = Integer.valueOf(envs.get(XLearningConstants.Environment.XLEARNING_TF_INDEX.toString()));
     this.xlearningCmdProcessId = "";
     if ("TENSORFLOW".equals(xlearningAppType)) {
+      if (conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR)) {
+        if(this.role.equals(XLearningConstants.WORKER) && conf.getInt(XLearningConfiguration.XLEARNING_WORKER_NUM, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM) == (this.index+1)){
+          this.index = 0;
+          this.role = XLearningConstants.EVALUATOR;
+        }
+      }
       LOG.info("TensorFlow role is:" + this.role);
     }
     if (xlearningAppType.equals("MXNET")) {
@@ -113,7 +120,6 @@ public class XLearningContainer {
       LOG.info("LightLDA role is:" + this.role);
     }
 
-    this.index = Integer.valueOf(envs.get(XLearningConstants.Environment.XLEARNING_TF_INDEX.toString()));
     if ("TENSORFLOW".equals(xlearningAppType)) {
       LOG.info("TensorFlow index is:" + this.index);
     }
@@ -305,6 +311,15 @@ public class XLearningContainer {
     }
   }
 
+  private void createLocalInputDir() {
+    if (this.envs.containsKey(XLearningConstants.Environment.XLEARNING_INPUT_PATH.toString())) {
+      String[] inputPath = this.envs.get(XLearningConstants.Environment.XLEARNING_INPUT_PATH.toString()).split(",");
+      for (String path : inputPath) {
+        Utilities.mkdirs(path);
+      }
+    }
+  }
+
   private void createLocalOutputDir() {
     if (this.conf.get(XLearningConfiguration.XLEARNING_OUTPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_OUTPUT_STRATEGY).toUpperCase().equals("STREAM")) {
       LOG.info("XLEARNING_OUTPUT_STRATEGY is STREAM, do not need to create local output dir.");
@@ -378,7 +393,7 @@ public class XLearningContainer {
         remoteLogPath = new Path(boardHistoryDir);
         boardDfs = remoteLogPath.getFileSystem(conf);
       }
-      if (boardLocalFs.exists(localLogPath) && boardEnable && boardIndex == this.index) {
+      if (boardLocalFs.exists(localLogPath) && boardEnable && boardIndex == this.index && this.role.equals(XLearningConstants.WORKER)) {
         if (boardDfs.exists(remoteLogPath)) {
           LOG.info("Container remote board log output path " + remoteLogPath + "exists, so we has to delete is first.");
           boardDfs.delete(remoteLogPath);
@@ -415,6 +430,8 @@ public class XLearningContainer {
     try {
       if (this.role.equals(XLearningConstants.WORKER)) {
         prepareInputFiles();
+      } else if (conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR)) {
+        createLocalInputDir();
       }
       if (this.conf.getBoolean(XLearningConfiguration.XLEARNING_CONTAINER_AUTO_CREATE_OUTPUT_DIR, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_AUTO_CREATE_OUTPUT_DIR)) {
         createLocalOutputDir();
@@ -469,8 +486,10 @@ public class XLearningContainer {
 
     if ("TENSORFLOW".equals(xlearningAppType) && !single) {
       LOG.info("Reserved available port: " + reservedSocket.getLocalPort());
-      amClient.reportReservedPort(envs.get(ApplicationConstants.Environment.NM_HOST.toString()),
-          reservedSocket.getLocalPort(), this.role, this.index);
+      if (!this.role.equals(XLearningConstants.EVALUATOR)) {
+        amClient.reportReservedPort(envs.get(ApplicationConstants.Environment.NM_HOST.toString()),
+            reservedSocket.getLocalPort(), this.role, this.index);
+      }
 
       while (!heartbeatThread.isXLearningTrainCompleted()) {
         //TODO may be need encode use Base64 while used in Env

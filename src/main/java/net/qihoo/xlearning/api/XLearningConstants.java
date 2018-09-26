@@ -17,6 +17,8 @@ public interface XLearningConstants {
 
   String PS = "ps";
 
+  String EVALUATOR = "evaluator";
+
   String STREAM_INPUT_DIR = "mapreduce.input.fileinputformat.inputdir";
 
   String STREAM_OUTPUT_DIR = "mapreduce.output.fileoutputformat.outputdir";
@@ -71,6 +73,8 @@ public interface XLearningConstants {
     XLEARNING_OUTPUTS("XLEARNING_OUTPUTS"),
 
     XLEARNING_INPUTS("XLEARNING_INPUTS"),
+
+    XLEARNING_INPUT_PATH("XLEARNING_INPUT_PATH"),
 
     APPMASTER_HOST("APPMASTER_HOST"),
 
