@@ -33,9 +33,7 @@ import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.RoundingMode;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.URI;
+import java.net.*;
 import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.util.*;
@@ -420,6 +418,8 @@ public class ApplicationMaster extends CompositeService {
             } else if (xlearningAppType.equals("MXNET")) {
               containerMessage.put(AMParams.CONTAINER_ROLE, "server");
             } else if (xlearningAppType.equals("LIGHTLDA")) {
+              containerMessage.put(AMParams.CONTAINER_ROLE, "server");
+            } else if (xlearningAppType.equals("XFLOW")) {
               containerMessage.put(AMParams.CONTAINER_ROLE, "server");
             }
 
@@ -849,8 +849,8 @@ public class ApplicationMaster extends CompositeService {
       containerEnv.put(XLearningConstants.Environment.XLEARNING_INPUT_PATH.toString(), this.inputPath.substring(0, inputPath.length() - 1));
     }
     if (xlearningAppType.equals("MXNET") && !single) {
-      containerEnv.put(XLearningConstants.Environment.XLEARNING_MXNET_WORKER_NUM.toString(), String.valueOf(workerNum));
-      containerEnv.put(XLearningConstants.Environment.XLEARNING_MXNET_SERVER_NUM.toString(), String.valueOf(psNum));
+      containerEnv.put(XLearningConstants.Environment.XLEARNING_DMLC_WORKER_NUM.toString(), String.valueOf(workerNum));
+      containerEnv.put(XLearningConstants.Environment.XLEARNING_DMLC_SERVER_NUM.toString(), String.valueOf(psNum));
       containerEnv.put("DMLC_PS_ROOT_URI", dmlcPsRootUri);
       containerEnv.put("DMLC_PS_ROOT_PORT", String.valueOf(dmlcPsRootPort));
     }
@@ -868,6 +868,13 @@ public class ApplicationMaster extends CompositeService {
     if (xlearningAppType.equals("LIGHTLDA")) {
       containerEnv.put(XLearningConstants.Environment.XLEARNING_LIGHTLDA_WORKER_NUM.toString(), String.valueOf(workerNum));
       containerEnv.put(XLearningConstants.Environment.XLEARNING_LIGHTLDA_PS_NUM.toString(), String.valueOf(psNum));
+    }
+
+    if (xlearningAppType.equals("XFLOW")){
+      containerEnv.put(XLearningConstants.Environment.XLEARNING_DMLC_WORKER_NUM.toString(), String.valueOf(workerNum));
+      containerEnv.put(XLearningConstants.Environment.XLEARNING_DMLC_SERVER_NUM.toString(), String.valueOf(psNum));
+      containerEnv.put("DMLC_PS_ROOT_URI", dmlcPsRootUri);
+      containerEnv.put("DMLC_PS_ROOT_PORT", String.valueOf(dmlcPsRootPort));
     }
 
     containerEnv.put("CLASSPATH", System.getenv("CLASSPATH"));
@@ -979,7 +986,7 @@ public class ApplicationMaster extends CompositeService {
       buildInputFileStatus();
     }
 
-    if ("TENSORFLOW".equals(xlearningAppType) || "MXNET".equals(xlearningAppType) || "LIGHTLDA".equals(xlearningAppType)) {
+    if ("TENSORFLOW".equals(xlearningAppType) || "MXNET".equals(xlearningAppType) || "LIGHTLDA".equals(xlearningAppType) || "XFLOW".equals(xlearningAppType)) {
       this.appendMessage("XLearning application needs " + workerNum + " worker and "
           + psNum + " ps  containers in fact", true);
     } else {
@@ -1141,15 +1148,15 @@ public class ApplicationMaster extends CompositeService {
           "DMLC_ROLE=scheduler",
           "DMLC_PS_ROOT_URI=" + dmlcPsRootUri,
           "DMLC_PS_ROOT_PORT=" + dmlcPsRootPort,
-          XLearningConstants.Environment.XLEARNING_MXNET_WORKER_NUM.toString() + "=" + workerNum,
-          XLearningConstants.Environment.XLEARNING_MXNET_SERVER_NUM.toString() + "=" + psNum,
+          XLearningConstants.Environment.XLEARNING_DMLC_WORKER_NUM.toString() + "=" + workerNum,
+          XLearningConstants.Environment.XLEARNING_DMLC_SERVER_NUM.toString() + "=" + psNum,
           "PYTHONUNBUFFERED=1"
       };
       LOG.info("Executing command:" + xlearningCommand);
       LOG.info("DMLC_PS_ROOT_URI is " + dmlcPsRootUri);
       LOG.info("DMLC_PS_ROOT_PORT is " + dmlcPsRootPort);
-      LOG.info(XLearningConstants.Environment.XLEARNING_MXNET_WORKER_NUM.toString() + "=" + workerNum);
-      LOG.info(XLearningConstants.Environment.XLEARNING_MXNET_SERVER_NUM.toString() + "=" + psNum);
+      LOG.info(XLearningConstants.Environment.XLEARNING_DMLC_WORKER_NUM.toString() + "=" + workerNum);
+      LOG.info(XLearningConstants.Environment.XLEARNING_DMLC_SERVER_NUM.toString() + "=" + psNum);
 
       try {
         Runtime rt = Runtime.getRuntime();
@@ -1272,6 +1279,90 @@ public class ApplicationMaster extends CompositeService {
         LOG.info("start xgboost scheduler error " + e);
       }
 
+    }
+
+    // launch xflow scheduler
+    if (("XFLOW").equals(xlearningAppType)) {
+      LOG.info("Setting environments for the xflow scheduler");
+      InetAddress address = null;
+      try {
+        address = InetAddress.getByName(applicationMasterHostname);
+        dmlcPsRootUri = address.getHostAddress();
+      } catch (UnknownHostException e) {
+        LOG.info("acquire host ip failed " + e);
+      }
+      Socket schedulerReservedSocket = new Socket();
+      try {
+        schedulerReservedSocket.bind(new InetSocketAddress("127.0.0.1", 0));
+      } catch (IOException e) {
+        LOG.error("Can not get available port");
+      }
+      dmlcPsRootPort = schedulerReservedSocket.getLocalPort();
+      String[] schedulerEnv = new String[]{
+          "PATH=" + System.getenv("PATH"),
+          "JAVA_HOME=" + System.getenv("JAVA_HOME"),
+          "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
+          "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
+          "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+              "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
+          "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
+          "DMLC_ROLE=scheduler",
+          "DMLC_PS_ROOT_URI=" + dmlcPsRootUri,
+          "DMLC_PS_ROOT_PORT=" + dmlcPsRootPort,
+          XLearningConstants.Environment.XLEARNING_DMLC_WORKER_NUM.toString() + "=" + workerNum,
+          XLearningConstants.Environment.XLEARNING_DMLC_SERVER_NUM.toString() + "=" + psNum,
+          "PYTHONUNBUFFERED=1"
+      };
+      LOG.info("Executing command:" + xlearningCommand);
+      LOG.info("DMLC_PS_ROOT_URI is " + dmlcPsRootUri);
+      LOG.info("DMLC_PS_ROOT_PORT is " + dmlcPsRootPort);
+      LOG.info(XLearningConstants.Environment.XLEARNING_DMLC_WORKER_NUM.toString() + "=" + workerNum);
+      LOG.info(XLearningConstants.Environment.XLEARNING_DMLC_SERVER_NUM.toString() + "=" + psNum);
+
+      try {
+        Runtime rt = Runtime.getRuntime();
+        schedulerReservedSocket.close();
+        final Process xflowSchedulerProcess = rt.exec(xlearningCommand, schedulerEnv);
+        LOG.info("Starting thread to redirect stdout of xflow scheduler process");
+        Thread xflowSchedulerRedirectThread = new Thread(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              BufferedReader reader;
+              reader = new BufferedReader(new InputStreamReader(xflowSchedulerProcess.getInputStream()));
+              String xflowSchedulerStdoutLog;
+              while ((xflowSchedulerStdoutLog = reader.readLine()) != null) {
+                LOG.info(xflowSchedulerStdoutLog);
+              }
+            } catch (Exception e) {
+              LOG.warn("Exception in thread xflowSchedulerRedirectThread");
+              e.printStackTrace();
+            }
+          }
+        });
+        xflowSchedulerRedirectThread.start();
+
+        LOG.info("Starting thread to redirect stderr of xflow scheduler process");
+        Thread xflowSchedulerStderrRedirectThread = new Thread(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              BufferedReader reader;
+              reader = new BufferedReader(new InputStreamReader(xflowSchedulerProcess.getErrorStream()));
+              String xflowSchedulerStderrLog;
+              while ((xflowSchedulerStderrLog = reader.readLine()) != null) {
+                LOG.info(xflowSchedulerStderrLog);
+              }
+            } catch (Exception e) {
+              LOG.warn("Error in thread xflowSchedulerStderrRedirectThread");
+              e.printStackTrace();
+            }
+          }
+        });
+        xflowSchedulerStderrRedirectThread.start();
+      } catch (Exception e) {
+        LOG.info("start xflow scheduler error " + e);
+      }
     }
 
 

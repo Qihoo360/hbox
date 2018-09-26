@@ -300,6 +300,10 @@ public class ApplicationContainerListener extends AbstractService implements App
       if (failedNum > 0) {
         return true;
       }
+    } else if ("XFLOW".equals(xlearningAppType)) {
+      if (failedNum > 0) {
+        return true;
+      }
     } else {
       Double jobFailedNum = containerId2Status.size() * this.getConfig().getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MAX_FAILURES_RATE, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_FAILURES_RATE);
       if (failedNum >= jobFailedNum) {

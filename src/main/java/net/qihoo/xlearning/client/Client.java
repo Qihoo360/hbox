@@ -283,7 +283,7 @@ public class Client {
     }
     LOG.info("Apply for worker vcores " + workerVcores);
 
-    if ("TENSORFLOW".equals(clientArguments.appType) || "MXNET".equals(clientArguments.appType) || "LIGHTLDA".equals(clientArguments.appType)) {
+    if ("TENSORFLOW".equals(clientArguments.appType) || "MXNET".equals(clientArguments.appType) || "LIGHTLDA".equals(clientArguments.appType) || "XFLOW".equals(clientArguments.appType)) {
       Boolean single = conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE);
       int psNum = conf.getInt(XLearningConfiguration.XLEARNING_PS_NUM, XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM);
       if (psNum < 0) {
@@ -425,7 +425,7 @@ public class Client {
       appMasterEnv.put(XLearningConstants.Environment.XLEARNING_FILES_LOCATION.toString(),
           appFilesRemotePath.deleteCharAt(appFilesRemotePath.length() - 1).toString());
 
-      if (clientArguments.appType.equals("MXNET") && !conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE)) {
+      if ((clientArguments.appType.equals("MXNET") || clientArguments.appType.equals("XFLOW")) && !conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE)) {
         String appFilesRemoteLocation = appMasterEnv.get(XLearningConstants.Environment.XLEARNING_FILES_LOCATION.toString());
         String[] xlearningFiles = StringUtils.split(appFilesRemoteLocation, ",");
         for (String file : xlearningFiles) {
@@ -501,7 +501,7 @@ public class Client {
 
     if (clientArguments.xlearningCacheFiles != null && !clientArguments.xlearningCacheFiles.equals("")) {
       appMasterEnv.put(XLearningConstants.Environment.XLEARNING_CACHE_FILE_LOCATION.toString(), clientArguments.xlearningCacheFiles);
-      if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE))
+      if (((clientArguments.appType.equals("MXNET") || clientArguments.appType.equals("XFLOW")) && !conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE))
           || clientArguments.appType.equals("DISTXGBOOST")) {
         URI defaultUri = new Path(conf.get("fs.defaultFS")).toUri();
         LOG.info("default URI is " + defaultUri.toString());
@@ -538,7 +538,7 @@ public class Client {
 
     if (clientArguments.xlearningCacheArchives != null && !clientArguments.xlearningCacheArchives.equals("")) {
       appMasterEnv.put(XLearningConstants.Environment.XLEARNING_CACHE_ARCHIVE_LOCATION.toString(), clientArguments.xlearningCacheArchives);
-      if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE))
+      if (((clientArguments.appType.equals("MXNET") || clientArguments.appType.equals("XFLOW")) && !conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE))
           || clientArguments.appType.equals("DISTXGBOOST")) {
         URI defaultUri = new Path(conf.get("fs.defaultFS")).toUri();
         String appCacheArchivesRemoteLocation = appMasterEnv.get(XLearningConstants.Environment.XLEARNING_CACHE_ARCHIVE_LOCATION.toString());

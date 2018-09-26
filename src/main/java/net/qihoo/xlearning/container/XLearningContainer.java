@@ -119,6 +119,12 @@ public class XLearningContainer {
     if (xlearningAppType.equals("LIGHTLDA")) {
       LOG.info("LightLDA role is:" + this.role);
     }
+    if (xlearningAppType.equals("XFLOW")) {
+      if (this.role.equals("ps")) {
+        this.role = "server";
+      }
+      LOG.info("XFlow role is:" + this.role);
+    }
 
     if ("TENSORFLOW".equals(xlearningAppType)) {
       LOG.info("TensorFlow index is:" + this.index);
@@ -134,6 +140,9 @@ public class XLearningContainer {
     }
     if (xlearningAppType.equals("LIGHTLDA")) {
       LOG.info("LightLDA index is:" + this.index);
+    }
+    if (xlearningAppType.equals("XFLOW")) {
+      LOG.info("XFlow index is:" + this.index);
     }
 
     this.single = conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE);
@@ -594,6 +603,23 @@ public class XLearningContainer {
         envList.add("LIGHTLDA_SERVER_NUM=" + System.getenv(XLearningConstants.Environment.XLEARNING_LIGHTLDA_PS_NUM.toString()));
         envList.add("LIGHTLDA_SERVER_ENDPOINT=" + this.lightLDAEndpoint);
       }
+    } else if (xlearningAppType.equals("XFLOW")) {
+      String dmlcID;
+      String heapprofile;
+      if (this.role.equals("worker")) {
+        dmlcID = "DMLC_WORKER_ID";
+        heapprofile = "./W";
+      } else {
+        dmlcID = "DMLC_SERVER_ID";
+        heapprofile = "./S";
+      }
+      envList.add("DMLC_PS_ROOT_URI=" + System.getenv("DMLC_PS_ROOT_URI"));
+      envList.add("DMLC_PS_ROOT_PORT=" + System.getenv("DMLC_PS_ROOT_PORT"));
+      envList.add("DMLC_NUM_WORKER=" + System.getenv("DMLC_NUM_WORKER"));
+      envList.add("DMLC_NUM_SERVER=" + System.getenv("DMLC_NUM_SERVER"));
+      envList.add(dmlcID + "=" + this.index);
+      envList.add("DMLC_ROLE=" + this.role);
+      envList.add("HEAPPROFILE=" + heapprofile + this.index);
     }
 
     if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).toUpperCase().equals("PLACEHOLDER")) {
