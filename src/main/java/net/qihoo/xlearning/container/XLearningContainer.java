@@ -379,18 +379,18 @@ public class XLearningContainer {
       String boardLogDir = conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR);
       Path localLogPath = new Path(boardLogDir);
       FileSystem boardLocalFs = FileSystem.getLocal(conf);
-      String boardHistoryDir;
+      Path boardHistoryDir;
       Path remoteLogPath;
       FileSystem boardDfs;
       if (conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR).equals(xlConf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR))) {
-        boardHistoryDir = xlConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
-            XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR) + "/" + this.envs.get("APP_ID");
-        remoteLogPath = new Path(boardHistoryDir);
+        boardHistoryDir = new Path(conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
+            XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR) + "/" + this.envs.get("APP_ID"));
+        remoteLogPath = new Path(xlConf.get("fs.defaultFS"), boardHistoryDir);
         boardDfs = remoteLogPath.getFileSystem(xlConf);
       } else {
-        boardHistoryDir = conf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
-            XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR);
-        remoteLogPath = new Path(boardHistoryDir);
+        boardHistoryDir = new Path(conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
+            XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR));
+        remoteLogPath = new Path(conf.get("fs.defaultFS"), boardHistoryDir);
         boardDfs = remoteLogPath.getFileSystem(conf);
       }
       if (boardLocalFs.exists(localLogPath) && boardEnable && boardIndex == this.index && this.role.equals(XLearningConstants.WORKER)) {
