@@ -287,19 +287,20 @@ public class ApplicationMaster extends CompositeService {
 
         try {
           FsPermission LOG_FILE_PERMISSION = FsPermission.createImmutable((short) 0777);
-          Path jobLogPath = new Path(xlearningConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_HISTORY_LOG_DIR,
+          Path logdir = new Path(conf.get(XLearningConfiguration.XLEARNING_HISTORY_LOG_DIR,
               XLearningConfiguration.DEFAULT_XLEARNING_HISTORY_LOG_DIR) + "/" + applicationAttemptID.getApplicationId().toString()
               + "/" + applicationAttemptID.getApplicationId().toString());
+          Path jobLogPath = new Path(xlearningConf.get("fs.defaultFS"), logdir);
           LOG.info("jobLogPath:" + jobLogPath.toString());
           LOG.info("Start write the log to " + jobLogPath.toString());
           FileSystem fs = FileSystem.get(xlearningConf);
           FSDataOutputStream out = fs.create(jobLogPath);
           fs.setPermission(jobLogPath, new FsPermission(LOG_FILE_PERMISSION));
           if (conf.getBoolean(XLearningConfiguration.XLEARNING_HOST_LOCAL_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_HOST_LOCAL_ENABLE)) {
-            String hostLocaldir = xlearningConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_HISTORY_LOG_DIR,
+            Path hostLocaldir = new Path(conf.get(XLearningConfiguration.XLEARNING_HISTORY_LOG_DIR,
                 XLearningConfiguration.DEFAULT_XLEARNING_HISTORY_LOG_DIR) + "/" + conf.get("hadoop.job.ugi").split(",")[0]
-                + "/" + envs.get(XLearningConstants.Environment.XLEARNING_APP_NAME.toString());
-            Path hostLocalPath = new Path(hostLocaldir);
+                + "/" + envs.get(XLearningConstants.Environment.XLEARNING_APP_NAME.toString()));
+            Path hostLocalPath = new Path(xlearningConf.get("fs.defaultFS"), hostLocaldir);
             try {
               FSDataOutputStream hostLocalOut = fs.create(hostLocalPath);
               fs.setPermission(hostLocalPath, new FsPermission(LOG_FILE_PERMISSION));
@@ -316,19 +317,19 @@ public class ApplicationMaster extends CompositeService {
 
           String tensorboardInfo = "-";
           if (conf.getBoolean(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_ENABLE)) {
-            String boardLogPath;
+            Path boardLogPath;
             if (conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR).indexOf("hdfs://") == -1) {
               if (conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR).equals(xlearningConf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR))) {
-                boardLogPath = xlearningConf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
-                    XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR) + "/" + applicationAttemptID.getApplicationId().toString();
+                boardLogPath = new Path(xlearningConf.get("fs.defaultFS"), conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
+                    XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR) + "/" + applicationAttemptID.getApplicationId().toString());
               } else {
-                boardLogPath = conf.get("fs.defaultFS") + conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
-                    XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR);
+                boardLogPath = new Path(conf.get("fs.defaultFS"), conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR,
+                    XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_HISTORY_DIR));
               }
             } else {
-              boardLogPath = conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR);
+              boardLogPath = new Path(conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR));
             }
-            tensorboardInfo = boardLogPath;
+            tensorboardInfo = boardLogPath.toString();
           }
           logMessage.put(AMParams.BOARD_INFO, tensorboardInfo);
 
