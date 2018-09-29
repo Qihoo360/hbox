@@ -124,7 +124,7 @@ public class Heartbeat extends Thread {
   }
 
   public void heartbeatResponseHandle(HeartbeatResponse heartbeatResponse) {
-    LOG.debug("Received the heartbeart response from the AM. CurrentJob finised " + heartbeatResponse.getIsHboxTrainCompleted()
+    LOG.debug("Received the heartbeat response from the AM. CurrentJob finished " + heartbeatResponse.getIsHboxTrainCompleted()
         + " , currentInnerModelSavedTimeStamp is " + heartbeatResponse.getInnerModelTimeStamp());
     if (!heartbeatResponse.getIsHboxTrainCompleted()) {
       if (!heartbeatResponse.getInnerModelTimeStamp().equals(lastInnerModelTimeStamp)) {
@@ -134,7 +134,7 @@ public class Heartbeat extends Thread {
           public void run() {
             try {
               for (OutputInfo outputs : protocol.getOutputLocation()) {
-                LOG.info("Ouput path: " + outputs.getLocalLocation() + "#" + outputs.getDfsLocation());
+                LOG.info("Output path: " + outputs.getLocalLocation() + "#" + outputs.getDfsLocation());
                 FileSystem localFs = FileSystem.getLocal(conf);
                 Path localPath = new Path(outputs.getLocalLocation());
                 Path remotePath = new Path(outputs.getDfsLocation()

@@ -34,6 +34,7 @@ import java.math.RoundingMode;
 import java.net.*;
 import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -126,6 +127,8 @@ public class ApplicationMaster extends CompositeService {
   private StringBuilder amContainerStdOut;
   private StringBuilder amContainerStdErr;
 
+  private Boolean containerStarted;
+
   /**
    * Constructor, connect to Resource Manager
    *
@@ -179,6 +182,7 @@ public class ApplicationMaster extends CompositeService {
 
     amContainerStdOut = new StringBuilder();
     amContainerStdErr = new StringBuilder();
+    containerStarted = false;
 
     if (envs.containsKey(ApplicationConstants.Environment.CONTAINER_ID.toString())) {
       amContainerId = envs.get(ApplicationConstants.Environment.CONTAINER_ID.toString());
@@ -272,7 +276,7 @@ public class ApplicationMaster extends CompositeService {
     this.startSavingModel = false;
     this.lastSavingStatus = false;
     this.savingModelList = new ArrayList<>();
-    this.savingInterval = conf.getInt(HboxConfiguration.HBOX_INTERRESULT_SAVE_INTERVAL, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_SAVE_INTERVAL) * 60 * 60 * 1000;
+    this.savingInterval = conf.getInt(HboxConfiguration.HBOX_INTERRESULT_SAVE_INTERVAL, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_SAVE_INTERVAL);
   }
 
   private void init() {
@@ -1671,7 +1675,7 @@ public class ApplicationMaster extends CompositeService {
       schedulerEnv.add("JAVA_HOME=" + System.getenv("JAVA_HOME"));
       schedulerEnv.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
       schedulerEnv.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
-      if (userEnv.containsKey("LD_LIBARARY_PATH")) {
+      if (userEnv.containsKey("LD_LIBRARY_PATH")) {
         schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
             "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
       } else {
@@ -1783,7 +1787,7 @@ public class ApplicationMaster extends CompositeService {
       schedulerEnv.add("JAVA_HOME=" + System.getenv("JAVA_HOME"));
       schedulerEnv.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
       schedulerEnv.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
-      if (userEnv.containsKey("LD_LIBARARY_PATH")) {
+      if (userEnv.containsKey("LD_LIBRARY_PATH")) {
         schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
             "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
       } else {
@@ -1900,7 +1904,7 @@ public class ApplicationMaster extends CompositeService {
       schedulerEnv.add("JAVA_HOME=" + System.getenv("JAVA_HOME"));
       schedulerEnv.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
       schedulerEnv.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
-      if (userEnv.containsKey("LD_LIBARARY_PATH")) {
+      if (userEnv.containsKey("LD_LIBRARY_PATH")) {
         schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
             "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
       } else {
@@ -2108,6 +2112,7 @@ public class ApplicationMaster extends CompositeService {
       saveInnerModelMonitor.start();
     }
 
+    containerStarted = true;
     try {
       boolean flag = true;
       boolean digitsFlag = true;
@@ -2263,7 +2268,7 @@ public class ApplicationMaster extends CompositeService {
         finalSuccess = containerListener.isAllWorkerContainersSucceeded();
       } else {
         containerListener.setAMFinished();
-        LOG.info("Waiting all contianers completed");
+        LOG.info("Waiting all containers completed");
         finalSuccess = mpiExitCode == 0;
         while (!containerListener.isTrainCompleted()) {
           Utilities.sleep(statusUpdateInterval);
@@ -2532,6 +2537,13 @@ public class ApplicationMaster extends CompositeService {
     }
 
     @Override
+    public String getLastInterSavingPath() {
+      Path interPath = new Path(conf.get(HboxConfiguration.HBOX_INTERREAULST_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
+          + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(containerListener.interResultTimeStamp()));
+      return interPath.toString();
+    }
+
+    @Override
     public int getSavingModelStatus() {
       return containerListener.interResultCompletedNum(containerListener.interResultTimeStamp());
     }
@@ -2548,8 +2560,14 @@ public class ApplicationMaster extends CompositeService {
 
     @Override
     public void startSavingModelStatus(Boolean flag) {
-      LOG.info("current savingModelStatus is " + flag);
-      startSavingModel = flag;
+      LOG.info("current savingModelStatus is " + startSavingModel + ", the last savingStatus is " + lastSavingStatus);
+      if (flag && !startSavingModel) {
+        lastSavingStatus = false;
+        startSavingModel = true;
+      }
+      if (!flag && startSavingModel) {
+        startSavingModel = false;
+      }
     }
 
     @Override
@@ -2560,6 +2578,11 @@ public class ApplicationMaster extends CompositeService {
     @Override
     public List<Long> getModelSavingList() {
       return savingModelList;
+    }
+
+    @Override
+    public Boolean getContainerStarted() {
+      return containerStarted;
     }
 
     @Override

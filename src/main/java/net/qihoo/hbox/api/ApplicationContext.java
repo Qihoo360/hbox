@@ -93,7 +93,11 @@ public interface ApplicationContext {
 
   Boolean getLastSavingStatus();
 
+  String getLastInterSavingPath();
+
   List<Long> getModelSavingList();
+
+  Boolean getContainerStarted();
 
   String getTfEvaluatorId();
 
