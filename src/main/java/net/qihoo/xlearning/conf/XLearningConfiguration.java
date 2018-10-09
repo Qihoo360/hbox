@@ -275,6 +275,14 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final boolean DEFAULT_XLEARNING_CONTAINER_AUTO_CREATE_OUTPUT_DIR = true;
 
+  public static final String XLEARNING_RESERVE_PORT_BEGIN = "xlearning.reserve.port.begin";
+
+  public static final int DEFAULT_XLEARNING_RESERVE_PORT_BEGIN = 20000;
+
+  public static final String XLEARNING_RESERVE_PORT_END = "xlearning.reserve.port.end";
+
+  public static final int DEFAULT_XLEARNING_RESERVE_PORT_END = 30000;
+
   /**
    * Configuration used in Log Dir
    */
