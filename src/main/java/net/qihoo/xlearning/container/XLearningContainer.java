@@ -79,6 +79,10 @@ public class XLearningContainer {
 
   private String xlearningCmdProcessId;
 
+  private int reservePortBegin = 0;
+
+  private int reservePortEnd = 0;
+
   private XLearningContainer() {
     this.conf = new XLearningConfiguration();
     conf.addResource(new Path(XLearningConstants.XLEARNING_JOB_CONFIGURATION));
@@ -128,6 +132,10 @@ public class XLearningContainer {
 
     this.single = conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE);
     heartbeatInterval = this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_HEARTBEAT_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_HEARTBEAT_INTERVAL);
+    this.reservePortBegin = this.conf.getInt(XLearningConfiguration.XLEARNING_RESERVE_PORT_BEGIN,
+        XLearningConfiguration.DEFAULT_XLEARNING_RESERVE_PORT_BEGIN);
+    this.reservePortEnd = this.conf.getInt(XLearningConfiguration.XLEARNING_RESERVE_PORT_END,
+        XLearningConfiguration.DEFAULT_XLEARNING_RESERVE_PORT_END);
     reservedSocket = new Socket();
   }
 
@@ -154,7 +162,7 @@ public class XLearningContainer {
 
     if ((("TENSORFLOW".equals(xlearningAppType) || "LIGHTLDA".equals(xlearningAppType)) && !single) || xlearningAppType.equals("DISTLIGHTGBM")) {
       try {
-        reservedSocket.bind(new InetSocketAddress("127.0.0.1", 0));
+        getReservePort(reservedSocket);
       } catch (IOException e) {
         LOG.error("Can not get available port");
         reportFailedAndExit();
@@ -892,6 +900,23 @@ public class XLearningContainer {
     heartbeatThread.setContainerStatus(XLearningContainerStatus.SUCCEEDED);
     Utilities.sleep(heartbeatInterval);
     System.exit(0);
+  }
+
+  private void getReservePort(Socket socket) throws IOException {
+    int i = 0;
+    Random random = new Random(System.currentTimeMillis());
+    while (i < 1000) {
+      int rand = random.nextInt(reservePortEnd - reservePortBegin);
+      try {
+        socket.bind(new InetSocketAddress("127.0.0.1", reservePortBegin + rand));
+        return;
+      } catch (IOException e) {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e2) {}
+      }
+    }
+    throw new IOException("couldn't allocate a unused port");
   }
 
   public static void main(String[] args) {
