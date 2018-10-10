@@ -436,14 +436,17 @@ public class XLearningContainer {
         amClient.reportLightLDAIpPort(containerId, ipPortStr);
       }
       if (this.role.equals(XLearningConstants.WORKER)) {
-        String lightLDAIpPortStr;
-        while (true) {
+        String lightLDAIpPortStr = null;
+        while (!heartbeatThread.isXLearningTrainCompleted()) {
           lightLDAIpPortStr = amClient.getLightLDAIpPortStr();
           if (lightLDAIpPortStr != null) {
             LOG.info("lightLDA IP PORT list is: " + lightLDAIpPortStr);
             break;
           }
           Utilities.sleep(this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL));
+        }
+        if (heartbeatThread.isXLearningTrainCompleted()) {
+          return false;
         }
         Type type = new TypeToken<ConcurrentHashMap<String, String>>() {
         }.getType();
@@ -461,7 +464,7 @@ public class XLearningContainer {
       amClient.reportReservedPort(envs.get(ApplicationConstants.Environment.NM_HOST.toString()),
           reservedSocket.getLocalPort(), this.role, this.index);
 
-      while (true) {
+      while (!heartbeatThread.isXLearningTrainCompleted()) {
         //TODO may be need encode use Base64 while used in Env
         this.clusterDef = amClient.getClusterDef();
         if (this.clusterDef != null) {
@@ -469,6 +472,9 @@ public class XLearningContainer {
           break;
         }
         Utilities.sleep(this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL));
+      }
+      if (heartbeatThread.isXLearningTrainCompleted()) {
+        return false;
       }
     }
 
@@ -485,8 +491,8 @@ public class XLearningContainer {
       String ipPortStr = address.getHostAddress() + " " + reservedSocket.getLocalPort();
       LOG.info("lightGBM ip port string is: " + ipPortStr);
       amClient.reportLightGbmIpPort(containerId, ipPortStr);
-      String lightGBMIpPortStr;
-      while (true) {
+      String lightGBMIpPortStr = null;
+      while (!heartbeatThread.isXLearningTrainCompleted()) {
         //TODO may be need encode use Base64 while used in Env
         lightGBMIpPortStr = amClient.getLightGbmIpPortStr();
         if (lightGBMIpPortStr != null) {
@@ -494,6 +500,9 @@ public class XLearningContainer {
           break;
         }
         Utilities.sleep(this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_UPDATE_APP_STATUS_INTERVAL));
+      }
+      if (heartbeatThread.isXLearningTrainCompleted()) {
+        return false;
       }
       Type type = new TypeToken<ConcurrentHashMap<String, String>>() {
       }.getType();

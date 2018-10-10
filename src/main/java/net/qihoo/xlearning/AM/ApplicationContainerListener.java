@@ -300,7 +300,7 @@ public class ApplicationContainerListener extends AbstractService implements App
       }
     } else {
       Double jobFailedNum = containerId2Status.size() * this.getConfig().getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MAX_FAILURES_RATE, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_FAILURES_RATE);
-      if (failedNum > jobFailedNum) {
+      if (failedNum >= jobFailedNum) {
         return true;
       }
     }
@@ -324,7 +324,7 @@ public class ApplicationContainerListener extends AbstractService implements App
       }
     } else {
       Double jobFailedNum = containerId2Status.size() * this.getConfig().getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MAX_FAILURES_RATE, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_FAILURES_RATE);
-      if (failedNum > jobFailedNum) {
+      if (failedNum >= jobFailedNum) {
         return false;
       }
     }

@@ -133,16 +133,16 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
         long workerGCores = Long.valueOf($(WORKER_GCORES));
         if (workerGCores > 0) {
           for (int i = 0; i < numWorkers; i++) {
-            if (!$("cpuMemMetrics" + i).equals("") && $("cpuMemMetrics" + i) != null) {
+            if (!$("workerCpuMemMetrics" + i).equals("") && $("workerCpuMemMetrics" + i) != null) {
               html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px").__(String.format($("WORKER_CONTAINER_ID" + i)) + " metrics:").__();
               html.script().$src("/static/xlWebApp/jquery-3.1.1.min.js").__();
               html.script().$src("/static/xlWebApp/highstock.js").__();
               html.script().$src("/static/xlWebApp/exporting.js").__();
 
-              String containerGpuMemID = "containerGpuMem" + i;
-              String containerGpuUtilID = "containerGpuUtil" + i;
-              String containerCpuMemID = "containerCpuMem" + i;
-              String containerCpuUtilID = "containerCpuUtil" + i;
+              String containerGpuMemID = "workercontainerGpuMem" + i;
+              String containerGpuUtilID = "workercontainerGpuUtil" + i;
+              String containerCpuMemID = "workercontainerCpuMem" + i;
+              String containerCpuUtilID = "workercontainerCpuUtil" + i;
               String containerClass = "container" + i;
               String gpustrs = $("WORKER_GPU_DEVICE" + i);
               String[] gpusIndex = StringUtils.split(gpustrs, ',');
@@ -151,8 +151,8 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
               String[] seriesGpuMemOptions = new String[gpusIndex.length];
               String[] seriesGpuUtilOptions = new String[gpusIndex.length];
               for (int j = 0; j < gpusIndex.length; j++) {
-                dataGpuMem[j] = $("gpuMemMetrics" + i + gpusIndex[j]);
-                dataGpuUtil[j] = $("gpuUtilMetrics" + i + gpusIndex[j]);
+                dataGpuMem[j] = $("workerGpuMemMetrics" + i + gpusIndex[j]);
+                dataGpuUtil[j] = $("workerGpuUtilMetrics" + i + gpusIndex[j]);
                 gpusIndex[j] = "gpu" + gpusIndex[j];
                 seriesGpuMemOptions[j] = "{\n" +
                     "            name: '" + gpusIndex[j] + "',\n" +
@@ -169,11 +169,11 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
               seriesGpuUtilOptionsData = "[" + seriesGpuUtilOptionsData + "]";
               String seriesCpuMemOptions = "[{\n" +
                   "            name: 'cpu mem used',\n" +
-                  "            data: " + $("cpuMemMetrics" + i) + "\n" +
+                  "            data: " + $("workerCpuMemMetrics" + i) + "\n" +
                   "        }]";
               String seriesCpuUtilOptions = "[{\n" +
                   "            name: 'cpu util',\n" +
-                  "            data: " + $("cpuUtilMetrics" + i) + "\n" +
+                  "            data: " + $("workerCpuUtilMetrics" + i) + "\n" +
                   "        }]";
               html.div()
                   .div().$id(containerGpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block").__()
@@ -341,7 +341,7 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
           }
         } else {
           for (int i = 0; i < numWorkers; i++) {
-            if (!$("cpuMemMetrics" + i).equals("") && $("cpuMemMetrics" + i) != null) {
+            if (!$("workerCpuMemMetrics" + i).equals("") && $("workerCpuMemMetrics" + i) != null) {
               html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px").__(String.format($("WORKER_CONTAINER_ID" + i)) + " metrics:").__();
             }
 
@@ -349,16 +349,16 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
             html.script().$src("/static/xlWebApp/highstock.js").__();
             html.script().$src("/static/xlWebApp/exporting.js").__();
 
-            String containerCpuMemID = "containerCpuMem" + i;
-            String containerCpuUtilID = "containerCpuUtil" + i;
+            String containerCpuMemID = "workercontainerCpuMem" + i;
+            String containerCpuUtilID = "workercontainerCpuUtil" + i;
             String containerClass = "container" + i;
             String seriesCpuMemOptions = "[{\n" +
                 "            name: 'cpu mem used',\n" +
-                "            data: " + $("cpuMemMetrics" + i) + "\n" +
+                "            data: " + $("workerCpuMemMetrics" + i) + "\n" +
                 "        }]";
             String seriesCpuUtilOptions = "[{\n" +
                 "            name: 'cpu util',\n" +
-                "            data: " + $("cpuUtilMetrics" + i) + "\n" +
+                "            data: " + $("workerCpuUtilMetrics" + i) + "\n" +
                 "        }]";
             html.div()
                 .div().$id(containerCpuMemID).$class(containerClass).$style("height: 400px; min-width: 310px; diplay:inline-block").__()
