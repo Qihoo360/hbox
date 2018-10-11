@@ -54,6 +54,9 @@ public class Client {
   private final ConcurrentHashMap<String, String> outputPaths;
   private static FsPermission JOB_FILE_PERMISSION;
 
+  private final Map<String, String> appMasterUserEnv;
+  private final Map<String, String> containerUserEnv;
+
   private Client(String[] args) throws IOException, ParseException, ClassNotFoundException {
     this.conf = new XLearningConfiguration();
     this.dfs = FileSystem.get(conf);
@@ -64,6 +67,9 @@ public class Client {
     this.inputPaths = new ConcurrentHashMap<>();
     this.outputPaths = new ConcurrentHashMap<>();
     JOB_FILE_PERMISSION = FsPermission.createImmutable((short) 0644);
+    this.appMasterUserEnv = new HashMap<>();
+    this.containerUserEnv = new HashMap<>();
+
   }
 
   private void init() throws IOException, YarnException {
@@ -106,6 +112,16 @@ public class Client {
 
     if (clientArguments.confs != null) {
       setConf();
+      if (containerUserEnv.size() > 0) {
+        StringBuilder userEnv = new StringBuilder();
+        for (String key : containerUserEnv.keySet()) {
+          userEnv.append(key);
+          userEnv.append("=");
+          userEnv.append(containerUserEnv.get(key));
+          userEnv.append("|");
+        }
+        conf.set(XLearningConfiguration.XLEARNING_CONTAINER_EXTRAENV, userEnv.deleteCharAt(userEnv.length() - 1).toString());
+      }
     }
 
     if (conf.getInt(XLearningConfiguration.XLEARNING_PS_NUM, XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM) == 0) {
@@ -158,7 +174,15 @@ public class Client {
     Enumeration<String> confSet = (Enumeration<String>) clientArguments.confs.propertyNames();
     while (confSet.hasMoreElements()) {
       String confArg = confSet.nextElement();
-      conf.set(confArg, clientArguments.confs.getProperty(confArg));
+      if (confArg.startsWith(XLearningConstants.AM_ENV_PREFIX)) {
+        String key = confArg.substring(XLearningConstants.AM_ENV_PREFIX.length()).trim();
+        Utilities.addPathToEnvironment(appMasterUserEnv, key, clientArguments.confs.getProperty(confArg).trim());
+      } else if (confArg.startsWith(XLearningConstants.CONTAINER_ENV_PREFIX)) {
+        String key = confArg.substring(XLearningConstants.CONTAINER_ENV_PREFIX.length()).trim();
+        Utilities.addPathToEnvironment(containerUserEnv, key, clientArguments.confs.getProperty(confArg).trim());
+      } else {
+        conf.set(confArg, clientArguments.confs.getProperty(confArg));
+      }
     }
   }
 
@@ -607,6 +631,12 @@ public class Client {
 
     if (clientArguments.userLD_LIBRARY_PATH != null && !clientArguments.userLD_LIBRARY_PATH.equals("")) {
       appMasterEnv.put(XLearningConstants.Environment.USER_LD_LIBRARY_PATH.toString(), clientArguments.userLD_LIBRARY_PATH);
+    }
+
+    if (appMasterUserEnv.size() > 0) {
+      for (String envKey : appMasterUserEnv.keySet()) {
+        Utilities.addPathToEnvironment(appMasterEnv, envKey, appMasterUserEnv.get(envKey));
+      }
     }
 
     LOG.info("Building application master launch command");

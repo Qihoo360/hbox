@@ -385,13 +385,13 @@ public class ApplicationContainerListener extends AbstractService implements App
   @Override
   public void reportLightLDAIpPort(XLearningContainerId containerId, String lightLDAIpPort) {
     this.lightLDAIpPortMap.put(containerId, lightLDAIpPort);
-    LOG.info("From container " + containerId.toString() + "Received reported lightLDA ip port: " + lightLDAIpPort);
+    LOG.info("From container " + containerId.toString() + " Received reported lightLDA ip port: " + lightLDAIpPort);
   }
 
   @Override
   public synchronized String getLightLDAIpPortStr() {
     if (this.lightLDAIpPortMap.size() == applicationContext.getPsNum()) {
-      LOG.info("Sending lightGBM ip port list \"" + new Gson().toJson(lightLDAIpPortMap) + "\"to container");
+      LOG.info("Sending lightLDA ip port list \"" + new Gson().toJson(lightLDAIpPortMap) + "\"to container");
       this.lightLDAIpPortStr = new Gson().toJson(lightLDAIpPortMap);
     }
     return this.lightLDAIpPortStr;

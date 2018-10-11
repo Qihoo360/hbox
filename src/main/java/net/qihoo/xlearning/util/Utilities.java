@@ -17,6 +17,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public final class Utilities {
   private static Log LOG = LogFactory.getLog(Utilities.class);
@@ -126,4 +127,13 @@ public final class Utilities {
     localResource.setVisibility(LocalResourceVisibility.APPLICATION);
     return localResource;
   }
+
+  public static void addPathToEnvironment(Map<String, String> env, String userEnvKey, String userEnvValue) {
+    if (env.containsKey(userEnvKey)) {
+      env.put(userEnvKey, userEnvValue + System.getProperty("path.separator") + env.get(userEnvKey) + System.getProperty("path.separator") + System.getenv(userEnvKey));
+    } else {
+      env.put(userEnvKey, userEnvValue + System.getProperty("path.separator") + System.getenv(userEnvKey));
+    }
+  }
+
 }

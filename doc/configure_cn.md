@@ -79,6 +79,8 @@ xlearning.ps.mem.autoscale | 0.2 | 作业失败重试时，ps内存自动增长�
 xlearning.app.max.attempts | 1 | 作业执行次数，默认执行失败后不重试   
 xlearning.report.container.status | true | client端打印container运行状态信息  
 xlearning.env.maxlength | 102400 | container启动程序执行时，环境变量长度上限
+xlearning.am.env.[EnvironmentVariableName] | (none) | 用户自定义am环境变量，用户可通过定义多项来设置多个环境变量
+xlearning.container.env.[EnvironmentVariableName] | (none) | 用户自定义container环境变量，用户可通过定义多项来设置多个环境变量
 
 
 

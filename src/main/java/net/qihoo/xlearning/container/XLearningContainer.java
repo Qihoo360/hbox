@@ -528,7 +528,7 @@ public class XLearningContainer {
       LOG.info("lightGBM ip port string is: " + ipPortStr);
       amClient.reportLightGbmIpPort(containerId, ipPortStr);
       String lightGBMIpPortStr = null;
-      while (heartbeatThread.isXLearningTrainCompleted()) {
+      while (!heartbeatThread.isXLearningTrainCompleted()) {
         //TODO may be need encode use Base64 while used in Env
         lightGBMIpPortStr = amClient.getLightGbmIpPortStr();
         if (lightGBMIpPortStr != null) {
@@ -551,6 +551,16 @@ public class XLearningContainer {
     }
 
     List<String> envList = new ArrayList<>(20);
+    if (conf.get(XLearningConfiguration.XLEARNING_CONTAINER_EXTRAENV) != null) {
+      String[] env = StringUtils.split(conf.get(XLearningConfiguration.XLEARNING_CONTAINER_EXTRAENV), "|");
+      for (String envPair : env) {
+        if (StringUtils.split(envPair, "=").length != 2) {
+          LOG.error(envPair + " is not correct");
+        } else {
+          envList.add(envPair);
+        }
+      }
+    }
     envList.add("PATH=" + System.getenv("PATH"));
     envList.add("JAVA_HOME=" + System.getenv("JAVA_HOME"));
     envList.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));

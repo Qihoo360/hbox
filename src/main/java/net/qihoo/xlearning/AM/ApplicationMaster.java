@@ -893,6 +893,19 @@ public class ApplicationMaster extends CompositeService {
     for (String anEnvStr : envStr) {
       LOG.debug("env:" + anEnvStr);
     }
+    if (conf.get(XLearningConfiguration.XLEARNING_CONTAINER_EXTRAENV) != null) {
+      String[] containerUserEnv = StringUtils.split(conf.get(XLearningConfiguration.XLEARNING_CONTAINER_EXTRAENV), "|");
+      if (containerUserEnv.length > 0) {
+        for (String envPair : containerUserEnv) {
+          String[] env = StringUtils.split(envPair, "=");
+          if (env.length != 2) {
+            LOG.error(envPair + " is not the correct.");
+          } else {
+            Utilities.addPathToEnvironment(containerEnv, env[0], env[1]);
+          }
+        }
+      }
+    }
     return containerEnv;
   }
 
@@ -1137,21 +1150,47 @@ public class ApplicationMaster extends CompositeService {
         LOG.error("Can not get available port");
       }
       dmlcPsRootPort = schedulerReservedSocket.getLocalPort();
-      String[] schedulerEnv = new String[]{
-          "PATH=" + System.getenv("PATH"),
-          "JAVA_HOME=" + System.getenv("JAVA_HOME"),
-          "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
-          "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
-          "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-              "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
-          "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
-          "DMLC_ROLE=scheduler",
-          "DMLC_PS_ROOT_URI=" + dmlcPsRootUri,
-          "DMLC_PS_ROOT_PORT=" + dmlcPsRootPort,
-          XLearningConstants.Environment.XLEARNING_DMLC_WORKER_NUM.toString() + "=" + workerNum,
-          XLearningConstants.Environment.XLEARNING_DMLC_SERVER_NUM.toString() + "=" + psNum,
-          "PYTHONUNBUFFERED=1"
-      };
+      List<String> schedulerEnv = new ArrayList<>(20);
+      Map<String, String> userEnv = new HashMap<>();
+      if (conf.get(XLearningConfiguration.XLEARNING_CONTAINER_EXTRAENV) != null) {
+        String[] env = StringUtils.split(conf.get(XLearningConfiguration.XLEARNING_CONTAINER_EXTRAENV), "|");
+        for (String envPair : env) {
+          String[] userEnvPair = StringUtils.split(envPair, "=");
+          if (userEnvPair.length != 2) {
+            LOG.error(envPair + " is not correct");
+          } else {
+            schedulerEnv.add(envPair);
+            userEnv.put(userEnvPair[0], userEnvPair[1]);
+          }
+        }
+      }
+      if (userEnv.containsKey("PATH")) {
+        schedulerEnv.add("PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
+      } else {
+        schedulerEnv.add("PATH=" + System.getenv("PATH"));
+      }
+      schedulerEnv.add("JAVA_HOME=" + System.getenv("JAVA_HOME"));
+      schedulerEnv.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
+      schedulerEnv.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
+      if (userEnv.containsKey("LD_LIBRARY_PATH")) {
+        schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+            "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+      } else {
+        schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+            "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+      }
+      if (userEnv.containsKey("CLASSPATH")) {
+        schedulerEnv.add("CLASSPATH=" + "./:" + userEnv.get("CLASSPATH") + System.getProperty("path.separator") + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+      } else {
+        schedulerEnv.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+      }
+      schedulerEnv.add("DMLC_ROLE=scheduler");
+      schedulerEnv.add("DMLC_PS_ROOT_URI=" + dmlcPsRootUri);
+      schedulerEnv.add("DMLC_PS_ROOT_PORT=" + dmlcPsRootPort);
+      schedulerEnv.add(XLearningConstants.Environment.XLEARNING_DMLC_WORKER_NUM.toString() + "=" + workerNum);
+      schedulerEnv.add(XLearningConstants.Environment.XLEARNING_DMLC_SERVER_NUM.toString() + "=" + psNum);
+      schedulerEnv.add("PYTHONUNBUFFERED=1");
+
       LOG.info("Executing command:" + xlearningCommand);
       LOG.info("DMLC_PS_ROOT_URI is " + dmlcPsRootUri);
       LOG.info("DMLC_PS_ROOT_PORT is " + dmlcPsRootPort);
@@ -1161,7 +1200,7 @@ public class ApplicationMaster extends CompositeService {
       try {
         Runtime rt = Runtime.getRuntime();
         schedulerReservedSocket.close();
-        final Process mxnetSchedulerProcess = rt.exec(xlearningCommand, schedulerEnv);
+        final Process mxnetSchedulerProcess = rt.exec(xlearningCommand, schedulerEnv.toArray(new String[schedulerEnv.size()]));
         LOG.info("Starting thread to redirect stdout of MXNet scheduler process");
         Thread mxnetSchedulerRedirectThread = new Thread(new Runnable() {
           @Override
@@ -1216,16 +1255,42 @@ public class ApplicationMaster extends CompositeService {
         LOG.error("Can not get available port");
       }
       dmlcTrackerPort = schedulerReservedSocket.getLocalPort();
-      String[] schedulerEnv = new String[]{
-          "PATH=" + System.getenv("PATH"),
-          "JAVA_HOME=" + System.getenv("JAVA_HOME"),
-          "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
-          "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
-          "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-              "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
-          "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
-          "PYTHONUNBUFFERED=1"
-      };
+      List<String> schedulerEnv = new ArrayList<>(20);
+      Map<String, String> userEnv = new HashMap<>();
+      if (conf.get(XLearningConfiguration.XLEARNING_CONTAINER_EXTRAENV) != null) {
+        String[] env = StringUtils.split(conf.get(XLearningConfiguration.XLEARNING_CONTAINER_EXTRAENV), "|");
+        for (String envPair : env) {
+          String[] userEnvPair = StringUtils.split(envPair, "=");
+          if (userEnvPair.length != 2) {
+            LOG.error(envPair + " is not correct");
+          } else {
+            schedulerEnv.add(envPair);
+            userEnv.put(userEnvPair[0], userEnvPair[1]);
+          }
+        }
+      }
+      if (userEnv.containsKey("PATH")) {
+        schedulerEnv.add("PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
+      } else {
+        schedulerEnv.add("PATH=" + System.getenv("PATH"));
+      }
+      schedulerEnv.add("JAVA_HOME=" + System.getenv("JAVA_HOME"));
+      schedulerEnv.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
+      schedulerEnv.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
+      if (userEnv.containsKey("LD_LIBRARY_PATH")) {
+        schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+            "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+      } else {
+        schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+            "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+      }
+      if (userEnv.containsKey("CLASSPATH")) {
+        schedulerEnv.add("CLASSPATH=" + "./:" + userEnv.get("CLASSPATH") + System.getProperty("path.separator") + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+      } else {
+        schedulerEnv.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+      }
+      schedulerEnv.add("PYTHONUNBUFFERED=1");
+
       String distXgboostSchedulerCmd = "python xgboost/self-define/rabitTracker.py --num-workers=" + workerNum
           + " --host-ip=" + dmlcTrackerUri + " --port=" + dmlcTrackerPort;
       LOG.info("Dist xgboost scheduler executing command:" + distXgboostSchedulerCmd);
@@ -1236,7 +1301,7 @@ public class ApplicationMaster extends CompositeService {
       try {
         Runtime rt = Runtime.getRuntime();
         schedulerReservedSocket.close();
-        final Process xgboostSchedulerProcess = rt.exec(distXgboostSchedulerCmd, schedulerEnv);
+        final Process xgboostSchedulerProcess = rt.exec(distXgboostSchedulerCmd, schedulerEnv.toArray(new String[schedulerEnv.size()]));
         LOG.info("Starting thread to redirect stdout of xgboost scheduler process");
         Thread xgboostSchedulerRedirectThread = new Thread(new Runnable() {
           @Override
@@ -1298,21 +1363,47 @@ public class ApplicationMaster extends CompositeService {
         LOG.error("Can not get available port");
       }
       dmlcPsRootPort = schedulerReservedSocket.getLocalPort();
-      String[] schedulerEnv = new String[]{
-          "PATH=" + System.getenv("PATH"),
-          "JAVA_HOME=" + System.getenv("JAVA_HOME"),
-          "HADOOP_HOME=" + System.getenv("HADOOP_HOME"),
-          "HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"),
-          "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-              "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native",
-          "CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"),
-          "DMLC_ROLE=scheduler",
-          "DMLC_PS_ROOT_URI=" + dmlcPsRootUri,
-          "DMLC_PS_ROOT_PORT=" + dmlcPsRootPort,
-          XLearningConstants.Environment.XLEARNING_DMLC_WORKER_NUM.toString() + "=" + workerNum,
-          XLearningConstants.Environment.XLEARNING_DMLC_SERVER_NUM.toString() + "=" + psNum,
-          "PYTHONUNBUFFERED=1"
-      };
+      List<String> schedulerEnv = new ArrayList<>(20);
+      Map<String, String> userEnv = new HashMap<>();
+      if (conf.get(XLearningConfiguration.XLEARNING_CONTAINER_EXTRAENV) != null) {
+        String[] env = StringUtils.split(conf.get(XLearningConfiguration.XLEARNING_CONTAINER_EXTRAENV), "|");
+        for (String envPair : env) {
+          String[] userEnvPair = StringUtils.split(envPair, "=");
+          if (userEnvPair.length != 2) {
+            LOG.error(envPair + " is not correct");
+          } else {
+            schedulerEnv.add(envPair);
+            userEnv.put(userEnvPair[0], userEnvPair[1]);
+          }
+        }
+      }
+      if (userEnv.containsKey("PATH")) {
+        schedulerEnv.add("PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
+      } else {
+        schedulerEnv.add("PATH=" + System.getenv("PATH"));
+      }
+      schedulerEnv.add("JAVA_HOME=" + System.getenv("JAVA_HOME"));
+      schedulerEnv.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
+      schedulerEnv.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
+      if (userEnv.containsKey("LD_LIBRARY_PATH")) {
+        schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+            "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+      } else {
+        schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+            "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+      }
+      if (userEnv.containsKey("CLASSPATH")) {
+        schedulerEnv.add("CLASSPATH=" + "./:" + userEnv.get("CLASSPATH") + System.getProperty("path.separator") + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+      } else {
+        schedulerEnv.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+      }
+      schedulerEnv.add("DMLC_ROLE=scheduler");
+      schedulerEnv.add("DMLC_PS_ROOT_URI=" + dmlcPsRootUri);
+      schedulerEnv.add("DMLC_PS_ROOT_PORT=" + dmlcPsRootPort);
+      schedulerEnv.add(XLearningConstants.Environment.XLEARNING_DMLC_WORKER_NUM.toString() + "=" + workerNum);
+      schedulerEnv.add(XLearningConstants.Environment.XLEARNING_DMLC_SERVER_NUM.toString() + "=" + psNum);
+      schedulerEnv.add("PYTHONUNBUFFERED=1");
+
       LOG.info("Executing command:" + xlearningCommand);
       LOG.info("DMLC_PS_ROOT_URI is " + dmlcPsRootUri);
       LOG.info("DMLC_PS_ROOT_PORT is " + dmlcPsRootPort);
@@ -1322,7 +1413,7 @@ public class ApplicationMaster extends CompositeService {
       try {
         Runtime rt = Runtime.getRuntime();
         schedulerReservedSocket.close();
-        final Process xflowSchedulerProcess = rt.exec(xlearningCommand, schedulerEnv);
+        final Process xflowSchedulerProcess = rt.exec(xlearningCommand, schedulerEnv.toArray(new String[schedulerEnv.size()]));
         LOG.info("Starting thread to redirect stdout of xflow scheduler process");
         Thread xflowSchedulerRedirectThread = new Thread(new Runnable() {
           @Override

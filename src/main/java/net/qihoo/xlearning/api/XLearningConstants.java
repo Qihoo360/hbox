@@ -23,6 +23,10 @@ public interface XLearningConstants {
 
   String STREAM_OUTPUT_DIR = "mapreduce.output.fileoutputformat.outputdir";
 
+  String AM_ENV_PREFIX = "xlearning.am.env.";
+
+  String CONTAINER_ENV_PREFIX = "xlearning.container.env.";
+
   enum Environment {
     HADOOP_USER_NAME("HADOOP_USER_NAME"),
 
