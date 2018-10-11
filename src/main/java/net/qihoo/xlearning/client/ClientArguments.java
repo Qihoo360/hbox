@@ -237,13 +237,13 @@ class ClientArguments {
       appType = cliParser.getOptionValue("app-type").trim().toUpperCase();
     }
 
-    if (!appType.equals("TENSORFLOW") && !appType.equals("MXNET") && !appType.equals("LIGHTLDA")) {
+    if (!appType.equals("TENSORFLOW") && !appType.equals("MXNET") && !appType.equals("LIGHTLDA") && !appType.equals("XFLOW")) {
       psNum = 0;
     }
 
     if (cliParser.hasOption("conf")) {
       confs = cliParser.getOptionProperties("conf");
-      if (!"TENSORFLOW".equals(appType) && !"MXNET".equals(appType) && !appType.equals("LIGHTLDA")) {
+      if (!"TENSORFLOW".equals(appType) && !"MXNET".equals(appType) && !appType.equals("LIGHTLDA") && !appType.equals("XFLOW")) {
         if (confs.containsKey("xlearning.ps.num")) {
           confs.setProperty("xlearning.ps.num", "0");
         }
@@ -278,7 +278,7 @@ class ClientArguments {
       workerGCores = Long.parseLong(workerGCoresStr);
     }
 
-    if ("TENSORFLOW".equals(appType) || "MXNET".equals(appType) || appType.equals("LIGHTLDA")) {
+    if ("TENSORFLOW".equals(appType) || "MXNET".equals(appType) || appType.equals("LIGHTLDA") || appType.equals("XFLOW")) {
       if (cliParser.hasOption("ps-memory")) {
         psMemory = getNormalizedMem(cliParser.getOptionValue("ps-memory"));
       }

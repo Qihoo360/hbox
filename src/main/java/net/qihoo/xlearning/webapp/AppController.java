@@ -198,7 +198,7 @@ public class AppController extends Controller implements AMParams {
       }
       if ($(APP_TYPE).equals("Tensorflow")) {
         set(CONTAINER_ROLE + i, "ps");
-      } else if ($(APP_TYPE).equals("Mxnet") || $(APP_TYPE).equals("Lightlda")) {
+      } else if ($(APP_TYPE).equals("Mxnet") || $(APP_TYPE).equals("Lightlda") || $(APP_TYPE).equals("Xflow")) {
         set(CONTAINER_ROLE + i, "server");
       }
 
