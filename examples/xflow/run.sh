@@ -7,6 +7,6 @@ $XLEARNING_HOME/bin/xl-submit \
    --ps-num 2 \
    --files xflow_lr,demo.sh \
    --cacheFile hdfs://xlearning.test.host1:9000/tmp/data/xflow#data \
-   --hbox-cmd "sh demo.sh" \
+   --launch-cmd "sh demo.sh" \
    --app-name "xflow" \
    --queue default \

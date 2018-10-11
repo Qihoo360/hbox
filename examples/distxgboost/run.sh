@@ -10,3 +10,4 @@ $XLEARNING_HOME/bin/xl-submit \
    --output /tmp/xgboost_dist_output#model \
    --app-name "distxgboost_demo" \
    --queue default \
+   --conf xlearning.container.env.PYTHONPATH=xgboost/python-package \
