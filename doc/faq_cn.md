@@ -20,7 +20,7 @@ XLearning目前支持 TensorFlow、MXNet、XGBoost、LightGBM 学习框架的分
 - MXNet：作业类型需设置为 `MXNet`，以是否申请ps数目来区分单机与分布式模式；  
 - XGBoost： 分布式作业需设置作业类型为 `distxgboost` ；  
 - LightGBM： 分布式作业需设置作业类型为 `distlightgbm` ；
-- LightLDA： 分布式作业需设置作业类型为 `distlightlda`；
+- LightLDA： 分布式作业需设置作业类型为 `lightlda`，以申请的ps数目来区分单机与分布式模式；
 - XFlow：作业类型需设置为 `XFlow`，以申请的ps数目来区分单机与分布式模式；
 
 

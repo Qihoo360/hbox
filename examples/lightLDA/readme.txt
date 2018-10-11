@@ -1,0 +1,1 @@
+Please generate the data/lightLDA/data based on the https://github.com/Microsoft/LightLDA/tree/master/example
