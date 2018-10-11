@@ -109,6 +109,8 @@ public class ApplicationMaster extends CompositeService {
   private String tfEvaluatorContainerId;
   private StringBuilder inputPath;
 
+  private int outputIndex;
+
   /**
    * Constructor, connect to Resource Manager
    *
@@ -154,6 +156,7 @@ public class ApplicationMaster extends CompositeService {
     tfEvaluator = conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR);
     tfEvaluatorContainerId = "";
     inputPath = new StringBuilder();
+    outputIndex = -1;
 
     if (envs.containsKey(ApplicationConstants.Environment.CONTAINER_ID.toString())) {
       ContainerId containerId = ConverterUtils
@@ -921,6 +924,9 @@ public class ApplicationMaster extends CompositeService {
     } else if (role.equals(XLearningConstants.WORKER)) {
       containerEnv.put(XLearningConstants.Environment.XLEARNING_CONTAIENR_GPU_NUM.toString(), String.valueOf(workerGCores));
     }
+    if (outputIndex >= 0) {
+      containerEnv.put(XLearningConstants.Environment.XLEARNING_OUTPUTS_WORKER_INDEX.toString(), String.valueOf(outputIndex));
+    }
     if (this.inputPath.length() > 0) {
       containerEnv.put(XLearningConstants.Environment.XLEARNING_INPUT_PATH.toString(), this.inputPath.substring(0, inputPath.length() - 1));
     }
@@ -1524,6 +1530,17 @@ public class ApplicationMaster extends CompositeService {
     }
     buildOutputLocations();
     buildContainerLocalResource();
+
+    if (envs.containsKey(XLearningConstants.Environment.XLEARNING_OUTPUTS_WORKER_INDEX.toString())) {
+      outputIndex = Integer.parseInt(envs.get(XLearningConstants.Environment.XLEARNING_OUTPUTS_WORKER_INDEX.toString()));
+      if (outputIndex >= workerNum) {
+        LOG.info("Note that user set the worker index " + outputIndex + " which to upload the output exceed the worker num " + workerNum + ". Job will upload the output of all workers after completed successfully!");
+      }
+    }
+    if (workerNum == 1) {
+      outputIndex = 0;
+    }
+
     Map<String, String> workerContainerEnv = buildContainerEnv(XLearningConstants.WORKER);
     Map<String, String> psContainerEnv = buildContainerEnv(XLearningConstants.PS);
     List<String> workerContainerLaunchCommands = buildContainerLaunchCommand(workerMemory);
@@ -1684,19 +1701,27 @@ public class ApplicationMaster extends CompositeService {
           for (OutputInfo outputInfo : outputInfos) {
             FileSystem fs = new Path(outputInfo.getDfsLocation()).getFileSystem(conf);
             Path finalResultPath = new Path(outputInfo.getDfsLocation());
-            for (Container finishedContainer : acquiredWorkerContainers) {
-              Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString());
+            if (outputIndex >= 0) {
+              Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + outputInfo.getLocalLocation());
               if (fs.exists(tmpResultPath)) {
                 LOG.info("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
                 fs.rename(tmpResultPath, finalResultPath);
               }
-            }
-            if (psNum > 0 && (xlearningAppType.equals("TENSORFLOW") || xlearningAppType.equals("LIGHTLDA"))) {
-              for (Container finishedContainer : acquiredPsContainers) {
+            } else {
+              for (Container finishedContainer : acquiredWorkerContainers) {
                 Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString());
                 if (fs.exists(tmpResultPath)) {
                   LOG.info("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
                   fs.rename(tmpResultPath, finalResultPath);
+                }
+              }
+              if (psNum > 0 && (xlearningAppType.equals("TENSORFLOW") || xlearningAppType.equals("LIGHTLDA"))) {
+                for (Container finishedContainer : acquiredPsContainers) {
+                  Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString());
+                  if (fs.exists(tmpResultPath)) {
+                    LOG.info("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
+                    fs.rename(tmpResultPath, finalResultPath);
+                  }
                 }
               }
             }

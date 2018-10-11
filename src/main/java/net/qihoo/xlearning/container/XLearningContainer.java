@@ -83,6 +83,8 @@ public class XLearningContainer {
 
   private int reservePortEnd = 0;
 
+  private int outputIndex;
+
   private XLearningContainer() {
     this.conf = new XLearningConfiguration();
     conf.addResource(new Path(XLearningConstants.XLEARNING_JOB_CONFIGURATION));
@@ -95,6 +97,10 @@ public class XLearningContainer {
     this.role = envs.get(XLearningConstants.Environment.XLEARNING_TF_ROLE.toString());
     this.index = Integer.valueOf(envs.get(XLearningConstants.Environment.XLEARNING_TF_INDEX.toString()));
     this.xlearningCmdProcessId = "";
+    this.outputIndex = -1;
+    if (envs.containsKey(XLearningConstants.Environment.XLEARNING_OUTPUTS_WORKER_INDEX.toString())) {
+      outputIndex = Integer.parseInt(envs.get(XLearningConstants.Environment.XLEARNING_OUTPUTS_WORKER_INDEX.toString()));
+    }
     if ("TENSORFLOW".equals(xlearningAppType)) {
       if (conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR)) {
         if(this.role.equals(XLearningConstants.WORKER) && conf.getInt(XLearningConfiguration.XLEARNING_WORKER_NUM, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM) == (this.index+1)){
@@ -168,7 +174,7 @@ public class XLearningContainer {
       System.exit(1);
     }
 
-    heartbeatThread = new Heartbeat(amClient, conf, containerId);
+    heartbeatThread = new Heartbeat(amClient, conf, containerId, outputIndex, index, role);
     heartbeatThread.setDaemon(true);
     heartbeatThread.start();
     heartbeatThread.setContainerStatus(XLearningContainerStatus.INITIALIZING);
@@ -366,6 +372,12 @@ public class XLearningContainer {
           FileSystem localFs = FileSystem.getLocal(conf);
           Path localPath = new Path(outputInfo.getLocalLocation());
           Path remotePath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + containerId.toString());
+          if (outputIndex >= 0) {
+            if (this.role.equals(XLearningConstants.WORKER) && this.index == outputIndex)
+              remotePath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + localPath.toString());
+            else
+              break;
+          }
           FileSystem dfs = remotePath.getFileSystem(conf);
           if (dfs.exists(remotePath)) {
             LOG.info("Container remote output path " + remotePath + "exists, so we has to delete is first.");
@@ -969,7 +981,7 @@ public class XLearningContainer {
       }
     }
 
-    if (this.role.equals(XLearningConstants.PS) && this.xlearningAppType.equals("TENSORFLOW")) {
+    if (this.outputIndex < 0 && this.role.equals(XLearningConstants.PS) && this.xlearningAppType.equals("TENSORFLOW")) {
       if (code == -1 || code == 0) {
         this.uploadOutputFiles();
       }

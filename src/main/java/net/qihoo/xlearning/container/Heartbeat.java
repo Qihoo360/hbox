@@ -1,6 +1,7 @@
 package net.qihoo.xlearning.container;
 
 import net.qihoo.xlearning.api.ApplicationContainerProtocol;
+import net.qihoo.xlearning.api.XLearningConstants;
 import net.qihoo.xlearning.common.HeartbeatResponse;
 import net.qihoo.xlearning.common.HeartbeatRequest;
 import net.qihoo.xlearning.common.OutputInfo;
@@ -38,8 +39,14 @@ public class Heartbeat extends Thread {
 
   private Boolean IsXLearningTrainCompleted;
 
+  private int outputIndex;
+
+  private int index;
+
+  private String role;
+
   public Heartbeat(ApplicationContainerProtocol protocol, Configuration conf,
-                   XLearningContainerId xlearningContainerId) {
+                   XLearningContainerId xlearningContainerId, int outputIndex, int index, String role) {
     this.protocol = protocol;
     this.conf = conf;
     this.containerId = xlearningContainerId;
@@ -49,6 +56,9 @@ public class Heartbeat extends Thread {
     this.IsXLearningTrainCompleted = false;
     this.heartbeatInterval = this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_HEARTBEAT_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_HEARTBEAT_INTERVAL);
     this.heartbeatRetryMax = this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_HEARTBEAT_RETRY, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_HEARTBEAT_RETRY);
+    this.outputIndex = outputIndex;
+    this.index = index;
+    this.role = role;
   }
 
   @SuppressWarnings("static-access")
@@ -111,7 +121,7 @@ public class Heartbeat extends Thread {
     if (!heartbeatResponse.getIsXLearningTrainCompleted()) {
       if (!heartbeatResponse.getInnerModelTimeStamp().equals(lastInnerModelTimeStamp)) {
         lastInnerModelTimeStamp = heartbeatResponse.getInnerModelTimeStamp();
-        Thread interResultSavedThread = new Thread(new Runnable() {
+        final Thread interResultSavedThread = new Thread(new Runnable() {
           @Override
           public void run() {
             try {
@@ -123,6 +133,15 @@ public class Heartbeat extends Thread {
                     + conf.get(XLearningConfiguration.XLEARNING_INTERREAULST_DIR, XLearningConfiguration.DEFAULT_XLEARNING_INTERRESULT_DIR)
                     + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date(lastInnerModelTimeStamp))
                     + "/" + containerId.toString());
+                if (outputIndex >= 0) {
+                  if (role.equals(XLearningConstants.WORKER) && index == outputIndex)
+                    remotePath = new Path(outputs.getDfsLocation()
+                        + conf.get(XLearningConfiguration.XLEARNING_INTERREAULST_DIR, XLearningConfiguration.DEFAULT_XLEARNING_INTERRESULT_DIR)
+                        + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date(lastInnerModelTimeStamp))
+                        + "/" + localPath);
+                  else
+                    break;
+                }
                 LOG.info("InnerModel path:" + remotePath);
                 FileSystem dfs = remotePath.getFileSystem(conf);
                 if (dfs.exists(remotePath)) {

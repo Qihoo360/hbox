@@ -45,4 +45,4 @@ inputformat-shuffle | 当输入文件加载策略为STREAM时，指定inputforma
 output-strategy | 输出文件加载策略，默认为系统配置xlearning.output.strategy  
 outputformat | 当输出文件加载模式为STREAM时，指定outputformat类，默认为系统配置xlearning.outputformat.class
 tf-evaluator | 在分布式TensorFlow作业类型下，是否设置evaluator角色，默认为系统配置xlearning.tf.evaluator
-
+output-index | 指定保存index对应worker的输出文件，默认保存所有worker的输出结果
