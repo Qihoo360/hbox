@@ -500,4 +500,8 @@ public class HboxConfiguration extends YarnConfiguration {
   public static final String HBOX_HOROVOD_HIERARCHICAL_ALLREDUCE = "hbox.horovod.hierarchical.allreduce";
   public static final boolean DEFAULT_HBOX_HOROVOD_HIERARCHICAL_ALLREDUCE = false;
 
+  /** Configuration for Docker number pre worker */
+  public static final String HBOX_DOCKER_NUM_PER_WORKER = "hbox.docker.num.per.worker";
+  public static final int DEDAULT_HBOX_DOCKER_NUM_PER_WORKER = 0;
+
 }
