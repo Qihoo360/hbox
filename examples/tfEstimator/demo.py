@@ -76,14 +76,20 @@ def main(_):
     # Build 3 layer DNN with 10, 20, 10 units respectively.
     classifier = tf.estimator.DNNClassifier(
         config=tf.estimator.RunConfig(
-           model_dir=FLAGS.model_path
+           model_dir=FLAGS.model_path,
+            save_checkpoints_steps = 50,
+            save_summary_steps = 50,
+            keep_checkpoint_max=5,
+            log_step_count_steps=50
         ),
         feature_columns=feature_columns,
         hidden_units=[10, 20, 10],
         n_classes=3)
 
+    tf.logging.set_verbosity(tf.logging.INFO)
+
     train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=FLAGS.max_steps)
-    eval_spec = tf.estimator.EvalSpec(input_fn=test_input_fn)
+    eval_spec = tf.estimator.EvalSpec(input_fn=test_input_fn, steps=10, start_delay_secs=150, throttle_secs=200)
 
     tf.estimator.train_and_evaluate(classifier, train_spec, eval_spec)
 

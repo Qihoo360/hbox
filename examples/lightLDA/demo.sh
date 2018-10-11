@@ -1,5 +1,4 @@
 echo $LIGHTLDA_ROLE
-export LD_LIBRARY_PATH=lightLDA/multiverso/third_party/lib:$LD_LIBRARY_PATH
 if [ "$LIGHTLDA_ROLE" = "ps" ]; then
   lightLDA/multiverso/bin/multiverso_server -serverid $LIGHTLDA_RANK -workers $LIGHTLDA_WORKER_NUM -endpoint $LIGHTLDA_SERVER_ENDPOINT
   mv server*.model output
