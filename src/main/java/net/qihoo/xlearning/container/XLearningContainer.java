@@ -85,6 +85,8 @@ public class XLearningContainer {
 
   private int outputIndex;
 
+  private String localHost;
+
   private XLearningContainer() {
     this.conf = new XLearningConfiguration();
     conf.addResource(new Path(XLearningConstants.XLEARNING_JOB_CONFIGURATION));
@@ -93,6 +95,11 @@ public class XLearningContainer {
         .getenv(ApplicationConstants.Environment.CONTAINER_ID.name())));
     this.downloadRetry = conf.getInt(XLearningConfiguration.XLEARNING_DOWNLOAD_FILE_RETRY, XLearningConfiguration.DEFAULT_XLEARNING_DOWNLOAD_FILE_RETRY);
     this.envs = System.getenv();
+    if (envs.containsKey(ApplicationConstants.Environment.NM_HOST.toString())) {
+      localHost = envs.get(ApplicationConstants.Environment.NM_HOST.toString());
+    } else {
+      localHost = "127.0.0.1";
+    }
     this.xlearningAppType = envs.get(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString()).toUpperCase();
     this.role = envs.get(XLearningConstants.Environment.XLEARNING_TF_ROLE.toString());
     this.index = Integer.valueOf(envs.get(XLearningConstants.Environment.XLEARNING_TF_INDEX.toString()));
@@ -183,7 +190,7 @@ public class XLearningContainer {
 
     if ((("TENSORFLOW".equals(xlearningAppType) || "LIGHTLDA".equals(xlearningAppType)) && !single) || xlearningAppType.equals("DISTLIGHTGBM")) {
       try {
-        getReservePort(reservedSocket);
+        Utilities.getReservePort(reservedSocket, InetAddress.getByName(localHost).getHostAddress(), reservePortBegin, reservePortEnd);
       } catch (IOException e) {
         LOG.error("Can not get available port");
         reportFailedAndExit();
@@ -832,7 +839,7 @@ public class XLearningContainer {
     if (boardEnable && this.role.equals(XLearningConstants.WORKER) && boardIndex == this.index) {
       Socket boardReservedSocket = new Socket();
       try {
-        boardReservedSocket.bind(new InetSocketAddress("127.0.0.1", 0));
+        Utilities.getReservePort(boardReservedSocket, InetAddress.getByName(localHost).getHostAddress(), reservePortBegin, reservePortEnd);
       } catch (IOException e) {
         LOG.error("Can not get available port");
         reportFailedAndExit();
@@ -1029,23 +1036,6 @@ public class XLearningContainer {
     heartbeatThread.setContainerStatus(XLearningContainerStatus.SUCCEEDED);
     Utilities.sleep(heartbeatInterval);
     System.exit(0);
-  }
-
-  private void getReservePort(Socket socket) throws IOException {
-    int i = 0;
-    Random random = new Random(System.currentTimeMillis());
-    while (i < 1000) {
-      int rand = random.nextInt(reservePortEnd - reservePortBegin);
-      try {
-        socket.bind(new InetSocketAddress("127.0.0.1", reservePortBegin + rand));
-        return;
-      } catch (IOException e) {
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException e2) {}
-      }
-    }
-    throw new IOException("couldn't allocate a unused port");
   }
 
   public static void main(String[] args) {
