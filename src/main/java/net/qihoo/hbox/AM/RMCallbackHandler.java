@@ -51,8 +51,6 @@ public class RMCallbackHandler implements CallbackHandler {
 
     private int blackHostsLimit = Integer.MAX_VALUE;
 
-//    private boolean needBlackHosts = false;
-
     public RMCallbackHandler() {
         cancelContainers = Collections.synchronizedList(new ArrayList<Container>());
         acquiredWorkerContainers = Collections.synchronizedList(new ArrayList<Container>());
@@ -121,50 +119,6 @@ public class RMCallbackHandler implements CallbackHandler {
             LOG.info("Container " + containerStatus.getContainerId() + " completed with status "
                     + containerStatus.getState().toString());
         }
-    }
-
-    /**
-     * @param configuration HBoxConfiguration object
-     * @param containers containers all required
-     */
-    private void limitDockerContainerNumPerWorker(HboxConfiguration configuration, List<Container> containers) {
-        int dockerContainerPerWorker = configuration.getInt(HboxConfiguration.HBOX_DOCKER_NUM_PER_WORKER, HboxConfiguration.DEDAULT_HBOX_DOCKER_NUM_PER_WORKER);
-        int launchSucceedContainerNum = containers.size();
-        if (dockerContainerPerWorker > 0) {
-            for (Container acquiredContainer : containers) {
-                String host = acquiredContainer.getNodeId().getHost();
-                if (countMap.containsKey(host)) {
-                    int currentNum = countMap.get(host);
-                    if (currentNum < dockerContainerPerWorker) {
-                        if (workerContainersAllocating.get()) {
-                            acquiredWorkerContainers.add(acquiredContainer);
-                            acquiredWorkerContainersCount.incrementAndGet();
-                        } else {
-                            acquiredPsContainers.add(acquiredContainer);
-                            acquiredPsContainersCount.incrementAndGet();
-                        }
-                    } else {
-                        blackHosts.add(host);
-                        cancelContainers.add(acquiredContainer);
-                        launchSucceedContainerNum--;
-                        LOG.info("Add container " + acquiredContainer.getId() + " to cancel list");
-                    }
-                    countMap.put(host, currentNum + 1);
-                } else {
-                    if (workerContainersAllocating.get()) {
-                        acquiredWorkerContainers.add(acquiredContainer);
-                        acquiredWorkerContainersCount.incrementAndGet();
-                    } else {
-                        acquiredPsContainers.add(acquiredContainer);
-                        acquiredPsContainersCount.incrementAndGet();
-                    }
-                    countMap.put(host, 1);
-                }
-            }
-        }
-        acquiredWorkerContainersCount.addAndGet(launchSucceedContainerNum);
-        LOG.info("Current acquired container " + acquiredWorkerContainersCount.get()
-                + ", total needed " + neededWorkerContainersCount);
     }
 
     @Override
