@@ -15,9 +15,12 @@ import org.apache.hadoop.yarn.util.Records;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 public final class Utilities {
   private static Log LOG = LogFactory.getLog(Utilities.class);
@@ -134,6 +137,23 @@ public final class Utilities {
     } else {
       env.put(userEnvKey, userEnvValue + System.getProperty("path.separator") + System.getenv(userEnvKey));
     }
+  }
+
+  public static void getReservePort(Socket socket, String localHost, int reservePortBegin, int reservePortEnd) throws IOException {
+    int i = 0;
+    Random random = new Random(System.currentTimeMillis());
+    while (i < 1000) {
+      int rand = random.nextInt(reservePortEnd - reservePortBegin);
+      try {
+        socket.bind(new InetSocketAddress(localHost, reservePortBegin + rand));
+        return;
+      } catch (IOException e) {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e2) {}
+      }
+    }
+    throw new IOException("couldn't allocate a unused port");
   }
 
 }
