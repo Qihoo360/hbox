@@ -32,7 +32,8 @@ xlearning.output.local.dir | output | If the local output path is not specified,
 xlearning.output.strategy | UPLOAD | loading strategy of output file, including DOWNLOAD, STREAM  
 xlearning.outputformat.class | TextMultiOutputFormat.class | which outputformat implementation to use in the STREAM strategy of output file  
 xlearning.interresult.dir | /interResult_ | specify the HDFS subdirectory that the intermediate output file upload to  
-xlearning.interresult.upload.timeout | 30 * 60 * 1000 | upload timeout to save the intermediate output (in milliseconds) 
+xlearning.interresult.upload.timeout | 30 * 60 * 1000 | upload timeout to save the intermediate output (in milliseconds)
+xlearning.tf.evaluator | false | whether to set the last worker as evaluator of the distributed TensorFlow job type for the estimator api
 
 
 

@@ -10,4 +10,5 @@ $XLEARNING_HOME/bin/xl-submit \
    --ps-memory 2G \
    --ps-num 1 \
    --ps-cores 2 \
+   --tf-evaluator true \
    --queue default \

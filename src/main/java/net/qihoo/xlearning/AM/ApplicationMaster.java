@@ -107,6 +107,10 @@ public class ApplicationMaster extends CompositeService {
   private String[] hostLocals;
   private Set<String> containerHostnames;
 
+  private Boolean tfEvaluator;
+  private String tfEvaluatorContainerId;
+  private StringBuilder inputPath;
+
   /**
    * Constructor, connect to Resource Manager
    *
@@ -149,6 +153,9 @@ public class ApplicationMaster extends CompositeService {
     dmlcTrackerPort = 0;
     containerHostnames = null;
     hostLocals = null;
+    tfEvaluator = conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR);
+    tfEvaluatorContainerId = "";
+    inputPath = new StringBuilder();
 
     if (envs.containsKey(ApplicationConstants.Environment.CONTAINER_ID.toString())) {
       ContainerId containerId = ConverterUtils
@@ -348,7 +355,11 @@ public class ApplicationMaster extends CompositeService {
               containerMessage.put(AMParams.CONTAINER_GPU_DEVICE, "-");
               workerGCores = 0;
             }
-            containerMessage.put(AMParams.CONTAINER_ROLE, "worker");
+            if (tfEvaluator && container.getId().toString().equals(tfEvaluatorContainerId)) {
+              containerMessage.put(AMParams.CONTAINER_ROLE, XLearningConstants.EVALUATOR);
+            } else {
+              containerMessage.put(AMParams.CONTAINER_ROLE, XLearningConstants.WORKER);
+            }
             if (applicationContext.getContainerStatus(currentContainerID) != null) {
               containerMessage.put(AMParams.CONTAINER_STATUS, applicationContext.getContainerStatus(currentContainerID).toString());
             } else {
@@ -589,11 +600,20 @@ public class ApplicationMaster extends CompositeService {
             }
           }
           input2FileStatus.put(inputPathTuple[1], fileStatus);
+          this.inputPath.append(inputPathTuple[1]).append(",");
           if (fileStatus.size() > 0) {
-            if (fileStatus.size() < workerNum) {
-              workerNum = fileStatus.size();
-              LOG.warn("File count in  " + inputPathRemote + "  " + fileStatus.size() +
-                  " less than the worker count " + workerNum);
+            if (!tfEvaluator) {
+              if (fileStatus.size() < workerNum) {
+                workerNum = fileStatus.size();
+                LOG.warn("File count in  " + inputPathRemote + "  " + fileStatus.size() +
+                    " less than the worker count " + workerNum);
+              }
+            } else {
+              if (fileStatus.size() < (workerNum - 1)) {
+                workerNum = fileStatus.size() + 1;
+                LOG.warn("File count in  " + inputPathRemote + "  " + fileStatus.size() +
+                    " less than the worker count " + workerNum + " including that the last worker is the evaluator.");
+              }
             }
           }
         } else {
@@ -634,12 +654,17 @@ public class ApplicationMaster extends CompositeService {
       containerId2InputInfo.putIfAbsent(new XLearningContainerId(container.getId()), new ArrayList<InputInfo>());
     }
     Set<String> fileKeys = input2FileStatus.keySet();
+    int splitWorkerNum = workerNum;
+    if (tfEvaluator) {
+      splitWorkerNum--;
+      LOG.info("Note that current TensorFlow job has the evaluator type. Not allocate the input to the last container.");
+    }
     for (String fileName : fileKeys) {
       List<FileStatus> files = input2FileStatus.get(fileName);
       List<Path> paths = Utilities.convertStatusToPath(files);
       ConcurrentHashMap<XLearningContainerId, ConcurrentHashMap<String, InputInfo>> containersFiles = new ConcurrentHashMap<>();
       for (int i = 0, len = paths.size(); i < len; i++) {
-        Integer index = i % workerNum;
+        Integer index = i % splitWorkerNum;
         ConcurrentHashMap<String, InputInfo> mapSplit;
         XLearningContainerId containerId = new XLearningContainerId(acquiredWorkerContainers.get(index).getId());
         if (containersFiles.containsKey(containerId)) {
@@ -674,20 +699,25 @@ public class ApplicationMaster extends CompositeService {
       LOG.info("Initializing " + container.getId().toString() + " input splits");
       containerId2InputSplit.putIfAbsent(new XLearningContainerId(container.getId()), new ArrayList<InputSplit>());
     }
+    int splitWorkerNum = workerNum;
+    if (tfEvaluator) {
+      splitWorkerNum--;
+      LOG.info("Note that current TensorFlow job has the evaluator type. Not allocate the input to the last container.");
+    }
     if (conf.getBoolean(XLearningConfiguration.XLEARNING_INPUT_STREAM_SHUFFLE, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STREAM_SHUFFLE)) {
       LOG.info("XLEARNING_INPUT_STREAM_SHUFFLE is true");
       for (int i = 0, len = inputFileSplits.length; i < len; i++) {
-        Integer index = i % workerNum;
+        Integer index = i % splitWorkerNum;
         XLearningContainerId containerId = new XLearningContainerId(acquiredWorkerContainers.get(index).getId());
         containerId2InputSplit.get(containerId).add(inputFileSplits[i]);
         LOG.info("put split " + (i + 1) + " to " + containerId.toString());
       }
     } else {
       LOG.info("XLEARNING_INPUT_STREAM_SHUFFLE is false");
-      int nsplit = inputFileSplits.length / workerNum;
-      int msplit = inputFileSplits.length % workerNum;
+      int nsplit = inputFileSplits.length / splitWorkerNum;
+      int msplit = inputFileSplits.length % splitWorkerNum;
       int count = 0;
-      for (int i = 0; i < workerNum; i++) {
+      for (int i = 0; i < splitWorkerNum; i++) {
         XLearningContainerId containerId = new XLearningContainerId(acquiredWorkerContainers.get(i).getId());
         for (int j = 0; j < nsplit; j++) {
           containerId2InputSplit.get(containerId).add(inputFileSplits[count++]);
@@ -889,6 +919,9 @@ public class ApplicationMaster extends CompositeService {
       containerEnv.put(XLearningConstants.Environment.XLEARNING_CONTAIENR_GPU_NUM.toString(), String.valueOf(psGCores));
     } else if (role.equals(XLearningConstants.WORKER)) {
       containerEnv.put(XLearningConstants.Environment.XLEARNING_CONTAIENR_GPU_NUM.toString(), String.valueOf(workerGCores));
+    }
+    if (this.inputPath.length() > 0) {
+      containerEnv.put(XLearningConstants.Environment.XLEARNING_INPUT_PATH.toString(), this.inputPath.substring(0, inputPath.length() - 1));
     }
     if (xlearningAppType.equals("MXNET") && !single) {
       containerEnv.put(XLearningConstants.Environment.XLEARNING_MXNET_WORKER_NUM.toString(), String.valueOf(workerNum));
@@ -1333,6 +1366,9 @@ public class ApplicationMaster extends CompositeService {
       launchContainer(containerLocalResource, workerContainerEnv,
           workerContainerLaunchCommands, container, index++);
       containerListener.registerContainer(new XLearningContainerId(container.getId()), XLearningConstants.WORKER);
+      if (conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR) && index == workerNum) {
+        tfEvaluatorContainerId = container.getId().toString();
+      }
     }
 
     String diagnostics = "";
@@ -1527,7 +1563,11 @@ public class ApplicationMaster extends CompositeService {
 
     @Override
     public int getWorkerNum() {
-      return workerNum;
+      if (tfEvaluator) {
+        return workerNum - 1;
+      } else {
+        return workerNum;
+      }
     }
 
     @Override
@@ -1654,7 +1694,7 @@ public class ApplicationMaster extends CompositeService {
     }
 
     @Override
-    public Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> getContainersCpuStatistics(){
+    public Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> getContainersCpuStatistics() {
       return containerListener.getContainersCpuStatistics();
     }
 
@@ -1697,6 +1737,11 @@ public class ApplicationMaster extends CompositeService {
     @Override
     public List<Long> getModelSavingList() {
       return savingModelList;
+    }
+
+    @Override
+    public String getTfEvaluatorId() {
+      return tfEvaluatorContainerId;
     }
 
   }

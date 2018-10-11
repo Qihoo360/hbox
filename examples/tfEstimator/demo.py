@@ -22,19 +22,21 @@ task_type = os.environ["TF_ROLE"]
 tf_config = dict()
 worker_num = len(cluster["worker"])
 if task_type == "ps":
-  tf_config["task"] = {"index":task_index, "type":task_type}
-else:
-  if task_index == 0:
-    tf_config["task"] = {"index":0, "type":"chief"}
-  else:
-    tf_config["task"] = {"index":task_index-1, "type":task_type}
+    tf_config["task"] = {"index":task_index, "type":task_type}
+elif task_type == "worker":
+    if task_index == 0:
+        tf_config["task"] = {"index":0, "type":"chief"}
+    else:
+        tf_config["task"] = {"index":task_index-1, "type":task_type}
+elif task_type == "evaluator":
+    tf_config["task"] = {"index":task_index, "type":task_type}
 
 if worker_num == 1:
-  cluster["chief"] = cluster["worker"]
-  del cluster["worker"]
+    cluster["chief"] = cluster["worker"]
+    del cluster["worker"]
 else:
-  cluster["chief"] = [cluster["worker"][0]]
-  del cluster["worker"][0]
+    cluster["chief"] = [cluster["worker"][0]]
+    del cluster["worker"][0]
 
 tf_config["cluster"] = cluster
 os.environ["TF_CONFIG"] = json.dumps(tf_config)

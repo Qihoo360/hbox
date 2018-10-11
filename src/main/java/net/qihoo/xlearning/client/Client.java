@@ -99,6 +99,7 @@ public class Client {
     conf.setClass(XLearningConfiguration.XLEARNING_INPUTF0RMAT_CLASS, clientArguments.inputFormatClass, InputFormat.class);
     conf.setClass(XLearningConfiguration.XLEARNING_OUTPUTFORMAT_CLASS, clientArguments.outputFormatClass, OutputFormat.class);
     conf.set(XLearningConfiguration.XLEARNING_STREAM_EPOCH, String.valueOf(clientArguments.streamEpoch));
+    conf.setBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, clientArguments.tfEvaluator);
 
     if (clientArguments.queue == null || clientArguments.queue.equals("")) {
       clientArguments.queue = appSubmitterUserName;
@@ -111,10 +112,20 @@ public class Client {
 
     if (conf.getInt(XLearningConfiguration.XLEARNING_PS_NUM, XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM) == 0) {
       conf.setBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, true);
+    } else {
+      conf.setBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, false);
     }
 
     if (conf.getInt(XLearningConfiguration.XLEARNING_WORKER_NUM, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM) == 1) {
       conf.setInt(XLearningConfiguration.XLEARNING_TF_BOARD_WORKER_INDEX, 0);
+    }
+
+    if (conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR)) {
+      if ("TENSORFLOW".equals(clientArguments.appType.toUpperCase()) && !conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, true) && conf.getInt(XLearningConfiguration.XLEARNING_WORKER_NUM, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM) > 1) {
+        LOG.info("Current job has the evaluator.");
+      } else {
+        conf.setBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR);
+      }
     }
 
     if (conf.get(XLearningConfiguration.XLEARNING_TF_BOARD_LOG_DIR, XLearningConfiguration.DEFAULT_XLEARNING_TF_BOARD_LOG_DIR).indexOf("/") == 0) {

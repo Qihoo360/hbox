@@ -43,5 +43,6 @@ stream-epoch | 当输入文件加载策略为STREAM时，流式数据读取次�
 inputformat | 当输入文件加载策略为STREAM时，指定inputformat类，默认为系统配置xlearning.inputformat.class  
 inputformat-shuffle | 当输入文件加载策略为STREAM时，指定inputformat输入是否需要shuffle操作，默认为系统配置xlearning.input.stream.shuffle  
 output-strategy | 输出文件加载策略，默认为系统配置xlearning.output.strategy  
-outputformat | 当输出文件加载模式为STREAM时，指定outputformat类，默认为系统配置xlearning.outputformat.class  
+outputformat | 当输出文件加载模式为STREAM时，指定outputformat类，默认为系统配置xlearning.outputformat.class
+tf-evaluator | 在分布式TensorFlow作业类型下，是否设置evaluator角色，默认为系统配置xlearning.tf.evaluator
 

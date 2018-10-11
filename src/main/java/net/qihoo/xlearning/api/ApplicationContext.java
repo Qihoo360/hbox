@@ -86,4 +86,6 @@ public interface ApplicationContext {
 
   String getContainerGPUDevice(XLearningContainerId containerId);
 
+  String getTfEvaluatorId();
+
 }

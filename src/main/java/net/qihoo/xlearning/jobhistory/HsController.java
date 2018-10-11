@@ -151,7 +151,7 @@ public class HsController extends Controller implements AMParams {
                   }.getType();
                   ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> map = new Gson().fromJson(containersGpuMemMetrics, type);
                   for (String str : map.keySet()) {
-                    if ($(CONTAINER_ROLE + i).equals("worker")) {
+                    if ($(CONTAINER_ROLE + i).equals(XLearningConstants.WORKER) || containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.EVALUATOR)) {
                       set("workerGpuMemMetrics" + workeri + str, new Gson().toJson(map.get(str)));
                     } else {
                       set("psGpuMemMetrics" + psi + str, new Gson().toJson(map.get(str)));
@@ -163,7 +163,7 @@ public class HsController extends Controller implements AMParams {
                   }.getType();
                   ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> map = new Gson().fromJson(containersGpuUtilMetrics, type);
                   for (String str : map.keySet()) {
-                    if ($(CONTAINER_ROLE + i).equals("worker")) {
+                    if ($(CONTAINER_ROLE + i).equals(XLearningConstants.WORKER) || containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.EVALUATOR)) {
                       set("workerGpuUtilMetrics" + workeri + str, new Gson().toJson(map.get(str)));
                     } else {
                       set("psGpuUtilMetrics" + psi + str, new Gson().toJson(map.get(str)));
@@ -178,12 +178,12 @@ public class HsController extends Controller implements AMParams {
                   }.getType();
                   Map<String, List<Double>> map = new Gson().fromJson(containersGpuMemStatistics, type);
                   for (String str : map.keySet()) {
-                    if ($(CONTAINER_ROLE + i).equals("worker")) {
+                    if ($(CONTAINER_ROLE + i).equals(XLearningConstants.WORKER) || containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.EVALUATOR)) {
                       set("worker." + CONTAINER_GPU_MEM_STATISTICS + USAGE_AVG + workeri + str, String.format("%.2f", map.get(str).get(0)));
                       set("worker." + CONTAINER_GPU_MEM_STATISTICS + USAGE_MAX + workeri + str, String.format("%.2f", map.get(str).get(1)));
                     } else {
-                      set("ps." + CONTAINER_GPU_MEM_STATISTICS + USAGE_AVG + workeri + str, String.format("%.2f", map.get(str).get(0)));
-                      set("ps." + CONTAINER_GPU_MEM_STATISTICS + USAGE_MAX + workeri + str, String.format("%.2f", map.get(str).get(1)));
+                      set("ps." + CONTAINER_GPU_MEM_STATISTICS + USAGE_AVG + psi + str, String.format("%.2f", map.get(str).get(0)));
+                      set("ps." + CONTAINER_GPU_MEM_STATISTICS + USAGE_MAX + psi + str, String.format("%.2f", map.get(str).get(1)));
                     }
                   }
                 }
@@ -192,19 +192,19 @@ public class HsController extends Controller implements AMParams {
                   }.getType();
                   Map<String, List<Double>> map = new Gson().fromJson(containersGpuUtilStatistics, type);
                   for (String str : map.keySet()) {
-                    if ($(CONTAINER_ROLE + i).equals("worker")) {
+                    if ($(CONTAINER_ROLE + i).equals(XLearningConstants.WORKER) || containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.EVALUATOR)) {
                       set("worker." + CONTAINER_GPU_UTIL_STATISTICS + USAGE_AVG + workeri + str, String.format("%.2f", map.get(str).get(0)));
                       set("worker." + CONTAINER_GPU_UTIL_STATISTICS + USAGE_MAX + workeri + str, String.format("%.2f", map.get(str).get(1)));
                     } else {
-                      set("ps." + CONTAINER_GPU_UTIL_STATISTICS + USAGE_AVG + workeri + str, String.format("%.2f", map.get(str).get(0)));
-                      set("ps." + CONTAINER_GPU_UTIL_STATISTICS + USAGE_MAX + workeri + str, String.format("%.2f", map.get(str).get(1)));
+                      set("ps." + CONTAINER_GPU_UTIL_STATISTICS + USAGE_AVG + psi + str, String.format("%.2f", map.get(str).get(0)));
+                      set("ps." + CONTAINER_GPU_UTIL_STATISTICS + USAGE_MAX + psi + str, String.format("%.2f", map.get(str).get(1)));
                     }
                   }
                 }
-                if ($(CONTAINER_ROLE + i).equals("worker")) {
+                if ($(CONTAINER_ROLE + i).equals(XLearningConstants.WORKER) || containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.EVALUATOR)) {
                   set("WORKER_GPU_DEVICE" + workeri, containerMessage.get(AMParams.CONTAINER_GPU_DEVICE));
                 } else {
-                  set("PS_GPU_DEVICE" + workeri, containerMessage.get(AMParams.CONTAINER_GPU_DEVICE));
+                  set("PS_GPU_DEVICE" + psi, containerMessage.get(AMParams.CONTAINER_GPU_DEVICE));
                 }
               }
             }
@@ -235,7 +235,7 @@ public class HsController extends Controller implements AMParams {
                 }.getType();
                 ConcurrentHashMap<String, Object> map = gson2.fromJson(cpuMetrics, type);
                 if (map.size() > 0) {
-                  if (containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.WORKER)) {
+                  if (containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.WORKER) || containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.EVALUATOR)) {
                     set("workerCpuMemMetrics" + workeri, new Gson().toJson(map.get("CPUMEM")));
                     if (map.containsKey("CPUUTIL")) {
                       set("workerCpuUtilMetrics" + workeri, new Gson().toJson(map.get("CPUUTIL")));
@@ -257,7 +257,7 @@ public class HsController extends Controller implements AMParams {
                 }.getType();
                 Map<String, List<Double>> map = new Gson().fromJson(cpuStatistics, type);
                 if (map.size() > 0) {
-                  if (containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.WORKER)) {
+                  if (containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.WORKER) || containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.EVALUATOR)) {
                     set("worker" + CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + workeri, String.format("%.2f", map.get("CPUMEM").get(0)));
                     set("worker" + CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + workeri, String.format("%.2f", map.get("CPUMEM").get(1)));
                     set("worker" + CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + workeri, String.format("%.2f", map.get("CPUUTIL").get(0)));
@@ -273,14 +273,14 @@ public class HsController extends Controller implements AMParams {
             }
 
             if (containerMessage.containsKey(AMParams.CONTAINER_CPU_USAGE_WARN_MEM)) {
-              if (containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.WORKER)) {
+              if (containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.WORKER) || containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.EVALUATOR)) {
                 set("worker" + CONTAINER_CPU_USAGE_WARN_MEM + workeri, containerMessage.get(CONTAINER_CPU_USAGE_WARN_MEM));
               } else {
                 set("ps" + CONTAINER_CPU_USAGE_WARN_MEM + psi, containerMessage.get(CONTAINER_CPU_USAGE_WARN_MEM));
               }
             }
 
-            if (containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.WORKER)) {
+            if (containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.WORKER) || containerMessage.get(AMParams.CONTAINER_ROLE).equals(XLearningConstants.EVALUATOR)) {
               set("WORKER_CONTAINER_ID" + workeri, info);
               workeri++;
             } else {

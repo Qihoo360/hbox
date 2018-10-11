@@ -73,11 +73,13 @@ Example of TF_CONFIG for chief training in the distributed mode of Tensorflow es
     worker_num = len(cluster["wroker"])
     if task_type == "ps":
 	  tf_config["task"] = {"index":task_index, "type":task_type}
-    else:
+    elif task_type == "worker":
 	  if taks_index == 0:
 	    tf_config["task"] = {"index":0, "type":"chief"}
 	  else:
 		tf_config["task"] = {"index":task_index-1, "type":task_type}
+	elif task_type == "evaluator":
+    	  tf_config["task"] = {"index":task_index, "type":task_type}
 
     if worker_num == 1:
 	  cluster["chief"] = cluster["worker"]

@@ -17,6 +17,8 @@ public interface XLearningConstants {
 
   String PS = "ps";
 
+  String EVALUATOR = "evaluator";
+
   String GPU = "yarn.io/gpu";
 
   String ASSIGNED_GPU_DEVICES = "assignedGpuDevices";
@@ -77,6 +79,8 @@ public interface XLearningConstants {
     XLEARNING_OUTPUTS("XLEARNING_OUTPUTS"),
 
     XLEARNING_INPUTS("XLEARNING_INPUTS"),
+
+    XLEARNING_INPUT_PATH("XLEARNING_INPUT_PATH"),
 
     APPMASTER_HOST("APPMASTER_HOST"),
 
