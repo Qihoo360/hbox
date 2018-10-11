@@ -20,6 +20,7 @@ public class InfoBlock extends HtmlBlock implements AMParams {
   protected void render(Block html) {
     int numContainers = Integer.parseInt($(CONTAINER_NUMBER));
     int numWorkers = Integer.parseInt($(WORKER_NUMBER));
+    int numPS = Integer.parseInt($(PS_NUMBER));
     long workerGcores = Long.valueOf($(WORKER_GCORES));
     long psGcores = Long.valueOf($(PS_GCORES));
     if (numContainers > 0) {
@@ -60,7 +61,7 @@ public class InfoBlock extends HtmlBlock implements AMParams {
               td($(CONTAINER_STATUS + i)).
               td($(CONTAINER_START_TIME + i)).
               td($(CONTAINER_FINISH_TIME + i)).
-              td($(CONTAINER_REPORTER_PROGRESS + i)).td().__().__();
+              td($(CONTAINER_REPORTER_PROGRESS + i)).__();
         } else if ($(CONTAINER_REPORTER_PROGRESS + i).equals("0.00%")) {
           td.__().
               td(containerMachine.split(":")[0]).
@@ -69,7 +70,7 @@ public class InfoBlock extends HtmlBlock implements AMParams {
               td($(CONTAINER_STATUS + i)).
               td($(CONTAINER_START_TIME + i)).
               td($(CONTAINER_FINISH_TIME + i)).
-              td("N/A").td().__().__();
+              td("N/A").__();
         } else {
           td.__().
               td(containerMachine.split(":")[0]).
@@ -184,6 +185,179 @@ public class InfoBlock extends HtmlBlock implements AMParams {
         }
         tbodySave.__().__();
       }
+
+      // resource applied info
+      html.div().$style("margin:20px 2px;").__(" ").__();
+      TBODY<TABLE<Hamlet>> resourceAppliedInfo = html.
+          h2("Resource Applied Info:").
+          table("#resourceAppliedInfo").
+          thead("ui-widget-header").
+          tr().
+          th("ui-state-default", "Role").
+          th("ui-state-default", "Number").
+          th("ui-state-default", "CPU Memory(GB)").
+          th("ui-state-default", "CPU Cores").
+          th("ui-state-default", "GPU Num").
+          __().__().
+          tbody();
+      if (numWorkers > 0) {
+        resourceAppliedInfo.
+            __().tbody("ui-widget-content").
+            tr().
+            $style("text-align:center;").
+            td("worker").
+            td(String.valueOf(numWorkers)).
+            td($(WORKER_MEMORY)).
+            td($(WORKER_VCORES)).
+            td($(WORKER_GCORES)).
+            __();
+      }
+      if (numPS > 0) {
+        resourceAppliedInfo.
+            __().tbody("ui-widget-content").
+            tr().
+            $style("text-align:center;").
+            td("ps").
+            td(String.valueOf(numPS)).
+            td($(PS_MEMORY)).
+            td($(PS_VCORES)).
+            td($(PS_GCORES)).
+            __();
+      }
+      resourceAppliedInfo.__().__();
+
+      html.div().$style("margin:20px 2px;").__(" ").__();
+
+      // worker/ps containers resource usage statistics info
+      if (numWorkers > 0) {
+        TBODY<TABLE<Hamlet>> workerCPUUsage = html.
+            h2("Worker Containers CPU Usage Info:").
+            table("#workerCPUUsageInfo").
+            thead("ui-widget-header").
+            tr().
+            th("ui-state-default", "ContainerID").
+            th("ui-state-default", "CPU memory average usages(GB)").
+            th("ui-state-default", "CPU memory max usages(GB)").
+            th("ui-state-default", "CPU utilization average usages(%)").
+            th("ui-state-default", "CPU utilization max usages(%)").
+            __().__().
+            tbody();
+
+        for (int i = 0; i < numWorkers; i++) {
+          workerCPUUsage.
+              __().tbody("ui-widget-content").
+              tr().
+              $style("text-align:center;").
+              td($(CONTAINER_ID + i)).
+              td($(CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + i)).
+              td($(CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + i)).
+              td($(CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + i)).
+              td($(CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + i)).
+              __();
+        }
+        workerCPUUsage.__().__();
+        if (workerGcores > 0) {
+          html.div().$style("margin:20px 2px;").__(" ").__();
+          TBODY<TABLE<Hamlet>> workerGPUUsage = html.
+              h2("Worker Containers GPU Usage Info:").
+              table("#workerGPUUsageInfo").
+              thead("ui-widget-header").
+              tr().
+              th("ui-state-default", "ContainerID").
+              th("ui-state-default", "GPU DEVICE ID").
+              th("ui-state-default", "GPU memory average usages(MB)").
+              th("ui-state-default", "GPU memory max usages(MB)").
+              th("ui-state-default", "GPU utilization average usages(%)").
+              th("ui-state-default", "GPU utilization max usages(%)").
+              __().__().
+              tbody();
+
+          for (int i = 0; i < numWorkers; i++) {
+            String gpustrs = $(CONTAINER_GPU_DEVICE + i);
+            String[] gpusIndex = StringUtils.split(gpustrs, ',');
+            for (int j = 0; j < gpusIndex.length; j++) {
+              workerGPUUsage.
+                  __().tbody("ui-widget-content").
+                  tr().
+                  $style("text-align:center;").
+                  td($(CONTAINER_ID + i)).
+                  td(gpusIndex[j]).
+                  td($(CONTAINER_GPU_MEM_STATISTICS + USAGE_AVG + i + gpusIndex[j])).
+                  td($(CONTAINER_GPU_MEM_STATISTICS + USAGE_MAX + i + gpusIndex[j])).
+                  td($(CONTAINER_GPU_UTIL_STATISTICS + USAGE_AVG + i + gpusIndex[j])).
+                  td($(CONTAINER_GPU_UTIL_STATISTICS + USAGE_MAX + i + gpusIndex[j])).
+                  __();
+            }
+          }
+          workerGPUUsage.__().__();
+        }
+      }
+
+      if (numPS > 0) {
+        html.div().$style("margin:20px 2px;").__(" ").__();
+        TBODY<TABLE<Hamlet>> psCPUUsage = html.
+            h2("PS Containers CPU Usage Info:").
+            table("#psCPUUsageInfo").
+            thead("ui-widget-header").
+            tr().
+            th("ui-state-default", "ContainerID").
+            th("ui-state-default", "CPU memory average usages(GB)").
+            th("ui-state-default", "CPU memory max usages(GB)").
+            th("ui-state-default", "CPU utilization average usages(%)").
+            th("ui-state-default", "CPU utilization max usages(%)").
+            __().__().
+            tbody();
+
+        for (int i = numWorkers; i < numContainers; i++) {
+          psCPUUsage.
+              __().tbody("ui-widget-content").
+              tr().
+              $style("text-align:center;").
+              td($(CONTAINER_ID + i)).
+              td($(CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + i)).
+              td($(CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + i)).
+              td($(CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + i)).
+              td($(CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + i)).
+              __();
+        }
+        psCPUUsage.__().__();
+        if (psGcores > 0) {
+          html.div().$style("margin:20px 2px;").__(" ").__();
+          TBODY<TABLE<Hamlet>> psGPUUsage = html.
+              h2("PS Containers GPU Usage Info:").
+              table("#psGPUUsageInfo").
+              thead("ui-widget-header").
+              tr().
+              th("ui-state-default", "ContainerID").
+              th("ui-state-default", "GPU DEVICE ID").
+              th("ui-state-default", "GPU memory average usages(MB)").
+              th("ui-state-default", "GPU memory max usages(MB)").
+              th("ui-state-default", "GPU utilization average usages(%)").
+              th("ui-state-default", "GPU utilization max usages(%)").
+              __().__().
+              tbody();
+
+          for (int i = numWorkers; i < numContainers; i++) {
+            String gpustrs = $(CONTAINER_GPU_DEVICE + i);
+            String[] gpusIndex = StringUtils.split(gpustrs, ',');
+            for (int j = 0; j < gpusIndex.length; j++) {
+              psGPUUsage.
+                  __().tbody("ui-widget-content").
+                  tr().
+                  $style("text-align:center;").
+                  td($(CONTAINER_ID + i)).
+                  td(gpusIndex[j]).
+                  td($(CONTAINER_GPU_MEM_STATISTICS + USAGE_AVG + i + gpusIndex[j])).
+                  td($(CONTAINER_GPU_MEM_STATISTICS + USAGE_MAX + i + gpusIndex[j])).
+                  td($(CONTAINER_GPU_UTIL_STATISTICS + USAGE_AVG + i + gpusIndex[j])).
+                  td($(CONTAINER_GPU_UTIL_STATISTICS + USAGE_MAX + i + gpusIndex[j])).
+                  __();
+            }
+          }
+          psGPUUsage.__().__();
+        }
+      }
+
       html.div().$style("margin:20px 2px;").__(" ").__();
       if (Boolean.parseBoolean($(CONTAINER_CPU_METRICS_ENABLE))) {
         int i = 0;

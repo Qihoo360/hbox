@@ -336,9 +336,10 @@ public class ApplicationMaster extends CompositeService {
           for (Container container : workerContainers) {
             Map<String, String> containerMessage = new HashMap<>();
             containerMessage.put(AMParams.CONTAINER_HTTP_ADDRESS, container.getNodeHttpAddress());
-            if (applicationContext.getContainerGPUDevice(new XLearningContainerId(container.getId())) != null) {
-              if (applicationContext.getContainerGPUDevice(new XLearningContainerId(container.getId())).trim().length() != 0) {
-                containerMessage.put(AMParams.CONTAINER_GPU_DEVICE, applicationContext.getContainerGPUDevice(new XLearningContainerId(container.getId())));
+            XLearningContainerId currentContainerID = new XLearningContainerId(container.getId());
+            if (applicationContext.getContainerGPUDevice(currentContainerID) != null) {
+              if (applicationContext.getContainerGPUDevice(currentContainerID).trim().length() != 0) {
+                containerMessage.put(AMParams.CONTAINER_GPU_DEVICE, applicationContext.getContainerGPUDevice(currentContainerID));
               } else {
                 containerMessage.put(AMParams.CONTAINER_GPU_DEVICE, "-");
                 workerGCores = 0;
@@ -348,45 +349,63 @@ public class ApplicationMaster extends CompositeService {
               workerGCores = 0;
             }
             containerMessage.put(AMParams.CONTAINER_ROLE, "worker");
-            if (applicationContext.getContainerStatus(new XLearningContainerId(container.getId())) != null) {
-              containerMessage.put(AMParams.CONTAINER_STATUS, applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).toString());
+            if (applicationContext.getContainerStatus(currentContainerID) != null) {
+              containerMessage.put(AMParams.CONTAINER_STATUS, applicationContext.getContainerStatus(currentContainerID).toString());
             } else {
               containerMessage.put(AMParams.CONTAINER_STATUS, "-");
             }
-            if (containersAppStartTime.get(new XLearningContainerId(container.getId())) != null && !containersAppStartTime.get(new XLearningContainerId(container.getId())).equals("")) {
-              String localStartTime = containersAppStartTime.get(new XLearningContainerId(container.getId()));
+            if (containersAppStartTime.get(currentContainerID) != null && !containersAppStartTime.get(currentContainerID).equals("")) {
+              String localStartTime = containersAppStartTime.get(currentContainerID);
               containerMessage.put(AMParams.CONTAINER_START_TIME, localStartTime);
             } else {
               containerMessage.put(AMParams.CONTAINER_START_TIME, "N/A");
             }
-            if (containersAppFinishTime.get(new XLearningContainerId(container.getId())) != null && !containersAppFinishTime.get(new XLearningContainerId(container.getId())).equals("")) {
-              String localFinishTime = containersAppFinishTime.get(new XLearningContainerId(container.getId()));
+            if (containersAppFinishTime.get(currentContainerID) != null && !containersAppFinishTime.get(currentContainerID).equals("")) {
+              String localFinishTime = containersAppFinishTime.get(currentContainerID);
               containerMessage.put(AMParams.CONTAINER_FINISH_TIME, localFinishTime);
             } else {
               containerMessage.put(AMParams.CONTAINER_FINISH_TIME, "N/A");
             }
 
-            if (applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId())) != null) {
-              ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
+            if (applicationContext.getContainersCpuMetrics().get(currentContainerID) != null) {
+              ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(currentContainerID);
               containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
+            }
+            if (applicationContext.getContainersCpuStatistics().get(currentContainerID) != null) {
+              ConcurrentHashMap<String, List<Double>> cpuStatistics = applicationContext.getContainersCpuStatistics().get(currentContainerID);
+              containerMessage.put(AMParams.CONTAINER_CPU_STATISTICS, new Gson().toJson(cpuStatistics));
+              if (cpuStatistics.size() != 0) {
+                Double cpuMemUsagedMax = cpuStatistics.get("CPUMEM").get(1);
+                if (cpuMemUsagedMax * 1024.0 / workerMemory < conf.getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
+                  containerMessage.put(AMParams.CONTAINER_CPU_USAGE_WARN_MEM, "true");
+                } else {
+                  containerMessage.put(AMParams.CONTAINER_CPU_USAGE_WARN_MEM, "false");
+                }
+              }
             }
 
             if (workerGCores > 0) {
-              if (applicationContext.getContainersGpuMemMetrics().get(new XLearningContainerId(container.getId())) != null) {
-                ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuMemMetrics = applicationContext.getContainersGpuMemMetrics().get(new XLearningContainerId(container.getId()));
+              if (applicationContext.getContainersGpuMemMetrics().get(currentContainerID) != null) {
+                ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuMemMetrics = applicationContext.getContainersGpuMemMetrics().get(currentContainerID);
                 containerMessage.put(AMParams.CONTAINER_GPU_MEM_METRICS, new Gson().toJson(containersGpuMemMetrics));
               }
-              if (applicationContext.getContainersGpuUtilMetrics().get(new XLearningContainerId(container.getId())) != null) {
-                ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuUtilMetrics = applicationContext.getContainersGpuUtilMetrics().get(new XLearningContainerId(container.getId()));
+              if (applicationContext.getContainersGpuUtilMetrics().get(currentContainerID) != null) {
+                ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuUtilMetrics = applicationContext.getContainersGpuUtilMetrics().get(currentContainerID);
                 containerMessage.put(AMParams.CONTAINER_GPU_UTIL_METRICS, new Gson().toJson(containersGpuUtilMetrics));
               }
+              ConcurrentHashMap<String, List<Double>> gpuMemStatistics = applicationContext.getContainersGpuMemStatistics().get(currentContainerID);
+              ConcurrentHashMap<String, List<Double>> gpuUtilStatistics = applicationContext.getContainersGpuUtilStatistics().get(currentContainerID);
+              containerMessage.put(AMParams.CONTAINER_GPU_MEM_STATISTICS, new Gson().toJson(gpuMemStatistics));
+              containerMessage.put(AMParams.CONTAINER_GPU_UTIL_STATISTICS, new Gson().toJson(gpuUtilStatistics));
             } else {
               containerMessage.put(AMParams.CONTAINER_GPU_MEM_METRICS, "-");
               containerMessage.put(AMParams.CONTAINER_GPU_UTIL_METRICS, "-");
+              containerMessage.put(AMParams.CONTAINER_GPU_MEM_STATISTICS, "-");
+              containerMessage.put(AMParams.CONTAINER_GPU_UTIL_STATISTICS, "-");
             }
 
-            if (reporterProgress.get(new XLearningContainerId(container.getId())) != null && !reporterProgress.get(new XLearningContainerId(container.getId())).equals("")) {
-              String progressLog = reporterProgress.get(new XLearningContainerId(container.getId()));
+            if (reporterProgress.get(currentContainerID) != null && !reporterProgress.get(currentContainerID).equals("")) {
+              String progressLog = reporterProgress.get(currentContainerID);
               String[] progress = progressLog.toString().split(":");
               if (progress.length != 2) {
                 containerMessage.put(AMParams.CONTAINER_REPORTER_PROGRESS, "progress log format error");
@@ -417,9 +436,10 @@ public class ApplicationMaster extends CompositeService {
           for (Container container : psContainers) {
             Map<String, String> containerMessage = new HashMap<>();
             containerMessage.put(AMParams.CONTAINER_HTTP_ADDRESS, container.getNodeHttpAddress());
-            if (applicationContext.getContainerGPUDevice(new XLearningContainerId(container.getId())) != null) {
-              if (applicationContext.getContainerGPUDevice(new XLearningContainerId(container.getId())).trim().length() != 0) {
-                containerMessage.put(AMParams.CONTAINER_GPU_DEVICE, applicationContext.getContainerGPUDevice(new XLearningContainerId(container.getId())));
+            XLearningContainerId currentContainerID = new XLearningContainerId(container.getId());
+            if (applicationContext.getContainerGPUDevice(currentContainerID) != null) {
+              if (applicationContext.getContainerGPUDevice(currentContainerID).trim().length() != 0) {
+                containerMessage.put(AMParams.CONTAINER_GPU_DEVICE, applicationContext.getContainerGPUDevice(currentContainerID));
               } else {
                 containerMessage.put(AMParams.CONTAINER_GPU_DEVICE, "-");
               }
@@ -434,42 +454,61 @@ public class ApplicationMaster extends CompositeService {
               containerMessage.put(AMParams.CONTAINER_ROLE, "server");
             }
 
-            if (applicationContext.getContainerStatus(new XLearningContainerId(container.getId())) != null) {
-              containerMessage.put(AMParams.CONTAINER_STATUS, applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).toString());
+            if (applicationContext.getContainerStatus(currentContainerID) != null) {
+              containerMessage.put(AMParams.CONTAINER_STATUS, applicationContext.getContainerStatus(currentContainerID).toString());
             } else {
               containerMessage.put(AMParams.CONTAINER_STATUS, "-");
             }
 
-            if (containersAppStartTime.get(new XLearningContainerId(container.getId())) != null && !containersAppStartTime.get(new XLearningContainerId(container.getId())).equals("")) {
-              String localStartTime = containersAppStartTime.get(new XLearningContainerId(container.getId()));
+            if (containersAppStartTime.get(currentContainerID) != null && !containersAppStartTime.get(currentContainerID).equals("")) {
+              String localStartTime = containersAppStartTime.get(currentContainerID);
               containerMessage.put(AMParams.CONTAINER_START_TIME, localStartTime);
             } else {
               containerMessage.put(AMParams.CONTAINER_START_TIME, "N/A");
             }
-            if (containersAppFinishTime.get(new XLearningContainerId(container.getId())) != null && !containersAppFinishTime.get(new XLearningContainerId(container.getId())).equals("")) {
-              String localFinishTime = containersAppFinishTime.get(new XLearningContainerId(container.getId()));
+            if (containersAppFinishTime.get(currentContainerID) != null && !containersAppFinishTime.get(currentContainerID).equals("")) {
+              String localFinishTime = containersAppFinishTime.get(currentContainerID);
               containerMessage.put(AMParams.CONTAINER_FINISH_TIME, localFinishTime);
             } else {
               containerMessage.put(AMParams.CONTAINER_FINISH_TIME, "N/A");
             }
 
-            if (applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId())) != null) {
-              ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(new XLearningContainerId(container.getId()));
+            if (applicationContext.getContainersCpuMetrics().get(currentContainerID) != null) {
+              ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(currentContainerID);
               containerMessage.put(AMParams.CONTAINER_CPU_METRICS, new Gson().toJson(cpuMetrics));
             }
 
+            if (applicationContext.getContainersCpuStatistics().get(currentContainerID) != null) {
+              ConcurrentHashMap<String, List<Double>> cpuStatistics = applicationContext.getContainersCpuStatistics().get(currentContainerID);
+              containerMessage.put(AMParams.CONTAINER_CPU_STATISTICS, new Gson().toJson(cpuStatistics));
+              if (cpuStatistics.size() != 0) {
+                Double cpuMemUsagedMax = cpuStatistics.get("CPUMEM").get(1);
+                if (cpuMemUsagedMax * 1024.0 / workerMemory < conf.getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
+                  containerMessage.put(AMParams.CONTAINER_CPU_USAGE_WARN_MEM, "true");
+                } else {
+                  containerMessage.put(AMParams.CONTAINER_CPU_USAGE_WARN_MEM, "false");
+                }
+              }
+            }
+
             if (psGCores > 0) {
-              if (applicationContext.getContainersGpuMemMetrics().get(new XLearningContainerId(container.getId())) != null) {
-                ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuMemMetrics = applicationContext.getContainersGpuMemMetrics().get(new XLearningContainerId(container.getId()));
+              if (applicationContext.getContainersGpuMemMetrics().get(currentContainerID) != null) {
+                ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuMemMetrics = applicationContext.getContainersGpuMemMetrics().get(currentContainerID);
                 containerMessage.put(AMParams.CONTAINER_GPU_MEM_METRICS, new Gson().toJson(containersGpuMemMetrics));
               }
-              if (applicationContext.getContainersGpuUtilMetrics().get(new XLearningContainerId(container.getId())) != null) {
-                ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuUtilMetrics = applicationContext.getContainersGpuUtilMetrics().get(new XLearningContainerId(container.getId()));
+              if (applicationContext.getContainersGpuUtilMetrics().get(currentContainerID) != null) {
+                ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuUtilMetrics = applicationContext.getContainersGpuUtilMetrics().get(currentContainerID);
                 containerMessage.put(AMParams.CONTAINER_GPU_UTIL_METRICS, new Gson().toJson(containersGpuUtilMetrics));
               }
+              ConcurrentHashMap<String, List<Double>> gpuMemStatistics = applicationContext.getContainersGpuMemStatistics().get(currentContainerID);
+              ConcurrentHashMap<String, List<Double>> gpuUtilStatistics = applicationContext.getContainersGpuUtilStatistics().get(currentContainerID);
+              containerMessage.put(AMParams.CONTAINER_GPU_MEM_STATISTICS, new Gson().toJson(gpuMemStatistics));
+              containerMessage.put(AMParams.CONTAINER_GPU_UTIL_STATISTICS, new Gson().toJson(gpuUtilStatistics));
             } else {
               containerMessage.put(AMParams.CONTAINER_GPU_MEM_METRICS, "-");
               containerMessage.put(AMParams.CONTAINER_GPU_UTIL_METRICS, "-");
+              containerMessage.put(AMParams.CONTAINER_GPU_MEM_STATISTICS, "-");
+              containerMessage.put(AMParams.CONTAINER_GPU_UTIL_STATISTICS, "-");
             }
 
             containerMessage.put(AMParams.CONTAINER_REPORTER_PROGRESS, "0.00%");
@@ -503,6 +542,10 @@ public class ApplicationMaster extends CompositeService {
           logMessage.put(AMParams.WORKER_GCORES, String.valueOf(workerGCores));
           logMessage.put(AMParams.PS_NUMBER, String.valueOf(psNum));
           logMessage.put(AMParams.PS_GCORES, String.valueOf(psGCores));
+          logMessage.put(AMParams.WORKER_VCORES, String.valueOf(workerVCores));
+          logMessage.put(AMParams.PS_VCORES, String.valueOf(psVCores));
+          logMessage.put(AMParams.WORKER_MEMORY, String.format("%.2f", workerMemory / 1024.0));
+          logMessage.put(AMParams.PS_MEMORY, String.format("%.2f", psMemory / 1024.0));
 
           out.writeBytes(new Gson().toJson(logMessage));
           out.close();
@@ -1503,6 +1546,26 @@ public class ApplicationMaster extends CompositeService {
     }
 
     @Override
+    public long getWorkerMemory() {
+      return workerMemory;
+    }
+
+    @Override
+    public long getPsMemory() {
+      return psMemory;
+    }
+
+    @Override
+    public int getWorkerVCores() {
+      return workerVCores;
+    }
+
+    @Override
+    public int getPsVCores() {
+      return psVCores;
+    }
+
+    @Override
     public List<Container> getWorkerContainers() {
       return acquiredWorkerContainers;
     }
@@ -1588,6 +1651,21 @@ public class ApplicationMaster extends CompositeService {
     @Override
     public Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics() {
       return containerListener.getContainersCpuMetrics();
+    }
+
+    @Override
+    public Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> getContainersCpuStatistics(){
+      return containerListener.getContainersCpuStatistics();
+    }
+
+    @Override
+    public Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> getContainersGpuUtilStatistics(){
+      return containerListener.getContainersGpuUtilStatistics();
+    }
+
+    @Override
+    public Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> getContainersGpuMemStatistics(){
+      return containerListener.getContainersGpuMemStatistics();
     }
 
     @Override

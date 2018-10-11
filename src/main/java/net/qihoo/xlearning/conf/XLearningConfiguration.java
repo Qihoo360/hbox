@@ -51,6 +51,10 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final boolean DEFAULT_XLEARNING_REPORT_CONTAINER_STATUS = true;
 
+  public static final String XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION = "xlearning.container.mem.usage.warn.fraction";
+
+  public static final Double DEFAULT_XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION = 0.70;
+
   public static final String XLEARNING_AM_MEMORY = "xlearning.am.memory";
 
   public static final long DEFAULT_XLEARNING_AM_MEMORY = 1024;

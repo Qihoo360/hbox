@@ -179,6 +179,103 @@ public class SingleInfoBlock extends HtmlBlock implements AMParams {
         }
         tbodySave.__().__();
       }
+
+      // resource applied info
+      html.div().$style("margin:20px 2px;").__(" ").__();
+      TBODY<TABLE<Hamlet>> resourceAppliedInfo = html.
+          h2("Resource Applied Info:").
+          table("#resourceAppliedInfo").
+          thead("ui-widget-header").
+          tr().
+          th("ui-state-default", "Role").
+          th("ui-state-default", "Number").
+          th("ui-state-default", "CPU Memory(GB)").
+          th("ui-state-default", "CPU Cores").
+          th("ui-state-default", "GPU Num").
+          __().__().
+          tbody();
+      if (numWorkers > 0) {
+        resourceAppliedInfo.
+            __().tbody("ui-widget-content").
+            tr().
+            $style("text-align:center;").
+            td("worker").
+            td(String.valueOf(numWorkers)).
+            td($(WORKER_MEMORY)).
+            td($(WORKER_VCORES)).
+            td($(WORKER_GCORES)).
+            __();
+      }
+      resourceAppliedInfo.__().__();
+
+      html.div().$style("margin:20px 2px;").__(" ").__();
+
+      // worker containers resource usage statistics info
+      if (numWorkers > 0) {
+        TBODY<TABLE<Hamlet>> workerCPUUsage = html.
+            h2("Worker Containers CPU Usage Info:").
+            table("#workerCPUUsageInfo").
+            thead("ui-widget-header").
+            tr().
+            th("ui-state-default", "ContainerID").
+            th("ui-state-default", "CPU memory average usages(GB)").
+            th("ui-state-default", "CPU memory max usages(GB)").
+            th("ui-state-default", "CPU utilization average usages(%)").
+            th("ui-state-default", "CPU utilization max usages(%)").
+            __().__().
+            tbody();
+
+        for (int i = 0; i < numWorkers; i++) {
+          workerCPUUsage.
+              __().tbody("ui-widget-content").
+              tr().
+              $style("text-align:center;").
+              td($(CONTAINER_ID + i)).
+              td($(CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + i)).
+              td($(CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + i)).
+              td($(CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + i)).
+              td($(CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + i)).
+              __();
+        }
+        workerCPUUsage.__().__();
+
+        if (workerGcores > 0) {
+          html.div().$style("margin:20px 2px;").__(" ").__();
+          TBODY<TABLE<Hamlet>> workerGPUUsage = html.
+              h2("Worker Containers GPU Usage Info:").
+              table("#workerGPUUsageInfo").
+              thead("ui-widget-header").
+              tr().
+              th("ui-state-default", "ContainerID").
+              th("ui-state-default", "GPU DEVICE ID").
+              th("ui-state-default", "GPU memory average usages(MB)").
+              th("ui-state-default", "GPU memory max usages(MB)").
+              th("ui-state-default", "GPU utilization average usages(%)").
+              th("ui-state-default", "GPU utilization max usages(%)").
+              __().__().
+              tbody();
+
+          for (int i = 0; i < numWorkers; i++) {
+            String gpustrs = $(CONTAINER_GPU_DEVICE + i);
+            String[] gpusIndex = StringUtils.split(gpustrs, ',');
+            for (int j = 0; j < gpusIndex.length; j++) {
+              workerGPUUsage.
+                  __().tbody("ui-widget-content").
+                  tr().
+                  $style("text-align:center;").
+                  td($(CONTAINER_ID + i)).
+                  td(gpusIndex[j]).
+                  td($(CONTAINER_GPU_MEM_STATISTICS + USAGE_AVG + i + gpusIndex[j])).
+                  td($(CONTAINER_GPU_MEM_STATISTICS + USAGE_MAX + i + gpusIndex[j])).
+                  td($(CONTAINER_GPU_UTIL_STATISTICS + USAGE_AVG + i + gpusIndex[j])).
+                  td($(CONTAINER_GPU_UTIL_STATISTICS + USAGE_MAX + i + gpusIndex[j])).
+                  __();
+            }
+          }
+          workerGPUUsage.__().__();
+        }
+      }
+
       html.div().$style("margin:20px 2px;").__(" ").__();
       if (Boolean.parseBoolean($(CONTAINER_CPU_METRICS_ENABLE))) {
         if (workerGcores > 0) {

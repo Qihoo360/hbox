@@ -70,6 +70,11 @@ public class AppController extends Controller implements AMParams {
     set(USER_NAME, StringUtils.split(conf.get("hadoop.job.ugi"), ',')[0]);
     set(WORKER_GCORES, String.valueOf(workerGcores));
     set(PS_GCORES, String.valueOf(psGcores));
+    set(PS_NUMBER, String.valueOf(psContainers.size()));
+    set(WORKER_VCORES, String.valueOf(app.context.getWorkerVCores()));
+    set(PS_VCORES, String.valueOf(app.context.getPsVCores()));
+    set(WORKER_MEMORY, String.format("%.2f", app.context.getWorkerMemory() / 1024.0));
+    set(PS_MEMORY, String.format("%.2f", app.context.getPsMemory() / 1024.0));
     int i = 0;
     for (Container container : workerContainers) {
       set(CONTAINER_HTTP_ADDRESS + i, container.getNodeHttpAddress());
@@ -96,6 +101,21 @@ public class AppController extends Controller implements AMParams {
               set("gpuUtilMetrics" + i + str, new Gson().toJson(containersGpuUtilMetrics.get(str)));
             }
           }
+          ConcurrentHashMap<String, List<Double>> containersGpuMemStatistics = app.context.getContainersGpuMemStatistics().get(new XLearningContainerId(container.getId()));
+          if (containersGpuMemStatistics.size() != 0) {
+            for (String str : containersGpuMemStatistics.keySet()) {
+              set(CONTAINER_GPU_MEM_STATISTICS + USAGE_AVG + i + str, String.format("%.2f", containersGpuMemStatistics.get(str).get(0)));
+              set(CONTAINER_GPU_MEM_STATISTICS + USAGE_MAX + i + str, String.format("%.2f", containersGpuMemStatistics.get(str).get(1)));
+            }
+          }
+
+          ConcurrentHashMap<String, List<Double>> containersGpuUtilStatistics = app.context.getContainersGpuUtilStatistics().get(new XLearningContainerId(container.getId()));
+          if (containersGpuUtilStatistics.size() != 0) {
+            for (String str : containersGpuUtilStatistics.keySet()) {
+              set(CONTAINER_GPU_UTIL_STATISTICS + USAGE_AVG + i + str, String.format("%.2f", containersGpuUtilStatistics.get(str).get(0)));
+              set(CONTAINER_GPU_UTIL_STATISTICS + USAGE_MAX + i + str, String.format("%.2f", containersGpuUtilStatistics.get(str).get(1)));
+            }
+          }
         } else {
           set(CONTAINER_GPU_DEVICE + i, "-");
           if (Long.valueOf($(WORKER_GCORES)) > 0) {
@@ -110,6 +130,14 @@ public class AppController extends Controller implements AMParams {
           set("cpuMemMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUMEM")));
           set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
         }
+      }
+
+      ConcurrentHashMap<String, List<Double>> cpuStatistics = app.context.getContainersCpuStatistics().get(new XLearningContainerId(container.getId()));
+      if (cpuStatistics.size() != 0) {
+        set(CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(0)));
+        set(CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(1)));
+        set(CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(0)));
+        set(CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(1)));
       }
 
       if (reporterProgress.get(new XLearningContainerId(container.getId())) != null && !reporterProgress.get(new XLearningContainerId(container.getId())).equals("")) {
@@ -185,6 +213,21 @@ public class AppController extends Controller implements AMParams {
               set("gpuUtilMetrics" + i + str, new Gson().toJson(containersGpuUtilMetrics.get(str)));
             }
           }
+          ConcurrentHashMap<String, List<Double>> containersGpuMemStatistics = app.context.getContainersGpuMemStatistics().get(new XLearningContainerId(container.getId()));
+          if (containersGpuMemStatistics.size() != 0) {
+            for (String str : containersGpuMemStatistics.keySet()) {
+              set(CONTAINER_GPU_MEM_STATISTICS + USAGE_AVG + i + str, String.format("%.2f", containersGpuMemStatistics.get(str).get(0)));
+              set(CONTAINER_GPU_MEM_STATISTICS + USAGE_MAX + i + str, String.format("%.2f", containersGpuMemStatistics.get(str).get(1)));
+            }
+          }
+
+          ConcurrentHashMap<String, List<Double>> containersGpuUtilStatistics = app.context.getContainersGpuUtilStatistics().get(new XLearningContainerId(container.getId()));
+          if (containersGpuUtilStatistics.size() != 0) {
+            for (String str : containersGpuUtilStatistics.keySet()) {
+              set(CONTAINER_GPU_UTIL_STATISTICS + USAGE_AVG + i + str, String.format("%.2f", containersGpuUtilStatistics.get(str).get(0)));
+              set(CONTAINER_GPU_UTIL_STATISTICS + USAGE_MAX + i + str, String.format("%.2f", containersGpuUtilStatistics.get(str).get(1)));
+            }
+          }
         } else {
           set(CONTAINER_GPU_DEVICE + i, "-");
           if (Long.valueOf($(PS_GCORES)) > 0) {
@@ -200,6 +243,13 @@ public class AppController extends Controller implements AMParams {
           if (cpuMetrics.containsKey("CPUUTIL")) {
             set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
           }
+        }
+        ConcurrentHashMap<String, List<Double>> cpuStatistics = app.context.getContainersCpuStatistics().get(new XLearningContainerId(container.getId()));
+        if (cpuStatistics.size() != 0) {
+          set(CONTAINER_CPU_STATISTICS_MEM + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(0)));
+          set(CONTAINER_CPU_STATISTICS_MEM + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(1)));
+          set(CONTAINER_CPU_STATISTICS_UTIL + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(0)));
+          set(CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(1)));
         }
       }
 

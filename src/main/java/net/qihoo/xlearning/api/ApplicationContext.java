@@ -24,6 +24,14 @@ public interface ApplicationContext {
 
   int getPsNum();
 
+  long getWorkerMemory();
+
+  long getPsMemory();
+
+  int getWorkerVCores();
+
+  int getPsVCores();
+
   long getWorkerGcores();
 
   long getPsGcores();
@@ -57,6 +65,12 @@ public interface ApplicationContext {
   Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuUtilMetrics();
 
   Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics();
+
+  Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> getContainersCpuStatistics();
+
+  Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> getContainersGpuMemStatistics();
+
+  Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> getContainersGpuUtilStatistics();
 
   int getSavingModelStatus();
 

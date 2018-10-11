@@ -27,6 +27,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class ApplicationContainerListener extends AbstractService implements ApplicationContainerProtocol,
     ContainerListener {
@@ -57,9 +58,15 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   private final Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> containersCpuMetrics;
 
+  private final Map<XLearningContainerId, ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>> containersCpuStatistics;
+
   private final Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> containersGpuMemMetrics;
 
   private final Map<XLearningContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> containersGpuUtilMetrics;
+
+  private final Map<XLearningContainerId, ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>> containersGpuMemStatistics;
+
+  private final Map<XLearningContainerId, ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>> containersGpuUtilStatistics;
 
   private String clusterDefStr;
 
@@ -122,8 +129,11 @@ public class ApplicationContainerListener extends AbstractService implements App
     this.interResultTimeStamp = Long.MIN_VALUE;
     this.containerId2InnerModel = new ConcurrentHashMap<>();
     this.containersCpuMetrics = new ConcurrentHashMap<>();
+    this.containersCpuStatistics = new ConcurrentHashMap<>();
     this.containersGpuMemMetrics = new ConcurrentHashMap<>();
     this.containersGpuUtilMetrics = new ConcurrentHashMap<>();
+    this.containersGpuMemStatistics = new ConcurrentHashMap<>();
+    this.containersGpuUtilStatistics = new ConcurrentHashMap<>();
     if (System.getenv().containsKey(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString())) {
       xlearningAppType = System.getenv(XLearningConstants.Environment.XLEARNING_APP_TYPE.toString()).toUpperCase();
     } else {
@@ -188,6 +198,45 @@ public class ApplicationContainerListener extends AbstractService implements App
     return this.containersGpuUtilMetrics;
   }
 
+  public Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> getContainersCpuStatistics() {
+    Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> cpuStatistics = new ConcurrentHashMap<>();
+    for (XLearningContainerId id : this.containersCpuStatistics.keySet()) {
+      Map<String, ContainerMetricsStatisticsTuple> statisticsTuple = this.containersCpuStatistics.get(id);
+      ConcurrentHashMap<String, List<Double>> statisticsValue = new ConcurrentHashMap<>();
+      for (String str : statisticsTuple.keySet()) {
+        statisticsValue.put(str, statisticsTuple.get(str).getStatisticsInfo());
+      }
+      cpuStatistics.put(id, statisticsValue);
+    }
+    return cpuStatistics;
+  }
+
+  public Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> getContainersGpuMemStatistics(){
+    Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> gpuStatistics = new ConcurrentHashMap<>();
+    for(XLearningContainerId id: this.containersGpuMemStatistics.keySet()){
+      Map<String, ContainerMetricsStatisticsTuple> statisticsTuple = this.containersGpuMemStatistics.get(id);
+      ConcurrentHashMap<String, List<Double>> statisticsValue = new ConcurrentHashMap<>();
+      for (String str: statisticsTuple.keySet()){
+        statisticsValue.put(str, statisticsTuple.get(str).getStatisticsInfo());
+      }
+      gpuStatistics.put(id, statisticsValue);
+    }
+    return gpuStatistics;
+  }
+
+  public Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> getContainersGpuUtilStatistics(){
+    Map<XLearningContainerId, ConcurrentHashMap<String, List<Double>>> gpuStatistics = new ConcurrentHashMap<>();
+    for(XLearningContainerId id: this.containersGpuUtilStatistics.keySet()){
+      Map<String, ContainerMetricsStatisticsTuple> statisticsTuple = this.containersGpuUtilStatistics.get(id);
+      ConcurrentHashMap<String, List<Double>> statisticsValue = new ConcurrentHashMap<>();
+      for (String str: statisticsTuple.keySet()){
+        statisticsValue.put(str, statisticsTuple.get(str).getStatisticsInfo());
+      }
+      gpuStatistics.put(id, statisticsValue);
+    }
+    return gpuStatistics;
+  }
+
   public int getServerPort() {
     return server.getPort();
   }
@@ -239,8 +288,11 @@ public class ApplicationContainerListener extends AbstractService implements App
     containersAppStartTimeMap.put(containerId, "");
     containersAppFinishTimeMap.put(containerId, "");
     containersCpuMetrics.put(containerId, new ConcurrentHashMap<String, LinkedBlockingDeque<Object>>());
+    containersCpuStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
     containersGpuMemMetrics.put(containerId, new ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>());
     containersGpuUtilMetrics.put(containerId, new ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>());
+    containersGpuMemStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
+    containersGpuUtilStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
     if (role.equals(XLearningConstants.WORKER.toString()) || (role.equals(XLearningConstants.PS) && (xlearningAppType.equals("TENSORFLOW")) || xlearningAppType.equals("LIGHTLDA"))) {
       containerId2InnerModel.put(containerId, new InnerModelSavedPair());
     }
@@ -411,6 +463,7 @@ public class ApplicationContainerListener extends AbstractService implements App
         LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
         queue.add(map.get(str));
         this.containersGpuMemMetrics.get(containerId).put(str, queue);
+        this.containersGpuMemStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(map.get(str).get(1).doubleValue()));
       }
     } else {
       Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {
@@ -424,10 +477,12 @@ public class ApplicationContainerListener extends AbstractService implements App
             this.containersGpuMemMetrics.get(containerId).get(str).poll();
             this.containersGpuMemMetrics.get(containerId).get(str).add(map.get(str));
           }
+          this.containersGpuMemStatistics.get(containerId).get(str).update(map.get(str).get(1).doubleValue());
         } else {
           LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
           queue.add(map.get(str));
           this.containersGpuMemMetrics.get(containerId).put(str, queue);
+          this.containersGpuMemStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(map.get(str).get(1).doubleValue()));
         }
       }
     }
@@ -443,6 +498,7 @@ public class ApplicationContainerListener extends AbstractService implements App
         LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
         queue.add(map.get(str));
         this.containersGpuUtilMetrics.get(containerId).put(str, queue);
+        this.containersGpuUtilStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(map.get(str).get(1).doubleValue()));
       }
     } else {
       Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {
@@ -456,10 +512,12 @@ public class ApplicationContainerListener extends AbstractService implements App
             this.containersGpuUtilMetrics.get(containerId).get(str).poll();
             this.containersGpuUtilMetrics.get(containerId).get(str).add(map.get(str));
           }
+          this.containersGpuUtilStatistics.get(containerId).get(str).update(map.get(str).get(1).doubleValue());
         } else {
           LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
           queue.add(map.get(str));
           this.containersGpuUtilMetrics.get(containerId).put(str, queue);
+          this.containersGpuUtilStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(map.get(str).get(1).doubleValue()));
         }
       }
     }
@@ -495,6 +553,7 @@ public class ApplicationContainerListener extends AbstractService implements App
         LinkedBlockingDeque<Object> queue = new LinkedBlockingDeque<>();
         queue.add(map.get(str));
         this.containersCpuMetrics.get(containerId).put(str, queue);
+        this.containersCpuStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(Double.parseDouble(new Gson().fromJson((JsonArray)map.get(str), ArrayList.class).get(1).toString())));
       }
     } else {
       Gson gson = new GsonBuilder()
@@ -528,10 +587,12 @@ public class ApplicationContainerListener extends AbstractService implements App
             this.containersCpuMetrics.get(containerId).get(str).poll();
             this.containersCpuMetrics.get(containerId).get(str).add(map.get(str));
           }
+          this.containersCpuStatistics.get(containerId).get(str).update(Double.parseDouble(new Gson().fromJson((JsonArray)map.get(str), ArrayList.class).get(1).toString()));
         } else {
           LinkedBlockingDeque<Object> queue = new LinkedBlockingDeque<>();
           queue.add(map.get(str));
           this.containersCpuMetrics.get(containerId).put(str, queue);
+          this.containersCpuStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(Double.parseDouble(new Gson().fromJson((JsonArray)map.get(str), ArrayList.class).get(1).toString())));
         }
       }
     }
@@ -794,4 +855,39 @@ public class ApplicationContainerListener extends AbstractService implements App
     }
 
   }
+
+  private class ContainerMetricsStatisticsTuple{
+    private Double totalUsed = 0.0;
+    private Double maxUsed = 0.0;
+    private AtomicLong count = new AtomicLong(0);
+
+    public ContainerMetricsStatisticsTuple(){
+    }
+
+    public ContainerMetricsStatisticsTuple(Double resourceUsed){
+      totalUsed = resourceUsed;
+      maxUsed = resourceUsed;
+      count.incrementAndGet();
+    }
+
+    public void update(Double resourceUsed){
+      totalUsed += resourceUsed;
+      count.incrementAndGet();
+      if(resourceUsed > maxUsed){
+        maxUsed = resourceUsed;
+      }
+    }
+
+    public List<Double> getStatisticsInfo(){
+      List<Double> statisticsInfo = new ArrayList<>();
+      statisticsInfo.add(totalUsed / count.get());
+      statisticsInfo.add(maxUsed);
+      return statisticsInfo;
+    }
+
+    public String toString(){
+      return totalUsed + "\t"+ count.get() + "\t" + maxUsed;
+    }
+  }
+
 }
