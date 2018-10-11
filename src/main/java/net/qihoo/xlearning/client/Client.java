@@ -633,6 +633,10 @@ public class Client {
       appMasterEnv.put(XLearningConstants.Environment.USER_LD_LIBRARY_PATH.toString(), clientArguments.userLD_LIBRARY_PATH);
     }
 
+    if (clientArguments.outputIndex >= 0) {
+      appMasterEnv.put(XLearningConstants.Environment.XLEARNING_OUTPUTS_WORKER_INDEX.toString(), String.valueOf(clientArguments.outputIndex));
+    }
+
     if (appMasterUserEnv.size() > 0) {
       for (String envKey : appMasterUserEnv.keySet()) {
         Utilities.addPathToEnvironment(appMasterEnv, envKey, appMasterUserEnv.get(envKey));

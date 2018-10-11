@@ -43,4 +43,5 @@ inputformat-shuffle | whether to shuffle the input splits when input-strategy is
 output-strategy | the strategy of the output file, default as the configure of xlearning.output.strategy 
 outputformat | specify the class of outputformat when output-strategy is "STREAM", default as the configure of xlearning.outputformat.class
 tf-evaluator | whether to set the last worker as evaluator of distributed TensorFlow job type, default as the configure of xlearning.tf.evaluator
+output-index | specify the index of the worker which to upload the output, default upload the output of all the workers.
 

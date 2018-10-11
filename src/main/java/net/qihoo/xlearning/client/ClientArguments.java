@@ -54,6 +54,7 @@ class ClientArguments {
   public Class<?> inputFormatClass;
   public Class<?> outputFormatClass;
   Properties confs;
+  int outputIndex;
 
   public ClientArguments(String[] args) throws IOException, ParseException, ClassNotFoundException {
     this.init();
@@ -97,6 +98,7 @@ class ClientArguments {
     inputStrategy = XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY.toUpperCase();
     outputStrategy = XLearningConfiguration.DEFAULT_XLEARNING_OUTPUT_STRATEGY.toUpperCase();
     tfEvaluator = XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR;
+    outputIndex = -1;
 
     allOptions = new Options();
     allOptions.addOption("appName", "app-name", true,
@@ -172,6 +174,9 @@ class ClientArguments {
         "The input strategy for user data input, DOWNLOAD,PLACEHOLDER or STREAM, default:DOWNLOAD");
     allOptions.addOption("outputStrategy", "output-strategy", true,
         "The output strategy for user result output, UPLOAD or STREAM, default:UPLOAD");
+
+    allOptions.addOption("outputIndex", "output-index", true,
+        "Setting the index of worker which to upload the output, default uploading the output of all the workers.");
 
     allOptions.addOption("tfEvaluator", "tf-evaluator", true,
         "Using the evaluator during the tensorflow distribute training.");
@@ -400,6 +405,10 @@ class ClientArguments {
 
     if (cliParser.hasOption("tf-evaluator")){
       tfEvaluator = Boolean.parseBoolean(cliParser.getOptionValue("tf-evaluator"));
+    }
+
+    if (cliParser.hasOption("output-index")) {
+      outputIndex = Integer.parseInt(cliParser.getOptionValue("output-index"));
     }
 
     appMasterJar = JobConf.findContainingJar(ApplicationMaster.class);

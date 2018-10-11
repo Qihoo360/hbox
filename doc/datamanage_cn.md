@@ -68,7 +68,9 @@ XLearning默认采用Upload模式对输出数据进行保存至HDFS操作，示�
     XLearning作业提交脚本中，指定参数：
        --output /tmp/output#model \
     在此参数示例中，执行程序进程结束后，将本地./model下的所有文件，上传至HDFS路径/tmp/output/${containerID}下，注意，此处${containerID}为Worker所属ContainerID，由XLearning自动分配。若需要多个输出路径，可通过设置多个" --output"参数实现。
-
+    若指定保存某个worker的输出数据，则提交时指定worker的index，指定参数：
+       --output-index 0 \
+    如此，程序成功执行退出后，仅保留index为0的worker的输出结果至HDFS路径。
 为方便用户在训练过程中随时将本地输出上传至HDFS，XLearning在作业执行Web界面提供输出结果中间保存机制。用户作业执行过程中，根据训练进度及设置，将结果保存在`output`参数的对应的本地路径下，在执行中途需要提前将本地输出传至对应HDFS路径时，可在作业执行ApplicationMaster页面点击`Save Model`按钮进行中间输出结果上传。上传成功后，界面显示当前已上传的中间结果列表。  
 
 #### 2. OutputFormat  
