@@ -20,7 +20,7 @@ XLearning support the distributed deep learning framworks such as TensorFlow, MX
 - MXNet：Set the `--app-type` as `MXNet`, and distinguish stand-alone and distributed mode by the number of ps applied.   
 - XGBoost： Set the `--app-type` as `distxgboost`.  
 - LightGBM： Set the `--app-type` as `distlightgbm`.
-- LightLDA： Set the `--app-type` as `distlightlda`.
+- LightLDA： Set the `--app-type` as `lightlda`,  and distinguish stand-alone and distributed mode by the number of ps applied.
 - XFlow： Set the `--app-type` as `XFlow`, and distinguish stand-alone and distributed mode by the number of ps applied.
 
 ### 4. How to define the ClusterSpec in the distributed mode of TensorFlow application ?  
