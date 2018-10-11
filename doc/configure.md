@@ -34,6 +34,8 @@ xlearning.outputformat.class | TextMultiOutputFormat.class | which outputformat 
 xlearning.interresult.dir | /interResult_ | specify the HDFS subdirectory that the intermediate output file upload to  
 xlearning.interresult.upload.timeout | 30 * 60 * 1000 | upload timeout to save the intermediate output (in milliseconds)
 xlearning.tf.evaluator | false | whether to set the last worker as evaluator of the distributed TensorFlow job type for the estimator api
+xlearning.am.env.[EnvironmentVariableName] | (none) |  Add the environment variable specified by EnvironmentVariableName to the AM process. The user can specify multiple of these to set multiple environment variables.
+xlearning.container.env.[EnvironmentVariableName] | (none) | Add the environment variable specified by EnvironmentVariableName to the Container process. The user can specify multiple of these to set multiple environment variables.
 
 
 

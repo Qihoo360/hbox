@@ -35,6 +35,8 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final String DEFAULT_XLEARNING_STAGING_DIR = "/tmp/XLearning/staging";
 
+  public static final String XLEARNING_CONTAINER_EXTRAENV = "xlearning.container.extraEnv";
+
   public static final String XLEARNING_LOG_PULL_INTERVAL = "xlearning.log.pull.interval";
 
   public static final int DEFAULT_XLEARNING_LOG_PULL_INTERVAL = 10000;
