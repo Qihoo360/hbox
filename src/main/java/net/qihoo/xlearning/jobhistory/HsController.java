@@ -81,6 +81,7 @@ public class HsController extends Controller implements AMParams {
       set(PS_GCORES, String.valueOf(0));
       set(WORKER_NUMBER, String.valueOf(0));
       set(CONTAINER_CPU_METRICS_ENABLE, "false");
+      set(CONTAINER_CPU_STATISTICS, "false");
       for (String info : readLog.keySet()) {
         if (info.equals(AMParams.APP_TYPE)) {
           if (readLog.get(info) != null) {
@@ -246,6 +247,7 @@ public class HsController extends Controller implements AMParams {
                       set("psCpuUtilMetrics" + psi, new Gson().toJson(map.get("CPUUTIL")));
                     }
                   }
+                  set(CONTAINER_CPU_METRICS_ENABLE, "true");
                 }
               }
             }
@@ -269,6 +271,7 @@ public class HsController extends Controller implements AMParams {
                     set("ps" + CONTAINER_CPU_STATISTICS_UTIL + USAGE_MAX + psi, String.format("%.2f", map.get("CPUUTIL").get(1)));
                   }
                 }
+                set(CONTAINER_CPU_STATISTICS, "true");
               }
             }
 
