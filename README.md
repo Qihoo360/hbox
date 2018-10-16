@@ -5,8 +5,8 @@
   </a>
 </div>
   
-[![license](http://img.shields.io/badge/license-Apache2.0-brightgreen.svg?style=flat)](./LICENSE)
-[![Release Version](https://img.shields.io/badge/release-1.1-red.svg)]()
+[![license](https://img.shields.io/badge/license-Apache2.0-blue.svg?style=flat)](./LICENSE)
+[![Release Version](https://img.shields.io/badge/release-1.3-red.svg)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)]()
 
 **XLearning** is a convenient and efficient scheduling platform combined with the big data and artificial intelligence, support for a variety of machine learning, deep learning frameworks. XLearning is running on the Hadoop Yarn and has integrated deep learning frameworks such as TensorFlow, MXNet, Caffe, Theano, PyTorch, Keras, XGBoost. XLearning has the satisfactory scalability and compatibility.
