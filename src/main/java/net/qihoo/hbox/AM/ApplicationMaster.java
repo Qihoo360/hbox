@@ -899,7 +899,7 @@ public class ApplicationMaster extends CompositeService {
     workerCapability.setMemory(Math.min(workerMemory + workerOverheadMem, maxContainerMem));
     workerCapability.setVirtualCores(workerVCores);
     workerCapability.setGpuCores(workerGCores);
-    workerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority);
+    workerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
     LOG.info("Create worker container request: " + workerContainerRequest.toString());
 
     if("TENSORFLOW".equals(hboxAppType) && !single) {
@@ -909,7 +909,7 @@ public class ApplicationMaster extends CompositeService {
       psCapability.setMemory(Math.min(psMemory + psOverheadMem, maxContainerMem));
       psCapability.setVirtualCores(psVCores);
       psCapability.setGpuCores(psGCores);
-      psContainerRequest = new ContainerRequest(psCapability, hostLocals, null, priority);
+      psContainerRequest = new ContainerRequest(psCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
       LOG.info("Create ps container request: " + psContainerRequest.toString());
     }
 

@@ -495,6 +495,7 @@ public class Client {
     applicationContext.setApplicationId(applicationId);
     applicationContext.setApplicationName(clientArguments.appName);
     applicationContext.setApplicationType(clientArguments.appType);
+    applicationContext.setNodeLabelExpression(conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
     LOG.info("Application maxAppAttempts: " + applicationContext.getMaxAppAttempts());
     Path appJarSrc = new Path(clientArguments.appMasterJar);
     Path appJarDst = Utilities

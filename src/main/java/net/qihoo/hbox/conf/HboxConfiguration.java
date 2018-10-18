@@ -42,6 +42,8 @@ public class HboxConfiguration extends YarnConfiguration {
 
   public static final String HBOX_CONTAINER_ENV = "hbox.container.env";
 
+  public static final String HBOX_JOB_LABEL_NAME = "hbox.job.labelname";
+
   public static final String HBOX_LOG_PULL_INTERVAL = "hbox.log.pull.interval";
 
   public static final int DEFAULT_HBOX_LOG_PULL_INTERVAL = 10000;
