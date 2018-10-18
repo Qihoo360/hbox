@@ -3,6 +3,7 @@
  */
 package net.qihoo.hbox.AM;
 
+import net.qihoo.hbox.conf.HboxConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -16,172 +17,169 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class RMCallbackHandler implements CallbackHandler {
-  private static final Log LOG = LogFactory.getLog(RMCallbackHandler.class);
+    private static final Log LOG = LogFactory.getLog(RMCallbackHandler.class);
 
-  private final List<Container> cancelContainers;
+    private final List<Container> cancelContainers;
 
-  public final List<Container> acquiredWorkerContainers;
+    public final List<Container> acquiredWorkerContainers;
 
-  public final List<Container> acquiredPsContainers;
+    public final List<Container> acquiredPsContainers;
 
-  public final Set<String> blackHosts;
+    public final Set<String> blackHosts;
 
-  private int neededWorkerContainersCount;
+    private int neededWorkerContainersCount;
 
-  private int neededPsContainersCount;
+    private int neededPsContainersCount;
 
-  private final AtomicInteger acquiredWorkerContainersCount;
+    private final AtomicInteger acquiredWorkerContainersCount;
 
-  private final AtomicInteger acquiredPsContainersCount;
+    private final AtomicInteger acquiredPsContainersCount;
 
-  private final AtomicBoolean workerContainersAllocating;
+    private final AtomicBoolean workerContainersAllocating;
 
-  private float progress;
+    private float progress;
 
-  public final List<Container> acquiredContainers;
+    public final List<Container> acquiredContainers;
 
-  private String hboxAppType;
+    private String hboxAppType;
 
-  private final Map<String, Container> hostToContainer;
+    private String containerType;
 
-  public RMCallbackHandler() {
-    cancelContainers = Collections.synchronizedList(new ArrayList<Container>());
-    acquiredWorkerContainers = Collections.synchronizedList(new ArrayList<Container>());
-    acquiredPsContainers = Collections.synchronizedList(new ArrayList<Container>());
-    blackHosts = Collections.synchronizedSet(new HashSet<String>());
-    acquiredWorkerContainersCount = new AtomicInteger(0);
-    acquiredPsContainersCount = new AtomicInteger(0);
-    workerContainersAllocating = new AtomicBoolean(false);
-    progress = 0.0f;
-    acquiredContainers = Collections.synchronizedList(new ArrayList<Container>());
-    hboxAppType = "";
-    hostToContainer = new ConcurrentHashMap<>();
-  }
+    private final Map<String, Container> hostToContainer;
 
-  public List<String> getBlackHosts() {
-    List<String> blackHostList = new ArrayList<>(blackHosts.size());
-    for (String host : blackHosts) {
-      blackHostList.add(host);
+    private HashMap<String, Integer> countMap = new HashMap<>();
+
+    private int blackHostsLimit = Integer.MAX_VALUE;
+
+    public RMCallbackHandler() {
+        cancelContainers = Collections.synchronizedList(new ArrayList<Container>());
+        acquiredWorkerContainers = Collections.synchronizedList(new ArrayList<Container>());
+        acquiredPsContainers = Collections.synchronizedList(new ArrayList<Container>());
+        blackHosts = Collections.synchronizedSet(new HashSet<String>());
+        acquiredWorkerContainersCount = new AtomicInteger(0);
+        acquiredPsContainersCount = new AtomicInteger(0);
+        workerContainersAllocating = new AtomicBoolean(false);
+        progress = 0.0f;
+        acquiredContainers = Collections.synchronizedList(new ArrayList<Container>());
+        hboxAppType = "";
+        hostToContainer = new ConcurrentHashMap<>();
     }
-    return blackHostList;
-  }
 
-  public void setHboxAppType(String appType) {
-    this.hboxAppType = appType;
-  }
-
-  public void addBlackHost(String hostname) {
-    blackHosts.add(hostname);
-  }
-
-  public int getAllocatedWorkerContainerNumber() {
-    return acquiredWorkerContainersCount.get();
-  }
-
-  public int getAllocatedPsContainerNumber() {
-    return acquiredPsContainersCount.get();
-  }
-
-  public List<Container> getCancelContainer() {
-    return cancelContainers;
-  }
-
-  public List<Container> getAcquiredWorkerContainer() {
-    return new ArrayList<>(acquiredWorkerContainers);
-  }
-
-  public List<Container> getAcquiredPsContainer() {
-    return new ArrayList<>(acquiredPsContainers);
-  }
-
-  public void setNeededWorkerContainersCount(int count) {
-    neededWorkerContainersCount = count;
-  }
-
-  public void setNeededPsContainersCount(int count) {
-    neededPsContainersCount = count;
-  }
-
-  public void setWorkerContainersAllocating() {
-    workerContainersAllocating.set(true);
-  }
-  @Override
-  public void onContainersCompleted(List<ContainerStatus> containerStatuses) {
-    for (ContainerStatus containerStatus : containerStatuses) {
-      LOG.info("Container " + containerStatus.getContainerId() + " completed with status "
-          + containerStatus.getState().toString());
-    }
-  }
-
-  @Override
-  public void onContainersAllocated(List<Container> containers) {
-    int count = containers.size();
-    if(this.hboxAppType.equals("MPI") || this.hboxAppType.equals("HOROVOD")) {
-      for (Container acquiredContainer : containers) {
-        LOG.info("Acquired container " + acquiredContainer.getId()
-                + " on host " + acquiredContainer.getNodeId().getHost());
-        acquiredContainers.add(acquiredContainer);
-        String host = acquiredContainer.getNodeId().getHost();
-        if (!hostToContainer.containsKey(host)) {
-          hostToContainer.put(host, acquiredContainer);
-          acquiredWorkerContainers.add(acquiredContainer);
-          blackHosts.add(host);
-        } else {
-          count --;
-          LOG.info("Add container " + acquiredContainer.getId() + " to cancel list");
-          cancelContainers.add(acquiredContainer);
+    public List<String> getBlackHosts() {
+        List<String> blackHostList = new ArrayList<>(blackHosts.size());
+        for (String host : blackHosts) {
+            blackHostList.add(host);
         }
-      }
-      acquiredWorkerContainersCount.addAndGet(count);
-      LOG.info("Current acquired container " + acquiredWorkerContainersCount.get()
-              + ", total needed " + neededWorkerContainersCount);
-    } else {
-      for (Container acquiredContainer : containers) {
-        LOG.info("Acquired container " + acquiredContainer.getId()
-                + " on host " + acquiredContainer.getNodeId().getHost());
-        String host = acquiredContainer.getNodeId().getHost();
-        if (!blackHosts.contains(host)) {
-          if (workerContainersAllocating.get()) {
-            acquiredWorkerContainers.add(acquiredContainer);
-            acquiredWorkerContainersCount.incrementAndGet();
-          } else {
-            acquiredPsContainers.add(acquiredContainer);
-            acquiredPsContainersCount.incrementAndGet();
-          }
-        } else {
-          count --;
-          LOG.info("Add container " + acquiredContainer.getId() + " to cancel list");
-          cancelContainers.add(acquiredContainer);
-        }
-      }
-      LOG.info("Current acquired worker container " + acquiredWorkerContainersCount.get()
-              + " / " + neededWorkerContainersCount + " ps container " + acquiredPsContainersCount.get()
-              + " / " + neededPsContainersCount);
+        return blackHostList;
     }
-  }
 
-  @Override
-  public float getProgress() {
-    //int totalNeededCount = neededPsContainersCount + neededWorkerContainersCount;
-    //return totalNeededCount == 0 ?
+    public void setHboxAppType(String appType) {
+        this.hboxAppType = appType;
+    }
+
+    public void addBlackHost(String hostname) {
+        blackHosts.add(hostname);
+    }
+
+    public int getAllocatedWorkerContainerNumber() {
+        return acquiredWorkerContainersCount.get();
+    }
+
+    public int getAllocatedPsContainerNumber() {
+        return acquiredPsContainersCount.get();
+    }
+
+    public List<Container> getCancelContainer() {
+        return cancelContainers;
+    }
+
+    public List<Container> getAcquiredWorkerContainer() {
+        return new ArrayList<>(acquiredWorkerContainers);
+    }
+
+    public List<Container> getAcquiredPsContainer() {
+        return new ArrayList<>(acquiredPsContainers);
+    }
+
+    public void setNeededWorkerContainersCount(int count) {
+        neededWorkerContainersCount = count;
+    }
+
+    public void setNeededPsContainersCount(int count) {
+        neededPsContainersCount = count;
+    }
+
+    public void setWorkerContainersAllocating() {
+        workerContainersAllocating.set(true);
+    }
+
+    @Override
+    public void onContainersCompleted(List<ContainerStatus> containerStatuses) {
+        for (ContainerStatus containerStatus : containerStatuses) {
+            LOG.info("Container " + containerStatus.getContainerId() + " completed with status "
+                    + containerStatus.getState().toString());
+        }
+    }
+
+    @Override
+    public void onContainersAllocated(List<Container> containers) {
+        HboxConfiguration configuration = new HboxConfiguration();
+        containerType = configuration.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);
+        //add blackHosts addition and limit number per host
+        if(this.hboxAppType.equals("MPI") || this.hboxAppType.equals("HOROVOD")){
+            blackHostsLimit = 1;
+        }else if(containerType.equalsIgnoreCase("DOCKER")){
+            blackHostsLimit = configuration.getInt(HboxConfiguration.HBOX_DOCKER_NUM_PER_WORKER, HboxConfiguration.DEDAULT_HBOX_DOCKER_NUM_PER_WORKER);
+        }
+        for (Container acquiredContainer : containers) {
+            String host = acquiredContainer.getNodeId().getHost();
+            LOG.info("Acquired container " + acquiredContainer.getId() + " on host " + host);
+            if (!blackHosts.contains(host)) {
+                //count and process blackHosts
+                int countContainerNum = countMap.get(host) == null? 1 : countMap.get(host) + 1;
+                countMap.put(host, countContainerNum);
+                if(countMap.get(host) >= blackHostsLimit)
+                    blackHosts.add(host);
+                //add worker or ps
+                if (workerContainersAllocating.get()) {
+                    acquiredWorkerContainers.add(acquiredContainer);
+                    acquiredWorkerContainersCount.incrementAndGet();
+                } else {
+                    acquiredPsContainers.add(acquiredContainer);
+                    acquiredPsContainersCount.incrementAndGet();
+                }
+            } else {
+                LOG.info("Add container " + acquiredContainer.getId() + " to cancel list");
+                cancelContainers.add(acquiredContainer);
+            }
+        }
+        LOG.info("Current acquired worker container " + acquiredWorkerContainersCount.get()
+                + " / " + neededWorkerContainersCount + " ps container " + acquiredPsContainersCount.get()
+                + " / " + neededPsContainersCount);
+    }
+
+    @Override
+    public float getProgress() {
+        //int totalNeededCount = neededPsContainersCount + neededWorkerContainersCount;
+        //return totalNeededCount == 0 ?
         //0.0f : (acquiredWorkerContainersCount.get() + acquiredPsContainersCount.get()) / totalNeededCount;
-    return  progress;
-  }
+        return progress;
+    }
 
-  public void setProgress(float reportProgress) {
-    this.progress = reportProgress;
-  }
+    public void setProgress(float reportProgress) {
+        this.progress = reportProgress;
+    }
 
-  @Override
-  public void onShutdownRequest() {
-  }
+    @Override
+    public void onShutdownRequest() {
+    }
 
-  @Override
-  public void onNodesUpdated(List<NodeReport> updatedNodes) {
-  }
+    @Override
+    public void onNodesUpdated(List<NodeReport> updatedNodes) {
+    }
 
-  @Override
-  public void onError(Throwable e) {
-    LOG.info("Error from RMCallback: ", e);
-  }
+    @Override
+    public void onError(Throwable e) {
+        LOG.info("Error from RMCallback: ", e);
+    }
 }
