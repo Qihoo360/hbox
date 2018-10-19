@@ -2618,6 +2618,11 @@ public class ApplicationMaster extends CompositeService {
       return containerListener.getContainerStdErr(cid);
     }
 
+    @Override
+    public void sendSignal(int sid){
+      containerListener.sendSignal(sid);
+    }
+
   }
 
   /**

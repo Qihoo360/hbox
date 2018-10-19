@@ -60,4 +60,8 @@ public interface ApplicationContainerProtocol extends VersionedProtocol {
 
   Long allContainerStartTime();
 
+  int getSignal();
+
+  void sendSignal(int sid);
+
 }

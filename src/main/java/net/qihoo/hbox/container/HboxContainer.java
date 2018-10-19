@@ -89,6 +89,8 @@ public class HboxContainer {
 
   private String mpiAppDir;
 
+  private int signalID;
+
   private HboxContainer() {
     this.conf = new HboxConfiguration();
     conf.addResource(new Path(HboxConstants.HBOX_JOB_CONFIGURATION));
@@ -163,6 +165,8 @@ public class HboxContainer {
     this.singleMx = conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE);
     heartbeatInterval = this.conf.getInt(HboxConfiguration.HBOX_CONTAINER_HEARTBEAT_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_HEARTBEAT_INTERVAL);
     reservedSocket = new Socket();
+
+    this.signalID = -1;
   }
 
   private void init() {
@@ -1281,6 +1285,12 @@ public class HboxContainer {
           //LOG.info("heartbeatThread.isHboxTrainCompleted() is: " + heartbeatThread.isHboxTrainCompleted());
         } catch (IllegalThreadStateException e) {
           LOG.debug("Hbox Process is running");
+          this.signalID = amClient.getSignal();
+          if (this.signalID >= 0) {
+            rt.exec("kill -" + this.signalID + " " + this.hboxCmdProcessId);
+            LOG.info("Send the signal " + this.signalID + " to process " + this.hboxCmdProcessId);
+            amClient.sendSignal(-1);
+          }
         }
       }
 

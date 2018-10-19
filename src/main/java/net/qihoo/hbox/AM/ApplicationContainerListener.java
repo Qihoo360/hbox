@@ -115,6 +115,8 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   private final ConcurrentHashMap<HboxContainerId, StringBuilder> containerId2StdErr;
 
+  private int signalID;
+
   public ApplicationContainerListener(ApplicationContext applicationContext, Configuration conf) {
     super(ApplicationContainerListener.class.getSimpleName());
     this.setConfig(conf);
@@ -161,6 +163,7 @@ public class ApplicationContainerListener extends AbstractService implements App
       hboxAppType = "HBOX";
     }
     this.isAMFinished = false;
+    this.signalID = -1;
   }
 
   @Override
@@ -1067,5 +1070,15 @@ public class ApplicationContainerListener extends AbstractService implements App
     public String toString(){
       return totalUsed + "\t"+ count.get() + "\t" + maxUsed;
     }
+  }
+
+  @Override
+  public void sendSignal(int sid) {
+    this.signalID = sid;
+  }
+
+  @Override
+  public int getSignal() {
+    return this.signalID;
   }
 }

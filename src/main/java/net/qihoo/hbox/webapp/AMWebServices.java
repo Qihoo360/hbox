@@ -113,4 +113,17 @@ public class AMWebServices {
     return new OutputInfo();
   }
 
+  @GET
+  @Path("/app/signal/{sid}")
+  @Produces(MediaType.TEXT_PLAIN)
+  public String sendSignal(@PathParam("sid") String sid) {
+    try {
+      int sID = Integer.parseInt(sid);
+      appCtx.sendSignal(sID);
+    } catch (Exception e) {
+      return "FAILED";
+    }
+    return "SUCCEED";
+  }
+
 }

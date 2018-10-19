@@ -105,4 +105,6 @@ public interface ApplicationContext {
 
   String getContainerStdErr(HboxContainerId cid);
 
+  void sendSignal(int sid);
+
 }
