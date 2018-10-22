@@ -129,6 +129,9 @@ public class ApplicationMaster extends CompositeService {
 
   private Boolean containerStarted;
 
+  private int reservePortBegin = 0;
+  private int reservePortEnd = 0;
+
   /**
    * Constructor, connect to Resource Manager
    *
@@ -183,6 +186,9 @@ public class ApplicationMaster extends CompositeService {
     amContainerStdOut = new StringBuilder();
     amContainerStdErr = new StringBuilder();
     containerStarted = false;
+
+    reservePortBegin = this.conf.getInt(HboxConfiguration.HBOX_RESERVE_PORT_BEGIN, HboxConfiguration.DEFAULT_HBOX_RESERVE_PORT_BEGIN);
+    reservePortEnd = this.conf.getInt(HboxConfiguration.HBOX_RESERVE_PORT_END, HboxConfiguration.DEFAULT_HBOX_RESERVE_PORT_END);
 
     if (envs.containsKey(ApplicationConstants.Environment.CONTAINER_ID.toString())) {
       amContainerId = envs.get(ApplicationConstants.Environment.CONTAINER_ID.toString());
@@ -1647,7 +1653,7 @@ public class ApplicationMaster extends CompositeService {
       dmlcPsRootUri = applicationMasterHostname;
       Socket schedulerReservedSocket = new Socket();
       try {
-        schedulerReservedSocket.bind(new InetSocketAddress("127.0.0.1" , 0));
+        Utilities.getReservePort(schedulerReservedSocket, InetAddress.getByName(applicationMasterHostname).getHostAddress(), reservePortBegin, reservePortEnd);
       } catch (IOException e) {
         LOG.error("Can not get available port");
       }
@@ -1759,7 +1765,7 @@ public class ApplicationMaster extends CompositeService {
       dmlcTrackerUri = applicationMasterHostname;
       Socket schedulerReservedSocket = new Socket();
       try {
-        schedulerReservedSocket.bind(new InetSocketAddress("127.0.0.1" , 0));
+        Utilities.getReservePort(schedulerReservedSocket, InetAddress.getByName(applicationMasterHostname).getHostAddress(), reservePortBegin, reservePortEnd);
       } catch (IOException e) {
         LOG.error("Can not get available port");
       }
@@ -1875,7 +1881,7 @@ public class ApplicationMaster extends CompositeService {
       }
       Socket schedulerReservedSocket = new Socket();
       try {
-        schedulerReservedSocket.bind(new InetSocketAddress("127.0.0.1", 0));
+        Utilities.getReservePort(schedulerReservedSocket, InetAddress.getByName(applicationMasterHostname).getHostAddress(), reservePortBegin, reservePortEnd);
       } catch (IOException e) {
         LOG.error("Can not get available port");
       }

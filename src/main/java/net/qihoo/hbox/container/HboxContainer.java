@@ -91,6 +91,12 @@ public class HboxContainer {
 
   private int signalID;
 
+  private int reservePortBegin = 0;
+
+  private int reservePortEnd = 0;
+
+  private String localHost;
+
   private HboxContainer() {
     this.conf = new HboxConfiguration();
     conf.addResource(new Path(HboxConstants.HBOX_JOB_CONFIGURATION));
@@ -99,6 +105,15 @@ public class HboxContainer {
         .getenv(ApplicationConstants.Environment.CONTAINER_ID.name())));
     this.downloadRetry = conf.getInt(HboxConfiguration.HBOX_DOWNLOAD_FILE_RETRY, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_RETRY);
     this.envs = System.getenv();
+
+    if (envs.containsKey(ApplicationConstants.Environment.NM_HOST.toString())) {
+      localHost = envs.get(ApplicationConstants.Environment.NM_HOST.toString());
+    } else {
+      localHost = "127.0.0.1";
+    }
+    reservePortBegin = this.conf.getInt(HboxConfiguration.HBOX_RESERVE_PORT_BEGIN, HboxConfiguration.DEFAULT_HBOX_RESERVE_PORT_BEGIN);
+    reservePortEnd = this.conf.getInt(HboxConfiguration.HBOX_RESERVE_PORT_END, HboxConfiguration.DEFAULT_HBOX_RESERVE_PORT_END);
+
     this.hboxAppType = envs.get(HboxConstants.Environment.HBOX_APP_TYPE.toString()).toUpperCase();
     this.role = envs.get(HboxConstants.Environment.HBOX_TF_ROLE.toString());
     this.index = Integer.valueOf(envs.get(HboxConstants.Environment.HBOX_TF_INDEX.toString()));
@@ -191,7 +206,7 @@ public class HboxContainer {
 
     if (("TENSORFLOW".equals(hboxAppType) && !single) || hboxAppType.equals("DIGITS") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA")) {
       try {
-        reservedSocket.bind(new InetSocketAddress("127.0.0.1", 0));
+        Utilities.getReservePort(reservedSocket, InetAddress.getByName(localHost).getHostAddress(), reservePortBegin, reservePortEnd);
       } catch (IOException e) {
         LOG.error("Can not get available port");
         reportFailedAndExit();
@@ -1095,7 +1110,7 @@ public class HboxContainer {
           if (this.role.equals(HboxConstants.PS) && boardIndex == this.index) {
             Socket boardReservedSocket = new Socket();
             try {
-              boardReservedSocket.bind(new InetSocketAddress("127.0.0.1", 0));
+              Utilities.getReservePort(boardReservedSocket, InetAddress.getByName(localHost).getHostAddress(), reservePortBegin, reservePortEnd);
             } catch (IOException e) {
               LOG.error("Can not get available port");
               reportFailedAndExit();
@@ -1167,7 +1182,7 @@ public class HboxContainer {
           if(this.role.equals(HboxConstants.WORKER) && boardIndex == this.index) {
             Socket boardReservedSocket = new Socket();
             try {
-              boardReservedSocket.bind(new InetSocketAddress("127.0.0.1", 0));
+              Utilities.getReservePort(boardReservedSocket, InetAddress.getByName(localHost).getHostAddress(), reservePortBegin, reservePortEnd);
             } catch (IOException e) {
               LOG.error("Can not get available port");
               reportFailedAndExit();

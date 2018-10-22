@@ -352,6 +352,15 @@ public class HboxConfiguration extends YarnConfiguration {
 
   public static final String DEFAULT_HBOX_LOCAL_RESOURCE_VISIBILITY = "PUBLIC";
 
+  public static final String HBOX_RESERVE_PORT_BEGIN = "hbox.reserve.port.begin";
+
+  public static final int DEFAULT_HBOX_RESERVE_PORT_BEGIN = 20000;
+
+  public static final String HBOX_RESERVE_PORT_END = "hbox.reserve.port.end";
+
+  public static final int DEFAULT_HBOX_RESERVE_PORT_END = 30000;
+
+
   /**
    * Configuration used in Log Dir
    */
