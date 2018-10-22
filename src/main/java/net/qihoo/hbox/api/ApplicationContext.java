@@ -101,6 +101,8 @@ public interface ApplicationContext {
 
   String getTfEvaluatorId();
 
+  String getAMContainerID();
+
   String getContainerStdOut(HboxContainerId cid);
 
   String getContainerStdErr(HboxContainerId cid);

@@ -2591,6 +2591,11 @@ public class ApplicationMaster extends CompositeService {
     }
 
     @Override
+    public String getAMContainerID(){
+      return amContainerId;
+    }
+
+    @Override
     public String getContainerStdOut(HboxContainerId cid) {
       if (cid.toString().equals(amContainerId)) {
         if(amContainerStdOut.length() > 0) {

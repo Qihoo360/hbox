@@ -3,9 +3,7 @@ package net.qihoo.hbox.webapp;
 import com.google.inject.Inject;
 import net.qihoo.hbox.api.ApplicationContext;
 import net.qihoo.hbox.common.LogType;
-import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.container.HboxContainerId;
-import net.qihoo.hbox.util.Utilities;
 import net.qihoo.hbox.webapp.dao.AppInfo;
 import net.qihoo.hbox.webapp.dao.ContainerInfo;
 import net.qihoo.hbox.webapp.dao.ContainersInfo;
@@ -62,6 +60,7 @@ public class AMWebServices {
   public ContainersInfo getContainersInfo() {
     init();
     ContainersInfo containersInfo = new ContainersInfo();
+    containersInfo.add(new ContainerInfo(new HboxContainerId(ConverterUtils.toContainerId(appCtx.getAMContainerID())), appCtx));
     for (Container c : appCtx.getPsContainers()) {
       containersInfo.add(new ContainerInfo(new HboxContainerId(c.getId()), appCtx));
     }
