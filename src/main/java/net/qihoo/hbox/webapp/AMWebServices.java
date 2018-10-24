@@ -79,6 +79,14 @@ public class AMWebServices {
   }
 
   @GET
+  @Path("/app/evaluator")
+  @Produces(MediaType.TEXT_PLAIN)
+  public String getEvaluatorID() {
+    init();
+    return appCtx.getTfEvaluatorId();
+  }
+
+  @GET
   @Path("/containers/{containerid}/{logType}")
   @Produces(MediaType.TEXT_PLAIN)
   public String getContainerLog(@PathParam("containerid") String cid, @PathParam("logType") String logType) {
