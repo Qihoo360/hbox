@@ -18,6 +18,10 @@ public interface ApplicationContainerProtocol extends VersionedProtocol {
 
   void reportLightLdaIpPort(HboxContainerId containerId, String lightLdaIpPort);
 
+  void reportTorchRank0IP(String ip);
+
+  String getTorchRank0IP();
+
   String getClusterDef();
 
   String getLightGbmIpPortStr();

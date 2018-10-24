@@ -1116,6 +1116,10 @@ public class ApplicationMaster extends CompositeService {
       containerEnv.put("DMLC_PS_ROOT_PORT", String.valueOf(dmlcPsRootPort));
     }
 
+    if (hboxAppType.equals("DISTTORCH")) {
+      containerEnv.put("WORLD_SIZE", String.valueOf(workerNum));
+    }
+
     if(conf.getBoolean(HboxConfiguration.HBOX_USER_CLASSPATH_FIRST, HboxConfiguration.DEFAULT_HBOX_USER_CLASSPATH_FIRST)) {
       containerEnv.put("CLASSPATH", libJarsClassPath + System.getenv("CLASSPATH"));
     } else {

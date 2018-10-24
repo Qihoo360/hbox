@@ -85,6 +85,10 @@ public class HboxContainer {
 
   private int lightLDALocalPort;
 
+  private int torchRank0Port;
+
+  private String torchRank0IP;
+
   private String lightLDAEndpoint;
 
   private String mpiAppDir;
@@ -204,7 +208,7 @@ public class HboxContainer {
     heartbeatThread.setContainerStatus(HboxContainerStatus.INITIALIZING);
     containerReporter = null;
 
-    if (("TENSORFLOW".equals(hboxAppType) && !single) || hboxAppType.equals("DIGITS") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA")) {
+    if (("TENSORFLOW".equals(hboxAppType) && !single) || hboxAppType.equals("DIGITS") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || (hboxAppType.equals("DISTTORCH") && this.index == 0)) {
       try {
         Utilities.getReservePort(reservedSocket, InetAddress.getByName(localHost).getHostAddress(), reservePortBegin, reservePortEnd);
       } catch (IOException e) {
@@ -695,6 +699,36 @@ public class HboxContainer {
       }
     }
 
+    if (hboxAppType.equals("DISTTORCH")) {
+      if(this.index == 0) {
+        this.torchRank0Port = reservedSocket.getLocalPort();
+        LOG.info("Reserved available port: " + torchRank0Port);
+        try {
+          InetAddress address = InetAddress.getByName(envs.get(ApplicationConstants.Environment.NM_HOST.toString()));
+          this.torchRank0IP = address.getHostAddress() + ":" + torchRank0Port;
+        } catch (UnknownHostException e) {
+          LOG.info("acquire host ip failed " + e);
+          reportFailedAndExit();
+        }
+        LOG.info("torch rank 0 ip port string is: " + torchRank0Port);
+        amClient.reportTorchRank0IP(torchRank0IP);
+      } else {
+        while (!heartbeatThread.isHboxTrainCompleted()) {
+          //TODO may be need encode use Base64 while used in Env
+          this.torchRank0IP = amClient.getTorchRank0IP();
+          if (torchRank0IP != null) {
+            LOG.info("Torch Rank 0 IP:Port is: " + torchRank0IP);
+            break;
+          }
+          Utilities.sleep(this.conf.getInt(HboxConfiguration.HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL));
+        }
+        if (heartbeatThread.isHboxTrainCompleted()) {
+          return false;
+        }
+      }
+
+    }
+
     /**
      * set TF_CLUSTER_DEF in env
      * python script can load cluster def use "json.loads(os.environ["CLUSTER_DEF"])"
@@ -843,6 +877,15 @@ public class HboxContainer {
       envList.add(dmlcID + "=" + this.index);
       envList.add("DMLC_ROLE=" + this.role);
       envList.add("HEAPPROFILE=" + heapprofile + this.index);
+    } else if (hboxAppType.equals("DISTTORCH")) {
+      if (containerType.equals("DOCKER")) {
+        cudaVisibleDevicesEnv = "";
+      }
+      envList.add(cudaVisibleDevicesEnv);
+      envList.add(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES_NUM.toString() + "=" + cudaNum);
+      envList.add("INIT_METHOD=tcp://" + this.torchRank0IP);
+      envList.add("RANK=" + this.index);
+      envList.add("WORLD_SIZE=" + System.getenv("WORLD_SIZE"));
     } else {
       if (containerType.equals("DOCKER")) {
         cudaVisibleDevicesEnv = "";

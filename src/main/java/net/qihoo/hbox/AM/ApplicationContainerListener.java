@@ -83,6 +83,8 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   private String lightLDAIpPortStr;
 
+  private String torchRank0IP;
+
   private final Clock clock;
 
   private final ConcurrentMap<HboxContainerId, LastTime> runningContainers;
@@ -135,6 +137,7 @@ public class ApplicationContainerListener extends AbstractService implements App
     this.clusterDefStr = null;
     this.lightGBMIpPortStr = null;
     this.lightLDAIpPortStr = null;
+    this.torchRank0IP = null;
     this.applicationContext = applicationContext;
     this.clock = new SystemClock();
     this.runningContainers = new ConcurrentHashMap<>();
@@ -536,6 +539,16 @@ public class ApplicationContainerListener extends AbstractService implements App
   public void reportLightLdaIpPort(HboxContainerId containerId, String lightLdaIpPort) {
     this.lightLDAIpPortMap.put(containerId, lightLdaIpPort);
     LOG.info("From container " + containerId.toString() + "Received reported lightLDA ip port: " + lightLdaIpPort);
+  }
+
+  @Override
+  public void reportTorchRank0IP(String ip) {
+    this.torchRank0IP = ip;
+  }
+
+  @Override
+  public String getTorchRank0IP(){
+    return this.torchRank0IP;
   }
 
   @Override
