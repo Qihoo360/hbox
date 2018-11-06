@@ -312,6 +312,8 @@ public class HboxConfiguration extends YarnConfiguration {
 
   public static final int DEFAULT_HBOX_DOWNLOAD_FILE_THREAD_NUMS = 10;
 
+  public static final String HBOX_UPLOAD_OUTPUT_THREAD_NUMS = "hbox.upload.file.thread.nums";
+
   public static final String HBOX_CONTAINER_HEARTBEAT_INTERVAL = "hbox.container.heartbeat.interval";
 
   public static final int DEFAULT_HBOX_CONTAINER_HEARTBEAT_INTERVAL = 10 * 1000;

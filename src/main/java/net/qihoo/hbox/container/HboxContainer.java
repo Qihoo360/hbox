@@ -14,7 +14,9 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
@@ -284,6 +286,39 @@ public class HboxContainer {
     }
   }
 
+  private class UploadTask implements Runnable {
+
+    private final Path uploadDst;
+
+    private final Path uploadSrc;
+
+    UploadTask(Path uploadDst, Path uploadSrc) throws IOException {
+      this.uploadDst = uploadDst;
+      this.uploadSrc = uploadSrc;
+    }
+
+    @Override
+    public void run() {
+      LOG.info("Upload output file from " + this.uploadSrc + " to " + this.uploadDst);
+      int retry = 0;
+      while (true) {
+        try {
+          FileSystem dfs = uploadDst.getFileSystem(conf);
+          dfs.copyFromLocalFile(false, false, uploadSrc, uploadDst);
+          LOG.info("Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " successful.");
+          Thread.sleep(1000*60*2);
+          break;
+        } catch (Exception e) {
+          if (retry < downloadRetry) {
+            LOG.warn("Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " failed, retry in " + (++retry), e);
+          } else {
+            LOG.error("Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " failed after " + downloadRetry + " retry times!", e);
+            reportFailedAndExit();
+          }
+        }
+      }
+    }
+  }
 
   @SuppressWarnings("deprecation")
   private void prepareInputFiles() throws IOException, InterruptedException,
@@ -443,6 +478,13 @@ public class HboxContainer {
         LOG.info("Output path: " + s.getLocalLocation() + "#" + s.getDfsLocation());
       }
       int workerNum = conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM);
+      ExecutorService executor = Executors.newFixedThreadPool(
+          conf.getInt(HboxConfiguration.HBOX_UPLOAD_OUTPUT_THREAD_NUMS, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_THREAD_NUMS),
+          new ThreadFactoryBuilder()
+              .setDaemon(true)
+              .setNameFormat("Upload-Output-Thread #%d")
+              .build()
+      );
       if (outputs.size() > 0) {
         for (OutputInfo outputInfo : outputs) {
           FileSystem localFs = FileSystem.getLocal(conf);
@@ -457,10 +499,32 @@ public class HboxContainer {
             dfs.delete(remotePath);
           }
           if (localFs.exists(localPath)) {
-            dfs.copyFromLocalFile(false, false, localPath, remotePath);
-            LOG.info("Upload output " + localPath + " to remote path " + remotePath + " finished.");
+            FileStatus[] uploadFiles = localFs.listStatus(localPath);
+            for (FileStatus uploadFile : uploadFiles) {
+              Path uploadPath = uploadFile.getPath();
+              LOG.info("upload:" + uploadPath + " \tlocalPath:" + localPath);
+              String[] fileName = StringUtils.splitByWholeSeparator(uploadPath.toString(), "/" + localPath.toString() + "/", 2);
+              if (fileName.length == 2) {
+                Path uploadDstPath = new Path(remotePath.toString() + "/" + fileName[1]);
+                UploadTask uploadTask = new UploadTask(uploadDstPath, uploadPath);
+                LOG.info("upload from " + uploadPath + " to " + uploadDstPath);
+                executor.submit(uploadTask);
+              } else {
+                LOG.error("Get the local path error");
+              }
+            }
           }
         }
+        boolean allUploadTaskFinished = false;
+        executor.shutdown();
+        do {
+          try {
+            executor.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
+            allUploadTaskFinished = true;
+          } catch (InterruptedException e) {
+          }
+        } while (!allUploadTaskFinished);
+        LOG.info("All output files upload finished.");
       }
     }
 
