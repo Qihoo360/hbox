@@ -94,11 +94,11 @@ public class HboxConfiguration extends YarnConfiguration {
 
   public static final String HBOX_WORKER_MEM_AUTO_SCALE = "hbox.worker.mem.autoscale";
 
-  public static final Double DEFAULT_HBOX_WORKER_MEM_AUTO_SCALE = 0.5;
+  public static final Double DEFAULT_HBOX_WORKER_MEM_AUTO_SCALE = 0.0;
 
   public static final String HBOX_PS_MEM_AUTO_SCALE = "hbox.ps.mem.autoscale";
 
-  public static final Double DEFAULT_HBOX_PS_MEM_AUTO_SCALE = 0.2;
+  public static final Double DEFAULT_HBOX_PS_MEM_AUTO_SCALE = 0.0;
 
   public static final String HBOX_APP_MAX_ATTEMPTS = "hbox.app.max.attempts";
 

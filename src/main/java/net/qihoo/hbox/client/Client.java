@@ -273,11 +273,11 @@ public class Client {
 
   private void checkArguments(HboxConfiguration conf, GetNewApplicationResponse newApplication) {
     int maxMem = newApplication.getMaximumResourceCapability().getMemory();
-    LOG.info("Max mem capabililty of resources in this cluster " + maxMem);
+    LOG.info("Max mem capability of resources in this cluster " + maxMem);
     int maxVCores = newApplication.getMaximumResourceCapability().getVirtualCores();
-    LOG.info("Max vcores capabililty of resources in this cluster " + maxVCores);
+    LOG.info("Max vcores capability of resources in this cluster " + maxVCores);
     int maxGCores = newApplication.getMaximumResourceCapability().getGpuCores();
-    LOG.info("Max gpu cores capabililty of resources in this cluster " + maxGCores);
+    LOG.info("Max gpu cores capability of resources in this cluster " + maxGCores);
 
     int driverMem = conf.getInt(HboxConfiguration.HBOX_DRIVER_MEMORY, HboxConfiguration.DEFAULT_HBOX_DRIVER_MEMORY);
     int driverCores = conf.getInt(HboxConfiguration.HBOX_DRIVER_CORES, HboxConfiguration.DEFAULT_HBOX_DRIVER_CORES);
@@ -842,7 +842,7 @@ public class Client {
           }
         } catch (UndeclaredThrowableException e) {
           hboxClient = null;
-          LOG.info("Connecting to ResourceManager failed, try again later ", e);
+          LOG.info("Connecting to ApplicationManager failed, try again later ", e);
         }
       }
 
