@@ -2157,10 +2157,10 @@ public class ApplicationMaster extends CompositeService {
 
           String containerType = conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE,
                   HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE).toUpperCase();
+          List<Container> workerContainers = applicationContext.getWorkerContainers();
+          List<Container> psContainers = applicationContext.getPsContainers();
           if(hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS") || containerType.equals("DOCKER")) {
             if(flag) {
-              List<Container> workerContainers = applicationContext.getWorkerContainers();
-              List<Container> psContainers = applicationContext.getPsContainers();
               Map<HboxContainerId, String> vpcCommandAndPasswdMap = applicationContext.getVPCCommandAndPasswdMap();
               if( vpcCommandAndPasswdMap.size() == (workerNum + psNum)) {
                 for(Container container : workerContainers) {
@@ -2184,8 +2184,6 @@ public class ApplicationMaster extends CompositeService {
             }
             if(hboxAppType.equals("DIGITS")) {
               if(digitsFlag) {
-                List<Container> workerContainers = applicationContext.getWorkerContainers();
-                List<Container> psContainers = applicationContext.getPsContainers();
                 Map<HboxContainerId, String> digitsUrlMap = applicationContext.getDigitsUrlMap();
                 if( digitsUrlMap.size() == (workerNum + psNum)) {
                   for(Container container : workerContainers) {
@@ -2206,7 +2204,29 @@ public class ApplicationMaster extends CompositeService {
             }
           }
 
-          List<Container> workerContainers = applicationContext.getWorkerContainers();
+          // check the gpu device assigned whether correct
+          if (conf.getInt(HboxConfiguration.HBOX_PS_GPU, HboxConfiguration.DEFAULT_HBOX_PS_GPU) > 0) {
+            for (Container container : psContainers) {
+              HboxContainerId containerId = new HboxContainerId(container.getId());
+              if (applicationContext.getContainerGPUDevice(containerId) != null) {
+                String gpus = applicationContext.getContainerGPUDevice(containerId);
+                if (gpus.equals("") || gpus.equals(null) || gpus.split(",").length != conf.getInt(HboxConfiguration.HBOX_PS_GPU, HboxConfiguration.DEFAULT_HBOX_PS_GPU))
+                  throw new RuntimeException("ps container " + containerId.toString() + " is not assigned the correct gpu device. Now assigned info is " + gpus);
+              }
+            }
+          }
+
+          if (conf.getInt(HboxConfiguration.HBOX_WORKER_GPU, HboxConfiguration.DEFAULT_HBOX_WORKER_GPU) > 0) {
+            for (Container container : workerContainers) {
+              HboxContainerId containerId = new HboxContainerId(container.getId());
+              if (applicationContext.getContainerGPUDevice(containerId) != null) {
+                String gpus = applicationContext.getContainerGPUDevice(containerId);
+                if (gpus.equals("") || gpus.equals(null) || gpus.split(",").length != conf.getInt(HboxConfiguration.HBOX_WORKER_GPU, HboxConfiguration.DEFAULT_HBOX_WORKER_GPU))
+                  throw new RuntimeException("worker container " + containerId.toString() + " is not assigned the correct gpu device. Now assigned info is " + gpus);
+              }
+            }
+          }
+
           Map<HboxContainerId, String> clientProgress = applicationContext.getReporterProgress();
           float total = 0.0f;
           for (Container container : workerContainers) {
