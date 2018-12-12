@@ -253,10 +253,17 @@ public class HsController extends Controller implements AMParams {
                   Type type = new TypeToken<Map<String, List<Double>>>() {
                   }.getType();
                   Map<String, List<Double>> map = new Gson().fromJson(cpuStatistics, type);
-                  set("worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + workeri, String.format("%.2f", map.get("CPUMEM").get(0)));
-                  set("worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX + workeri, String.format("%.2f", map.get("CPUMEM").get(1)));
-                  set("worker" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG + workeri, String.format("%.2f", map.get("CPUUTIL").get(0)));
-                  set("worker" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX + workeri, String.format("%.2f", map.get("CPUUTIL").get(1)));
+                  if (map.size() > 0) {
+                    set("worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + workeri, String.format("%.2f", map.get("CPUMEM").get(0)));
+                    set("worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX + workeri, String.format("%.2f", map.get("CPUMEM").get(1)));
+                    set("worker" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG + workeri, String.format("%.2f", map.get("CPUUTIL").get(0)));
+                    set("worker" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX + workeri, String.format("%.2f", map.get("CPUUTIL").get(1)));
+                  } else {
+                    set("worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + workeri, "");
+                    set("worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX + workeri, "");
+                    set("worker" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG + workeri, "");
+                    set("worker" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX + workeri, "");
+                  }
                 }
                 if (readLog.get(info).size() > 14) {
                   set("worker" + CONTAINER_MEM_USAGE_WARN + workeri, readLog.get(info).get(14));
@@ -298,10 +305,17 @@ public class HsController extends Controller implements AMParams {
                   Type type = new TypeToken<Map<String, List<Double>>>() {
                   }.getType();
                   Map<String, List<Double>> map = new Gson().fromJson(cpuStatistics, type);
-                  set("ps" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + psi, String.format("%.2f", map.get("CPUMEM").get(0)));
-                  set("ps" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX + psi, String.format("%.2f", map.get("CPUMEM").get(1)));
-                  set("ps" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG + psi, String.format("%.2f", map.get("CPUUTIL").get(0)));
-                  set("ps" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX + psi, String.format("%.2f", map.get("CPUUTIL").get(1)));
+                  if (map.size() > 0) {
+                    set("ps" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + psi, String.format("%.2f", map.get("CPUMEM").get(0)));
+                    set("ps" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX + psi, String.format("%.2f", map.get("CPUMEM").get(1)));
+                    set("ps" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG + psi, String.format("%.2f", map.get("CPUUTIL").get(0)));
+                    set("ps" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX + psi, String.format("%.2f", map.get("CPUUTIL").get(1)));
+                  } else {
+                    set("ps" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + psi, "");
+                    set("ps" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX + psi, "");
+                    set("ps" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG + psi, "");
+                    set("ps" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX + psi, "");
+                  }
                 }
                 if (readLog.get(info).size() > 14) {
                   set("ps" + CONTAINER_MEM_USAGE_WARN + psi, readLog.get(info).get(14));
