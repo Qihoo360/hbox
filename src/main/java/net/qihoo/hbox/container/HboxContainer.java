@@ -499,15 +499,21 @@ public class HboxContainer {
             dfs.delete(remotePath);
           }
           if (localFs.exists(localPath)) {
+            String splitDir = localPath.toString();
+            if (!localPath.toString().endsWith("/")) {
+              splitDir = localPath.toString() + "/";
+            } else if (!localPath.toString().startsWith("/")) {
+              splitDir = "/" + localPath.toString();
+            }
             FileStatus[] uploadFiles = localFs.listStatus(localPath);
             for (FileStatus uploadFile : uploadFiles) {
               Path uploadPath = uploadFile.getPath();
-              LOG.info("upload:" + uploadPath + " \tlocalPath:" + localPath);
-              String[] fileName = StringUtils.splitByWholeSeparator(uploadPath.toString(), "/" + localPath.toString() + "/", 2);
+              LOG.debug("upload:" + uploadPath + " \tfrom\tlocalPath:" + localPath);
+              String[] fileName = StringUtils.splitByWholeSeparator(uploadPath.toString() + "/", splitDir, 2);
               if (fileName.length == 2) {
                 Path uploadDstPath = new Path(remotePath.toString() + "/" + fileName[1]);
                 UploadTask uploadTask = new UploadTask(uploadDstPath, uploadPath);
-                LOG.info("upload from " + uploadPath + " to " + uploadDstPath);
+                LOG.debug("upload from " + uploadPath + " to " + uploadDstPath);
                 executor.submit(uploadTask);
               } else {
                 LOG.error("Get the local path error");
