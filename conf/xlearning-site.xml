@@ -53,5 +53,9 @@
         <name>xlearning.history.webapp.https.port</name>
         <value>19885</value>
     </property>
+    <property>
+        <name>ipc.client.fallback-to-simple-auth-allowed</name>
+        <value>true</value>
+    </property>
 </configuration>
 
