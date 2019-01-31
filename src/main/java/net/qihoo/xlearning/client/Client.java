@@ -7,6 +7,8 @@ import net.qihoo.xlearning.common.LogType;
 import net.qihoo.xlearning.common.Message;
 import net.qihoo.xlearning.common.exceptions.RequestOverLimitException;
 import net.qihoo.xlearning.conf.XLearningConfiguration;
+import net.qihoo.xlearning.security.XTokenIdentifier;
+import net.qihoo.xlearning.security.XTokenSecretManager;
 import net.qihoo.xlearning.util.Utilities;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang.StringUtils;
@@ -16,10 +18,15 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.OutputFormat;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.*;
 import org.apache.hadoop.yarn.api.records.*;
@@ -33,6 +40,7 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -216,6 +224,15 @@ public class Client {
     ApplicationMessageProtocol appMessageHandler = null;
     if (!StringUtils.isBlank(appMasterAddress) && !appMasterAddress.equalsIgnoreCase("N/A")) {
       InetSocketAddress addr = new InetSocketAddress(appMasterAddress, appMasterPort);
+
+      if(UserGroupInformation.isSecurityEnabled()) {
+        XTokenSecretManager secretManager = new XTokenSecretManager();
+        UserGroupInformation current = UserGroupInformation.getCurrentUser();
+        XTokenIdentifier tokenID = new XTokenIdentifier(new Text(current.getUserName()));
+        Token<XTokenIdentifier> token = new Token<>(tokenID, secretManager);
+        SecurityUtil.setTokenService(token, addr);
+        current.addToken(token);
+      }
       appMessageHandler = RPC.getProxy(ApplicationMessageProtocol.class, ApplicationMessageProtocol.versionID, addr, conf);
     }
     return appMessageHandler;
@@ -631,6 +648,30 @@ public class Client {
     applicationContext.setResource(capability);
     ContainerLaunchContext amContainer = ContainerLaunchContext.newInstance(
         localResources, appMasterEnv, appMasterLaunchcommands, null, null, null);
+
+
+    if (UserGroupInformation.isSecurityEnabled()) {
+      // Note: Credentials class is marked as LimitedPrivate for HDFS and MapReduce
+      Credentials credentials = new Credentials();
+      String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
+      if (tokenRenewer == null || tokenRenewer.length() == 0) {
+        throw new IOException(
+                "Can't get Master Kerberos principal for the RM to use as renewer");
+      }
+
+      // For now, only getting tokens for the default file-system.
+      final Token<?> tokens[] =
+              dfs.addDelegationTokens(tokenRenewer, credentials);
+      if (tokens != null) {
+        for (Token<?> token : tokens) {
+          LOG.info("Got dt for " + dfs.getUri() + "; " + token);
+        }
+      }
+      DataOutputBuffer dob = new DataOutputBuffer();
+      credentials.writeTokenStorageToStream(dob);
+      ByteBuffer fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+      amContainer.setTokens(fsTokens);
+    }
 
     applicationContext.setAMContainerSpec(amContainer);
 

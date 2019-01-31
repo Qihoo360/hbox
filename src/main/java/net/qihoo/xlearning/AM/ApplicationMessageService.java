@@ -3,6 +3,7 @@ package net.qihoo.xlearning.AM;
 import net.qihoo.xlearning.api.ApplicationContext;
 import net.qihoo.xlearning.api.ApplicationMessageProtocol;
 import net.qihoo.xlearning.common.Message;
+import net.qihoo.xlearning.security.XTokenSecretManager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -10,6 +11,7 @@ import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 
 import java.io.IOException;
@@ -35,11 +37,20 @@ public class ApplicationMessageService extends AbstractService implements
   @Override
   public void start() {
     LOG.info("Starting application message server");
-    RPC.Builder builder = new RPC.Builder(getConfig());
+    Configuration conf = getConfig();
+    conf.setBoolean("hadoop.security.authorization",false);
+
+    RPC.Builder builder = new RPC.Builder(conf);
     builder.setProtocol(ApplicationMessageProtocol.class);
     builder.setInstance(this);
     builder.setBindAddress("0.0.0.0");
     builder.setPort(0);
+
+    if(UserGroupInformation.isSecurityEnabled()) {
+      XTokenSecretManager secretManager = new XTokenSecretManager();
+      builder.setSecretManager(secretManager);
+    }
+
     Server server;
     try {
       server = builder.build();
