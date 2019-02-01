@@ -77,7 +77,7 @@ def main(_):
     # Filter all connections except that between ps and this worker to avoid hanging issues when
     # one worker finishes. We are using asynchronous training so there is no need for the workers to communicate.
     config_proto = tf.ConfigProto(device_filters = ['/job:ps', '/job:worker/task:%d' % FLAGS.task_index],
-        gpu_options=gpu_options,
+        gpu_options = gpu_options,
         allow_soft_placement = True,
         log_device_placement = True)
 
