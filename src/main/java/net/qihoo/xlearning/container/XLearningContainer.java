@@ -87,6 +87,10 @@ public class XLearningContainer {
 
   private String localHost;
 
+  private IContainerLaunch containerLaunch;
+
+  private String containerType;
+
   private XLearningContainer() {
     this.conf = new XLearningConfiguration();
     conf.addResource(new Path(XLearningConstants.XLEARNING_JOB_CONFIGURATION));
@@ -157,6 +161,32 @@ public class XLearningContainer {
     if (xlearningAppType.equals("XFLOW")) {
       LOG.info("XFlow index is:" + this.index);
     }
+    containerType = conf.get(XLearningConfiguration.XLEARNING_CONTAINER_TYPE,
+        XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_TYPE);
+    LOG.info("containerType:" + containerType);
+    if (containerType.equalsIgnoreCase("DOCKER")) {
+      containerLaunch = new DockerContainer(containerId, conf);
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        try {
+          String containerIdStr = containerId.getContainerId().toString();
+          Runtime rt = Runtime.getRuntime();
+          String dockerPullCommand = "docker kill " + containerIdStr;
+          LOG.info("Docker kill command:" + dockerPullCommand);
+          Process process = rt.exec(dockerPullCommand);
+          int i = process.waitFor();
+          LOG.info("Docker Kill Wait:" + (i == 0 ? "Success" : "Failed"));
+          BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+          String line;
+          while ((line = br.readLine()) != null) {
+            LOG.info(line);
+          }
+        } catch (Exception e) {
+          LOG.warn("Docker Kill Error:", e);
+        }
+      }));
+    } else {
+      containerLaunch = new YarnContainer(containerId);
+    }
 
     this.single = conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE);
     heartbeatInterval = this.conf.getInt(XLearningConfiguration.XLEARNING_CONTAINER_HEARTBEAT_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_HEARTBEAT_INTERVAL);
@@ -188,9 +218,11 @@ public class XLearningContainer {
 
     containerReporter = null;
 
-    if ((("TENSORFLOW".equals(xlearningAppType) || "LIGHTLDA".equals(xlearningAppType)) && !single) || xlearningAppType.equals("DISTLIGHTGBM")) {
+    if ((("TENSORFLOW".equals(xlearningAppType) || "LIGHTLDA".equals(xlearningAppType)) && !single) || xlearningAppType.equals("DISTLIGHTGBM") || containerLaunch instanceof DockerContainer) {
       try {
         Utilities.getReservePort(reservedSocket, InetAddress.getByName(localHost).getHostAddress(), reservePortBegin, reservePortEnd);
+        conf.set("RESERVED_PORT", reservedSocket.getLocalPort() + "");
+        LOG.error(conf.get("RESERVED_PORT"));
       } catch (IOException e) {
         LOG.error("Can not get available port");
         reportFailedAndExit();
@@ -670,7 +702,7 @@ public class XLearningContainer {
 
     //close reserved socket as tf will bind this port later
     this.reservedSocket.close();
-    final Process xlearningProcess = rt.exec(command, env);
+    final Process xlearningProcess = containerLaunch.exec(command, env, envs);
     Date now = new Date();
     heartbeatThread.setContainersStartTime(now.toString());
 

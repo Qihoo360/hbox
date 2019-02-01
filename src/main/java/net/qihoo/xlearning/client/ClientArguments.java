@@ -47,6 +47,8 @@ class ClientArguments {
   String boardModelPB;
   int boardCacheTimeout;
   Boolean isRenameInputFile;
+  String dockerImage;
+  String containerType;
   public Boolean tfEvaluator;
   public Boolean userClasspathFirst;
   public int streamEpoch;
@@ -80,6 +82,8 @@ class ClientArguments {
     appMasterJar = "";
     userPath = "";
     userPath = "";
+    dockerImage = "";
+    containerType = "";
     priority = XLearningConfiguration.DEFAULT_XLEARNING_APP_PRIORITY;
     queue = "";
     userClasspathFirst = XLearningConfiguration.DEFAULT_XLEARNING_USER_CLASSPATH_FIRST;
@@ -174,6 +178,12 @@ class ClientArguments {
         "The input strategy for user data input, DOWNLOAD,PLACEHOLDER or STREAM, default:DOWNLOAD");
     allOptions.addOption("outputStrategy", "output-strategy", true,
         "The output strategy for user result output, UPLOAD or STREAM, default:UPLOAD");
+
+    allOptions.addOption("dockerImage", "docker-image", true,
+        "The Docker Image");
+    allOptions.addOption("containerType", "container-type", true,
+        "The train Launch Container Type: Yarn or Docker, Default is Yarn.");
+
 
     allOptions.addOption("outputIndex", "output-index", true,
         "Setting the index of worker which to upload the output, default uploading the output of all the workers.");
@@ -409,6 +419,14 @@ class ClientArguments {
 
     if (cliParser.hasOption("output-index")) {
       outputIndex = Integer.parseInt(cliParser.getOptionValue("output-index"));
+    }
+
+    if(cliParser.hasOption("docker-image")){
+      dockerImage = cliParser.getOptionValue("docker-image");
+    }
+
+    if(cliParser.hasOption("container-type")){
+      containerType = cliParser.getOptionValue("container-type");
     }
 
     appMasterJar = JobConf.findContainingJar(ApplicationMaster.class);

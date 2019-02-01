@@ -114,6 +114,8 @@ public class ApplicationMaster extends CompositeService {
   private int reservePortBegin = 0;
   private int reservePortEnd = 0;
 
+  private String xlearningContainerType;
+
   /**
    * Constructor, connect to Resource Manager
    *
@@ -146,6 +148,7 @@ public class ApplicationMaster extends CompositeService {
     psNum = conf.getInt(XLearningConfiguration.XLEARNING_PS_NUM, XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM);
     single = conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE);
     appPriority = conf.getInt(XLearningConfiguration.XLEARNING_APP_PRIORITY, XLearningConfiguration.DEFAULT_XLEARNING_APP_PRIORITY);
+    xlearningContainerType = conf.get(XLearningConfiguration.XLEARNING_CONTAINER_TYPE, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_TYPE);
     acquiredWorkerContainers = new ArrayList<>();
     acquiredPsContainers = new ArrayList<>();
     dmlcPsRootUri = null;
@@ -918,6 +921,27 @@ public class ApplicationMaster extends CompositeService {
           }
         }
       }
+    }
+    if (xlearningContainerType.equalsIgnoreCase("DOCKER")) {
+      String dockeRegistryHost = conf.get(XLearningConfiguration.XLEARNING_DOCKER_REGISTRY_HOST,
+          XLearningConfiguration.DEFAULT_XLEARNING_DOCKER_REGISTRY_HOST);
+      String dockeRegistryPort = conf.get(XLearningConfiguration.XLEARNING_DOCKER_REGISTRY_PORT,
+          XLearningConfiguration.DEFAULT_XLEARNING_DOCKER_REGISTRY_PORT);
+      String dockeImage = conf.get(XLearningConfiguration.XLEARNING_DOCKER_IMAGE,
+          XLearningConfiguration.DEFAULT_XLEARNING_DOCKER_IMAGE);
+      int containerMemory = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_MEMORY,
+          XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
+      int containerCpu = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_VCORES,
+          XLearningConfiguration.DEFAULT_XLEARNING_WORKER_VCORES);
+      containerEnv.put("DOCKER_REGISTRY_HOST", dockeRegistryHost);
+      containerEnv.put("DOCKER_REGISTRY_PORT", dockeRegistryPort);
+      containerEnv.put("DOCKER_REGISTRY_IMAGE", dockeImage);
+      containerEnv.put("DOCKER_CONTAINER_MEMORY", containerMemory + "");
+      containerEnv.put("DOCKER_CONTAINER_CPU", containerCpu + "");
+      if (dockeImage == null || dockeImage.equals("")) {
+        throw new RuntimeException("Docker need image!");
+      }
+
     }
     return containerEnv;
   }

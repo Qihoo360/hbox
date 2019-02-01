@@ -367,4 +367,24 @@ public class XLearningConfiguration extends YarnConfiguration {
       "xlearning.cluster.delegation.token.max-lifetime";
   public static final long DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT =
       24 * 60 * 60 * 1000; // 7 days
+
+  /**
+   * xlearning support docker conf
+   */
+  public static final String XLEARNING_DOCKER_REGISTRY_HOST = "xlearning.docker.registry.host";
+  public static final String DEFAULT_XLEARNING_DOCKER_REGISTRY_HOST = "localhost";
+
+  public static final String XLEARNING_DOCKER_REGISTRY_PORT = "xlearning.docker.registry.port";
+  public static final String DEFAULT_XLEARNING_DOCKER_REGISTRY_PORT = "50000";
+
+  public static final String XLEARNING_DOCKER_IMAGE= "xlearning.docker.image";
+  public static final String DEFAULT_XLEARNING_DOCKER_IMAGE = "";
+
+  public static final String XLEARNING_CONTAINER_TYPE= "xlearning.container.type";
+  public static final String DEFAULT_XLEARNING_CONTAINER_TYPE = "yarn";
+
+  public static final String XLEARNING_DOCKER_RUN_ARGS = "xlearning.docker.run.args";
+
+  public static final String XLEARNING_APP_ID = "xlearning.app.id";
+
 }

@@ -1,5 +1,8 @@
 package net.qihoo.xlearning.util;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import net.qihoo.xlearning.conf.XLearningConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -154,6 +157,35 @@ public final class Utilities {
       }
     }
     throw new IOException("couldn't allocate a unused port");
+  }
+
+  public static boolean isDockerAlive(String containerName) {
+    boolean isAlive = false;
+    Runtime runtime = Runtime.getRuntime();
+    Process process;
+    try {
+      process = runtime.exec(
+          new String[]{"/bin/bash", "-c", "docker ps --filter name=" + containerName + " | wc -l"});
+      InputStream is = process.getInputStream();
+      InputStreamReader isr = new InputStreamReader(is);
+      BufferedReader br = new BufferedReader(isr);
+      String line = null;
+      StringBuffer sb = new StringBuffer();
+      while ((line = br.readLine()) != null) {
+        sb.append(line);
+      }
+      int result = Integer.parseInt(sb.toString());
+      LOG.info("Docker running count:" + sb.toString());
+      is.close();
+      isr.close();
+      br.close();
+      if (result >= 2) {
+        isAlive = true;
+      }
+    } catch (IOException e) {
+      LOG.error("Docker check error:", e);
+    }
+    return isAlive;
   }
 
 }
