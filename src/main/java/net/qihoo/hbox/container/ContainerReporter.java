@@ -291,14 +291,19 @@ public class ContainerReporter extends Thread {
                         Long time = (new Date()).getTime();
                         double currentPmemUsage = 0.0;
                         int cpuUsagePercentPerCore = 0;
-                        while ((line = reader.readLine()) != null){
+                        while ((line = reader.readLine()) != null) {
                             String[] topInfo = StringUtils.split(line.trim(), " ");
                             if (topInfo.length > 0 && topInfo[1].toLowerCase().equals("root")) {
-                                currentPmemUsage += Double.parseDouble(topInfo[5].trim());
+                                if (topInfo[5].trim().contains("g")) {
+                                    currentPmemUsage += Double.parseDouble(topInfo[5].trim().split("g")[0].trim());
+                                } else if (topInfo[5].trim().contains("m")) {
+                                    currentPmemUsage += Double.parseDouble(topInfo[5].trim().split("g")[0].trim()) / 1024.0;
+                                } else {
+                                    currentPmemUsage += Double.parseDouble(topInfo[5].trim()) / 1024.0 / 1024.0;
+                                }
                                 cpuUsagePercentPerCore += (int) Double.parseDouble(topInfo[8].trim());
                             }
                         }
-                        currentPmemUsage = currentPmemUsage / 1024.0 / 1024.0;
                         if (cpuUsagePercentPerCore < 0) {
                             cpuUsagePercentPerCore = 0;
                         }
