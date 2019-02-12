@@ -418,8 +418,10 @@ public class ApplicationMaster extends CompositeService {
             } else {
               containerMessage.add(HboxConstants.WORKER);
             }
-            if (applicationContext.getContainerStatus(currentContainerID) != null) {
-              containerMessage.add(applicationContext.getContainerStatus(currentContainerID).toString());
+
+            HboxContainerStatus status = applicationContext.getContainerStatus(currentContainerID);
+            if (status != null) {
+              containerMessage.add(status.toString());
             } else {
               containerMessage.add("-");
             }
@@ -446,7 +448,7 @@ public class ApplicationMaster extends CompositeService {
 
             if (cpuStatistics.size() != 0) {
               Double cpuMemUsagedMax = cpuStatistics.get("CPUMEM").get(1);
-              if ((cpuMemUsagedMax / (workerMemory / 1024.0)) < conf.getDouble(HboxConfiguration.HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION, HboxConfiguration.DEFAULT_HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
+              if (status != null && status.toString().equalsIgnoreCase("SUCCEEDED") && (cpuMemUsagedMax / (workerMemory / 1024.0)) < conf.getDouble(HboxConfiguration.HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION, HboxConfiguration.DEFAULT_HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
                 usageStatistics.add("true");
               } else {
                 usageStatistics.add("false");
@@ -515,9 +517,9 @@ public class ApplicationMaster extends CompositeService {
             } else if (hboxAppType.equals("MXNET") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XFLOW")) {
               containerMessage.add("server");
             }
-
-            if (applicationContext.getContainerStatus(currentContainerID) != null) {
-              containerMessage.add(applicationContext.getContainerStatus(currentContainerID).toString());
+            HboxContainerStatus status = applicationContext.getContainerStatus(currentContainerID);
+            if (status != null) {
+              containerMessage.add(status.toString());
             } else {
               containerMessage.add("-");
             }
@@ -545,7 +547,7 @@ public class ApplicationMaster extends CompositeService {
 
             if (cpuStatistics.size() != 0) {
               Double cpuMemUsagedMax = cpuStatistics.get("CPUMEM").get(1);
-              if ((cpuMemUsagedMax / (psMemory / 1024.0)) < conf.getDouble(HboxConfiguration.HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION, HboxConfiguration.DEFAULT_HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
+              if (status != null && status.toString().equalsIgnoreCase("SUCCEEDED") && (cpuMemUsagedMax / (psMemory / 1024.0)) < conf.getDouble(HboxConfiguration.HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION, HboxConfiguration.DEFAULT_HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
                 usageStatistics.add("true");
               } else {
                 usageStatistics.add("false");
