@@ -1587,20 +1587,17 @@ public class ApplicationMaster extends CompositeService {
       Utilities.sleep(allocateInterval);
     }
 
-    if ("TENSORFLOW".equals(hboxAppType) && !single) {
-      LOG.info("Total " + rmCallbackHandler.getAllocatedPsContainerNumber() + " ps containers has allocated.");
-    }
-
-    if ("MXNET".equals(hboxAppType) && !singleMx) {
-      LOG.info("Total " + rmCallbackHandler.getAllocatedPsContainerNumber() + " ps containers has allocated.");
-    }
-
-    if ("DISTLIGHTLDA".equals(hboxAppType)) {
-      LOG.info("Total " + rmCallbackHandler.getAllocatedPsContainerNumber() + " ps containers has allocated.");
-    }
-
-    if ("XFLOW".equals(hboxAppType)) {
-      LOG.info("Total " + rmCallbackHandler.getAllocatedPsContainerNumber() + " ps containers has allocated.");
+    acquiredPsContainers = rmCallbackHandler.getAcquiredPsContainer();
+    if (psNum > 0) {
+      int totalNumAllocatedPs = rmCallbackHandler.getAllocatedPsContainerNumber();
+      if (totalNumAllocatedPs > psNum) {
+        while (acquiredPsContainers.size() > psNum) {
+          Container releaseContainer = acquiredPsContainers.remove(acquiredPsContainers.size() - 1);
+          amrmAsync.releaseAssignedContainer(releaseContainer.getId());
+          LOG.info("Release container " + releaseContainer.getId().toString());
+        }
+      }
+      LOG.info("Total " + acquiredPsContainers.size() + " ps containers has allocated.");
     }
 
     rmCallbackHandler.setWorkerContainersAllocating();
@@ -1641,7 +1638,7 @@ public class ApplicationMaster extends CompositeService {
       }
       Utilities.sleep(allocateInterval);
     }
-    acquiredPsContainers = rmCallbackHandler.getAcquiredPsContainer();
+
     acquiredWorkerContainers = rmCallbackHandler.getAcquiredWorkerContainer();
     int totalNumAllocatedWorkers = rmCallbackHandler.getAllocatedWorkerContainerNumber();
     if(totalNumAllocatedWorkers > workerNum) {
@@ -1657,6 +1654,15 @@ public class ApplicationMaster extends CompositeService {
     }
     for (int i = 0; i < workerNum; i++) {
       amrmAsync.removeContainerRequest(workerContainerRequest);
+    }
+
+    List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
+    if (cancelContainers.size() != 0) {
+      for (Container container : cancelContainers) {
+        LOG.info("Canceling unnecessary container: " + container.getId().toString());
+        amrmAsync.releaseAssignedContainer(container.getId());
+      }
+      cancelContainers.clear();
     }
     if(conf.getBoolean(HboxConfiguration.HBOX_HOST_LOCAL_ENABLE, HboxConfiguration.DEFAULT_HBOX_HOST_LOCAL_ENABLE)) {
       containerHostnames = new HashSet<>();
