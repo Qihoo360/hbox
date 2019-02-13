@@ -342,6 +342,10 @@ public class HboxConfiguration extends YarnConfiguration {
 
   public static final boolean DEFAULT_HBOX_HOST_LOCAL_ENABLE = false;
 
+  public static final String HBOX_HOST_BLACKLIST = "hbox.host.blacklist";
+
+  public static final String HBOX_HOST_WHITELIST = "hbox.host.whitelist";
+
   public static final String HBOX_PLACEHOLDER_WHOLE_ENABLE = "hbox.placeholder.whole.enable";
 
   public static final boolean DEFAULT_HBOX_PLACEHOLDER_WHOLE_ENABLE = false;
