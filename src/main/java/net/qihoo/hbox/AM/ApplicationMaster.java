@@ -8,7 +8,6 @@ import net.qihoo.hbox.common.exceptions.HboxExecException;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.container.HboxContainerId;
 import net.qihoo.hbox.util.Utilities;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -900,10 +899,6 @@ public class ApplicationMaster extends CompositeService {
         LOG.info("open and read the host local from " + hostLocalPath + " error, " + e);
       }
     }
-    String[] whiteList = null;
-    if (conf.get(HboxConfiguration.HBOX_HOST_WHITELIST) != null) {
-      whiteList = conf.getStrings(HboxConfiguration.HBOX_HOST_WHITELIST);
-    }
     Priority priority = Records.newRecord(Priority.class);
     priority.setPriority(appPriority);
     Resource workerCapability = Records.newRecord(Resource.class);
@@ -912,11 +907,7 @@ public class ApplicationMaster extends CompositeService {
     workerCapability.setMemory(Math.min(workerMemory + workerOverheadMem, maxContainerMem));
     workerCapability.setVirtualCores(workerVCores);
     workerCapability.setGpuCores(workerGCores);
-    if (hostLocals == null && whiteList == null) {
-      workerContainerRequest = new ContainerRequest(workerCapability, null, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
-    } else {
-      workerContainerRequest = new ContainerRequest(workerCapability, (String[]) ArrayUtils.addAll(hostLocals, whiteList), null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
-    }
+    workerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
     LOG.info("Create worker container request: " + workerContainerRequest.toString());
 
     if("TENSORFLOW".equals(hboxAppType) && !single) {
@@ -1527,17 +1518,6 @@ public class ApplicationMaster extends CompositeService {
 
     int allocateInterval = conf.getInt(HboxConfiguration.HBOX_ALLOCATE_INTERVAL, HboxConfiguration.DEFAULT_HBOX_ALLOCATE_INTERVAL);
     amrmAsync.setHeartbeatInterval(allocateInterval);
-
-    if (conf.get(HboxConfiguration.HBOX_HOST_BLACKLIST) != null) {
-      String[] blacklist = conf.getStrings(HboxConfiguration.HBOX_HOST_BLACKLIST);
-      List<String> hostBlackList = new ArrayList<>(blacklist.length);
-      for (String host : blacklist) {
-        if (host != null || host != "") {
-          hostBlackList.add(host);
-        }
-      }
-      amrmAsync.updateBlacklist(hostBlackList, null);
-    }
 
     for (int i = 0; i < psNum; i++) {
       amrmAsync.addContainerRequest(psContainerRequest);
