@@ -1519,6 +1519,17 @@ public class ApplicationMaster extends CompositeService {
     int allocateInterval = conf.getInt(HboxConfiguration.HBOX_ALLOCATE_INTERVAL, HboxConfiguration.DEFAULT_HBOX_ALLOCATE_INTERVAL);
     amrmAsync.setHeartbeatInterval(allocateInterval);
 
+    if (conf.get(HboxConfiguration.HBOX_HOST_BLACKLIST) != null) {
+      String[] blacklist = conf.getStrings(HboxConfiguration.HBOX_HOST_BLACKLIST);
+      List<String> hostBlackList = new ArrayList<>(blacklist.length);
+      for (String host : blacklist) {
+        if (host != null || host != "") {
+          hostBlackList.add(host);
+        }
+      }
+      amrmAsync.updateBlacklist(hostBlackList, null);
+    }
+
     for (int i = 0; i < psNum; i++) {
       amrmAsync.addContainerRequest(psContainerRequest);
     }
