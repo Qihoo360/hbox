@@ -231,6 +231,7 @@ public class HboxConfiguration extends YarnConfiguration {
   public static final String DEFAULT_HBOX_TF_BOARD_LOG_DIR = "eventLog";
   public static final String HBOX_TF_BOARD_ENABLE = "hbox.tf.board.enable";
   public static final Boolean DEFAULT_HBOX_TF_BOARD_ENABLE = false;
+  public static final String HBOX_TF_BOARD_UPLOAD = "hbox.tf.board.upload";
   public static final String HBOX_TF_BOARD_PS_ENABLE = "hbox.tf.board.ps.enable";
   public static final Boolean DEFAULT_HBOX_TF_BOARD_PS_ENABLE = false;
   public static final String HBOX_TF_INPUT_PS_ENABLE = "hbox.tf.input.ps.enable";

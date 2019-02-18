@@ -469,6 +469,7 @@ public class HboxContainer {
 
   @SuppressWarnings("deprecation")
   private void uploadOutputFiles() throws IOException {
+    Boolean boardUpload = this.conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_UPLOAD, true);
     if (this.conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STREAM)
         || this.conf.get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY).equals("STREAM")) {
       LOG.info("HBOX_OUTPUT_STRATEGY is STREAM, do not need to upload local output files.");
@@ -477,15 +478,15 @@ public class HboxContainer {
       for (OutputInfo s : outputs) {
         LOG.info("Output path: " + s.getLocalLocation() + "#" + s.getDfsLocation());
       }
-      int workerNum = conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM);
-      ExecutorService executor = Executors.newFixedThreadPool(
-          conf.getInt(HboxConfiguration.HBOX_UPLOAD_OUTPUT_THREAD_NUMS, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_THREAD_NUMS),
-          new ThreadFactoryBuilder()
-              .setDaemon(true)
-              .setNameFormat("Upload-Output-Thread #%d")
-              .build()
-      );
       if (outputs.size() > 0) {
+        int workerNum = conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM);
+        ExecutorService executor = Executors.newFixedThreadPool(
+            conf.getInt(HboxConfiguration.HBOX_UPLOAD_OUTPUT_THREAD_NUMS, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_THREAD_NUMS),
+            new ThreadFactoryBuilder()
+                .setDaemon(true)
+                .setNameFormat("Upload-Output-Thread #%d")
+                .build()
+        );
         for (OutputInfo outputInfo : outputs) {
           FileSystem localFs = FileSystem.getLocal(conf);
           Path localPath = new Path(outputInfo.getLocalLocation());
@@ -520,6 +521,7 @@ public class HboxContainer {
               }
             }
           }
+          localFs.close();
         }
         boolean allUploadTaskFinished = false;
         executor.shutdown();
@@ -559,7 +561,7 @@ public class HboxContainer {
           boardDfs = remoteLogPath.getFileSystem(conf);
         }
 
-        if (boardLocalFs.exists(localLogPath) && boardEnable && boardIndex == this.index && !this.role.equals(HboxConstants.EVALUATOR)) {
+        if (boardUpload && boardLocalFs.exists(localLogPath) && boardEnable && boardIndex == this.index && !this.role.equals(HboxConstants.EVALUATOR)) {
           if (boardDfs.exists(remoteLogPath)) {
             LOG.info("Container remote board log output path " + remoteLogPath + "exists, so we has to delete is first.");
             boardDfs.delete(remoteLogPath);
@@ -567,6 +569,8 @@ public class HboxContainer {
           boardDfs.copyFromLocalFile(false, false, localLogPath, remoteLogPath);
           LOG.info("Upload board  log dir " + localLogPath + " to remote path " + remoteLogPath + " finished.");
         }
+        boardLocalFs.close();
+        boardDfs.close();
       } else {
         LOG.info("User appoint the board log dir : " + this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR));
         if (!(hboxAppType.equals("TENSORFLOW"))) {

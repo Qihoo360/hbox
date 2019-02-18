@@ -137,6 +137,35 @@ public final class Utilities {
     return dir.exists() || dir.mkdirs();
   }
 
+  public static boolean isSubPath(FileSystem fs, Path parent, Path sub) {
+    if (parent == null || sub == null) {
+      return false;
+    } else {
+      try {
+        if (fs.exists(parent) && fs.exists(sub)) {
+          if (parent.equals(sub)) {
+            return true;
+          } else {
+            Path subParent = sub.getParent();
+            while (!parent.equals(subParent) && subParent != null) {
+              subParent = subParent.getParent();
+            }
+            if (subParent != null) {
+              return true;
+            } else {
+              return false;
+            }
+          }
+        } else {
+          return false;
+        }
+      } catch (Exception e) {
+        LOG.error("Check whether the path " + sub.toString() + " is the sub path of the path " + parent.toString() + ". Exception : " + e);
+        return false;
+      }
+    }
+  }
+
   public static LocalResource createApplicationResource(FileSystem fs, Path path, LocalResourceType type)
       throws IOException {
     LocalResource localResource = Records.newRecord(LocalResource.class);

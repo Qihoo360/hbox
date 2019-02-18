@@ -58,6 +58,8 @@ public class Client {
   private final Map<String, String> appMasterUserEnv;
   private final Map<String, String> containerUserEnv;
 
+  private Boolean boardUpload;
+
   private Client(String[] args) throws IOException, ParseException, ClassNotFoundException {
     this.conf = new HboxConfiguration();
     this.clientArguments = new ClientArguments(args);
@@ -69,6 +71,7 @@ public class Client {
     JOB_FILE_PERMISSION = FsPermission.createImmutable((short) 0644);
     this.appMasterUserEnv = new HashMap<>();
     this.containerUserEnv = new HashMap<>();
+    this.boardUpload = true;
   }
 
   private void init() throws IOException, YarnException {
@@ -230,6 +233,35 @@ public class Client {
       }
       LOG.info("Local output path: " + outputLocal + " and remote output path: " + outputRemote);
     }
+    if (conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STREAM)
+        || conf.get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY).equals("STREAM")) {
+      boardUpload = false;
+    } else {
+      if (outputPaths.size() > 0) {
+        String boardLogDir = conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR);
+        String outputRefBoardDir = null;
+        if (boardUpload && boardLogDir.indexOf("hdfs://") == -1) {
+          String replaceBoardLogDir = "/" + boardLogDir.replaceAll("\\.", " ").trim().replaceAll(" ", ".").replaceAll("/", " ").trim().replaceAll(" ", "/") + "/";
+          for (String outputInfo : outputPaths.keySet()) {
+            String replaceOutputDir = "/" + outputInfo.replaceAll("\\.", " ").trim().replaceAll(" ", ".").replaceAll("/", " ").trim().replaceAll(" ", "/") + "/";
+            if (replaceBoardLogDir.indexOf(replaceOutputDir) == 0) {
+              boardUpload = false;
+              outputRefBoardDir = outputPaths.get(outputInfo).split(",")[0];
+              break;
+            }
+          }
+          if (!boardUpload) {
+            if (conf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR).equals(new HboxConfiguration().get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR))) {
+              LOG.info("Set the Board History: " + outputRefBoardDir);
+              conf.set(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR, outputRefBoardDir);
+            } else {
+              boardUpload = false;
+            }
+          }
+        }
+      }
+    }
+    conf.setBoolean(HboxConfiguration.HBOX_TF_BOARD_UPLOAD, boardUpload);
   }
 
   @SuppressWarnings("unchecked")
@@ -790,6 +822,9 @@ public class Client {
     } catch (YarnException e) {
       throw new RuntimeException("Application submitAndMonitor failed!");
     }
+    /*TODO
+    *  hbox-kill command use the HBOX_HOME/
+    * */
     LOG.info("To kill this job: /usr/bin/hadoop/software/hbox/bin/hbox-kill " + applicationId.toString());
     boolean isApplicationSucceed = waitCompleted();
     return isApplicationSucceed;
