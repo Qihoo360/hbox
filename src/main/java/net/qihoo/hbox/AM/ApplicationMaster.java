@@ -637,18 +637,22 @@ public class ApplicationMaster extends CompositeService {
         List<FileStatus> fileStatus = new ArrayList<>();
         String inputPathRemote = inputPathTuple[0];
         if (!StringUtils.isBlank(inputPathRemote)) {
-          for (String singlePath : StringUtils.split(inputPathRemote, ",")) {
-            Path inputPath = new Path(singlePath);
-            this.inputList.add(singlePath);
-            try {
-              inputPath = inputPath.getFileSystem(conf).makeQualified(inputPath);
-
-              List<FileStatus> downLoadFile = Utilities.listStatusRecursively(inputPath,
-                  inputPath.getFileSystem(conf), null, Integer.MAX_VALUE);
-              fileStatus.addAll(downLoadFile);
-            } catch (IOException e) {
-              e.printStackTrace();
+          try {
+            FileSystem inputFs = FileSystem.get(conf);
+            for (String singlePath : StringUtils.split(inputPathRemote, ",")) {
+              Path inputPathTotal = new Path(singlePath);
+              FileStatus[] inputStatus = inputFs.globStatus(inputPathTotal);
+              for (Path inputPath : FileUtil.stat2Paths(inputStatus)) {
+                this.inputList.add(inputPath.toString());
+                inputPath = inputFs.makeQualified(inputPath);
+                List<FileStatus> downLoadFile = Utilities.listStatusRecursively(inputPath,
+                    inputFs, null, Integer.MAX_VALUE);
+                fileStatus.addAll(downLoadFile);
+              }
             }
+            inputFs.close();
+          } catch (IOException e) {
+            e.printStackTrace();
           }
           input2FileStatus.put(inputPathTuple[1], fileStatus);
           this.inputPath.append(inputPathTuple[1]).append(",");
