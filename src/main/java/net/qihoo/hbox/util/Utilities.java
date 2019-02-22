@@ -38,23 +38,23 @@ public final class Utilities {
     }
   }
 
-  public static List<FileStatus> listStatusRecursively(Path path, FileSystem fs, List<FileStatus> fileStatuses)
+  public static List<FileStatus> listStatusRecursively(Path path, FileSystem fs, List<FileStatus> fileStatuses, int subLevel)
       throws IOException {
     if (fileStatuses == null) {
       fileStatuses = new ArrayList<>(1000);
     }
-    LOG.info("input path: " + path.toString());
+    LOG.info("path: " + path.toString());
     FileStatus[] fileStatus = fs.listStatus(path);
     if (fileStatus != null && fileStatus.length > 0) {
       for (FileStatus f : fileStatus) {
-        if (fs.isDirectory(f.getPath())) {
-          listStatusRecursively(f.getPath(), fs, fileStatuses);
+        if (fs.isDirectory(f.getPath()) && subLevel > 0) {
+          listStatusRecursively(f.getPath(), fs, fileStatuses, subLevel - 1);
         } else {
           fileStatuses.add(f);
         }
       }
     } else {
-      LOG.info("input list size:" + fileStatus.length);
+      LOG.info("list size:" + fileStatus.length);
       if (fileStatus == null) {
         LOG.info("fileStatus is null");
       }

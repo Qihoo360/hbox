@@ -8,6 +8,7 @@ import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.InputInfo;
 import net.qihoo.hbox.common.OutputInfo;
 import net.qihoo.hbox.common.HboxContainerStatus;
+import net.qihoo.hbox.common.UploadTask;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.util.Utilities;
 import org.apache.commons.lang.StringUtils;
@@ -286,40 +287,6 @@ public class HboxContainer {
     }
   }
 
-  private class UploadTask implements Runnable {
-
-    private final Path uploadDst;
-
-    private final Path uploadSrc;
-
-    UploadTask(Path uploadDst, Path uploadSrc) throws IOException {
-      this.uploadDst = uploadDst;
-      this.uploadSrc = uploadSrc;
-    }
-
-    @Override
-    public void run() {
-      LOG.info("Upload output file from " + this.uploadSrc + " to " + this.uploadDst);
-      int retry = 0;
-      while (true) {
-        try {
-          FileSystem dfs = uploadDst.getFileSystem(conf);
-          dfs.copyFromLocalFile(false, false, uploadSrc, uploadDst);
-          LOG.info("Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " successful.");
-          Thread.sleep(1000*60*2);
-          break;
-        } catch (Exception e) {
-          if (retry < downloadRetry) {
-            LOG.warn("Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " failed, retry in " + (++retry), e);
-          } else {
-            LOG.error("Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " failed after " + downloadRetry + " retry times!", e);
-            reportFailedAndExit();
-          }
-        }
-      }
-    }
-  }
-
   @SuppressWarnings("deprecation")
   private void prepareInputFiles() throws IOException, InterruptedException,
       ExecutionException {
@@ -499,6 +466,7 @@ public class HboxContainer {
             LOG.info("Container remote output path " + remotePath + "exists, so we has to delete is first.");
             dfs.delete(remotePath);
           }
+          dfs.close();
           if (localFs.exists(localPath)) {
             String splitDir = localPath.toString();
             if (!localPath.toString().endsWith("/")) {
@@ -513,7 +481,7 @@ public class HboxContainer {
               String[] fileName = StringUtils.splitByWholeSeparator(uploadPath.toString() + "/", splitDir, 2);
               if (fileName.length == 2) {
                 Path uploadDstPath = new Path(remotePath.toString() + "/" + fileName[1]);
-                UploadTask uploadTask = new UploadTask(uploadDstPath, uploadPath);
+                UploadTask uploadTask = new UploadTask(conf, uploadDstPath, uploadPath);
                 LOG.debug("upload from " + uploadPath + " to " + uploadDstPath);
                 executor.submit(uploadTask);
               } else {
@@ -530,6 +498,8 @@ public class HboxContainer {
             executor.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
             allUploadTaskFinished = true;
           } catch (InterruptedException e) {
+            reportFailedAndExit();
+            break;
           }
         } while (!allUploadTaskFinished);
         LOG.info("All output files upload finished.");

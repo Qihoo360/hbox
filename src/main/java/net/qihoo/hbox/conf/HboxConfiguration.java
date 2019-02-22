@@ -2,9 +2,9 @@ package net.qihoo.hbox.conf;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.OutputFormat;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 public class HboxConfiguration extends YarnConfiguration {
 
@@ -192,13 +192,17 @@ public class HboxConfiguration extends YarnConfiguration {
 
   public static final String DEFAULT_HBOX_REMOTE_DEFAULTFS = "";
 
-  public static final String HBOX_INTERREAULST_DIR = "hbox.interresult.dir";
+  public static final String HBOX_INTERRESULT_DIR = "hbox.interresult.dir";
 
   public static final String DEFAULT_HBOX_INTERRESULT_DIR = "/interResult/interResult_";
 
-  public static final String HBOX_INTERRESULT_SAVE_INTERVAL = "hbox.interresult.save.interval";
+  public static final String HBOX_INTERRESULT_UPLOAD_INTERVAL = "hbox.interresult.upload.interval";
 
-  public static final int DEFAULT_HBOX_INTERRESULT_SAVE_INTERVAL = 0;
+  public static final int DEFAULT_HBOX_INTERRESULT_UPLOAD_INTERVAL = 0;
+
+  public static final String HBOX_INTERRESULT_UPLOAD_INC = "hbox.interresult.upload.inc";
+
+  public static final Boolean DEFAULT_HBOX_INTERRESULT_UPLOAD_INC = false;
 
   public static final String HBOX_INPUT_STRATEGY = "hbox.input.strategy";
 
@@ -314,6 +318,10 @@ public class HboxConfiguration extends YarnConfiguration {
   public static final int DEFAULT_HBOX_DOWNLOAD_FILE_THREAD_NUMS = 10;
 
   public static final String HBOX_UPLOAD_OUTPUT_THREAD_NUMS = "hbox.upload.file.thread.nums";
+
+  public static final String HBOX_FILE_LIST_LEVEL = "hbox.file.list.level";
+
+  public static final int DEFAULT_HBOX_FILE_LIST_LEVEL = 2;
 
   public static final String HBOX_CONTAINER_HEARTBEAT_INTERVAL = "hbox.container.heartbeat.interval";
 

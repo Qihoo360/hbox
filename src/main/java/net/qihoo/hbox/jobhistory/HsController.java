@@ -114,7 +114,7 @@ public class HsController extends Controller implements AMParams {
             } else {
               int j = 0;
               for (String output : readLog.get(info)) {
-                set(OUTPUT_PATH + j, output + conf.get(HboxConfiguration.HBOX_INTERREAULST_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR));
+                set(OUTPUT_PATH + j, output + conf.get(HboxConfiguration.HBOX_INTERRESULT_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR));
                 j++;
               }
               set(OUTPUT_TOTAL, String.valueOf(j));
@@ -409,7 +409,7 @@ public class HsController extends Controller implements AMParams {
             } else {
               int j = 0;
               for (String output : readLog.get(info)) {
-                set(OUTPUT_PATH + j, output + conf.get(HboxConfiguration.HBOX_INTERREAULST_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR));
+                set(OUTPUT_PATH + j, output + conf.get(HboxConfiguration.HBOX_INTERRESULT_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR));
                 j++;
               }
               set(OUTPUT_TOTAL, String.valueOf(j));

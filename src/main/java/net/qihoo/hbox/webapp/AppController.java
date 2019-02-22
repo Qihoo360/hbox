@@ -2,9 +2,6 @@ package net.qihoo.hbox.webapp;
 
 import com.google.gson.*;
 
-import java.lang.reflect.Type;
-
-import com.google.gson.reflect.TypeToken;
 import com.google.inject.Inject;
 import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.OutputInfo;
@@ -20,7 +17,6 @@ import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 
@@ -268,7 +264,7 @@ public class AppController extends Controller implements AMParams {
     i = 0;
     for (OutputInfo output : app.context.getOutputs()) {
       Path interResult = new Path(output.getDfsLocation()
-          + conf.get(HboxConfiguration.HBOX_INTERREAULST_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR));
+          + conf.get(HboxConfiguration.HBOX_INTERRESULT_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR));
       set(OUTPUT_PATH + i, interResult.toString());
       i++;
     }

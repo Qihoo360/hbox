@@ -282,7 +282,7 @@ public class ApplicationMaster extends CompositeService {
     this.startSavingModel = false;
     this.lastSavingStatus = false;
     this.savingModelList = new ArrayList<>();
-    this.savingInterval = conf.getInt(HboxConfiguration.HBOX_INTERRESULT_SAVE_INTERVAL, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_SAVE_INTERVAL);
+    this.savingInterval = conf.getInt(HboxConfiguration.HBOX_INTERRESULT_UPLOAD_INTERVAL, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_UPLOAD_INTERVAL);
   }
 
   private void init() {
@@ -644,7 +644,7 @@ public class ApplicationMaster extends CompositeService {
               inputPath = inputPath.getFileSystem(conf).makeQualified(inputPath);
 
               List<FileStatus> downLoadFile = Utilities.listStatusRecursively(inputPath,
-                  inputPath.getFileSystem(conf), null);
+                  inputPath.getFileSystem(conf), null, Integer.MAX_VALUE);
               fileStatus.addAll(downLoadFile);
             } catch (IOException e) {
               e.printStackTrace();
@@ -2587,7 +2587,7 @@ public class ApplicationMaster extends CompositeService {
 
     @Override
     public String getLastInterSavingPath() {
-      Path interPath = new Path(conf.get(HboxConfiguration.HBOX_INTERREAULST_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
+      Path interPath = new Path(conf.get(HboxConfiguration.HBOX_INTERRESULT_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
           + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(containerListener.interResultTimeStamp()));
       return interPath.toString();
     }
