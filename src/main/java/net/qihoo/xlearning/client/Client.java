@@ -401,7 +401,6 @@ public class Client {
     GetNewApplicationResponse newAppResponse = newAPP.getNewApplicationResponse();
     applicationId = newAppResponse.getApplicationId();
     LOG.info("Got new Application: " + applicationId.toString());
-    conf.set(XLearningConfiguration.XLEARNING_APP_ID, applicationId.toString());
 
     Path jobConfPath = Utilities
         .getRemotePath(conf, applicationId, XLearningConstants.XLEARNING_JOB_CONFIGURATION);

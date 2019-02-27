@@ -9,7 +9,6 @@ import net.qihoo.xlearning.conf.XLearningConfiguration;
 import net.qihoo.xlearning.util.Utilities;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 public class DockerContainer implements IContainerLaunch {
 
@@ -28,7 +27,7 @@ public class DockerContainer implements IContainerLaunch {
 
   @Override
   public boolean isAlive() {
-    if (xlearningProcess != null && xlearningProcess.isAlive()) {
+    if (xlearningProcess != null && Utilities.isProcessAlive(xlearningProcess)) {
       return true;
     } else if (Utilities.isDockerAlive(containerId.toString())) {
       return true;
@@ -41,14 +40,15 @@ public class DockerContainer implements IContainerLaunch {
     LOG.info("docker command:" + command + ",envs:" + envs);
     Runtime rt = Runtime.getRuntime();
     String port = conf.get("RESERVED_PORT");
+    String workDir = "/" + conf.get(XLearningConfiguration.XLEARNING_DOCKER_WORK_DIR, XLearningConfiguration.DEFAULT_XLEARNING_DOCKER_WORK_DIR);
     String path = new File("").getAbsolutePath();
     StringBuilder envsParam = new StringBuilder();
     for (String keyValue : envp) {
-      if (keyValue.startsWith("PATH") || keyValue.startsWith("CLASSPATH") || keyValue
-          .startsWith("JAVA_HOME")) {
+      if (keyValue.startsWith("PATH") || keyValue.startsWith("CLASSPATH")) {
         continue;
+      } else {
+        envsParam.append(" --env " + keyValue + "");
       }
-      envsParam.append(" --env " + keyValue + "");
     }
     if (port.equals("-1")) {
       port = "";
@@ -63,29 +63,33 @@ public class DockerContainer implements IContainerLaunch {
       userName = userNameArr[0];
     }
     LOG.info("Container launch userName:" + userName);
-    String appId = conf.get(XLearningConfiguration.XLEARNING_APP_ID);
     String homePath = envs.get("HADOOP_HDFS_HOME");
-    String mount = " -v " + path + ":" + "/work";
+    String mount = " -v " + path + ":" + workDir;
     mount += " -v " + homePath + ":" + homePath;
-    mount += " -v " + "/home/yarn/software/hadoop:/home/yarn/software/hadoop";
-    String[] localDirs = conf.getStrings(YarnConfiguration.NM_LOCAL_DIRS);
+    String javaPath = envs.get("JAVA_HOME");
+    mount += " -v " + javaPath + ":" + javaPath;
+    String[] localDirs = envs.get("LOCAL_DIRS").split(File.pathSeparator);
     if (localDirs.length > 0) {
       for (String perPath : localDirs) {
-        String basePath = perPath + "/usercache/" + userName + "/appcache/" + appId;
-        mount = mount + " -v " + basePath + ":" + basePath;
+        mount = mount + " -v " + perPath + ":" + perPath;
       }
     }
-    String[] logsDirs = conf.getStrings(YarnConfiguration.NM_LOG_DIRS);
+    String[] logsDirs = envs.get("LOG_DIRS").split(File.pathSeparator);
     if (localDirs.length > 0) {
       for (String perPath : logsDirs) {
-        String basePath = perPath + "/" + appId;
-        mount = mount + " -v " + basePath + ":" + basePath;
+        mount = mount + " -v " + perPath + ":" + perPath;
       }
     }
+
+    String dockerHost = conf.get(XLearningConfiguration.XLEARNING_DOCKER_REGISTRY_HOST);
+    String dockerPort = conf.get(XLearningConfiguration.XLEARNING_DOCKER_REGISTRY_PORT);
+    String dockerImageName = conf.get(XLearningConfiguration.XLEARNING_DOCKER_IMAGE);
+    if (dockerPort != null && dockerPort.length() > 0 && dockerHost != null && dockerPort != null) {
+      dockerImageName = dockerHost + ":" + dockerPort + "/" + dockerImageName;
+    }
+
     try {
-      String dockerPullCommand =
-          "docker pull " + envs.get("DOCKER_REGISTRY_HOST") + ":" + envs.get("DOCKER_REGISTRY_PORT")
-              + "/" + envs.get("DOCKER_REGISTRY_IMAGE");
+      String dockerPullCommand = "docker pull " + dockerImageName;
       LOG.info("Docker Pull command:" + dockerPullCommand);
       Process process = rt.exec(dockerPullCommand, envp);
       int i = process.waitFor();
@@ -105,12 +109,12 @@ public class DockerContainer implements IContainerLaunch {
             " --cpus " + containerCpu +
             " -m " + containerMemory + "m " +
             port +
+            " -w " +workDir +
             mount +
             envsParam.toString() +
             " --name " + containerId.toString() + " " +
             runArgs + " " +
-            envs.get("DOCKER_REGISTRY_HOST") + ":" + envs.get("DOCKER_REGISTRY_PORT") + "/" + envs
-            .get("DOCKER_REGISTRY_IMAGE");
+            dockerImageName;
     dockerCommand += " " + command;
     LOG.info("Docker command:" + dockerCommand);
     xlearningProcess = rt.exec(dockerCommand, envp);

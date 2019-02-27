@@ -166,22 +166,25 @@ public class XLearningContainer {
     LOG.info("containerType:" + containerType);
     if (containerType.equalsIgnoreCase("DOCKER")) {
       containerLaunch = new DockerContainer(containerId, conf);
-      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-        try {
-          String containerIdStr = containerId.getContainerId().toString();
-          Runtime rt = Runtime.getRuntime();
-          String dockerPullCommand = "docker kill " + containerIdStr;
-          LOG.info("Docker kill command:" + dockerPullCommand);
-          Process process = rt.exec(dockerPullCommand);
-          int i = process.waitFor();
-          LOG.info("Docker Kill Wait:" + (i == 0 ? "Success" : "Failed"));
-          BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
-          String line;
-          while ((line = br.readLine()) != null) {
-            LOG.info(line);
+      Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            String containerIdStr = containerId.getContainerId().toString();
+            Runtime rt = Runtime.getRuntime();
+            String dockerPullCommand = "docker kill " + containerIdStr;
+            LOG.info("Docker kill command:" + dockerPullCommand);
+            Process process = rt.exec(dockerPullCommand);
+            int i = process.waitFor();
+            LOG.info("Docker Kill Wait:" + (i == 0 ? "Success" : "Failed"));
+            BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = br.readLine()) != null) {
+              LOG.info(line);
+            }
+          } catch (Exception e) {
+            LOG.warn("Docker Kill Error:", e);
           }
-        } catch (Exception e) {
-          LOG.warn("Docker Kill Error:", e);
         }
       }));
     } else {
@@ -612,12 +615,15 @@ public class XLearningContainer {
         }
       }
     }
-    envList.add("PATH=" + System.getenv("PATH"));
+    envList.add(XLearningConstants.Environment.HADOOP_USER_NAME.toString() + "=" + conf.get("hadoop.job.ugi").split(",")[0]);
+    envList.add("PATH=" + System.getenv("JAVA_HOME") + File.separator + "bin" + File.pathSeparator +
+        System.getenv("HADOOP_HDFS_HOME") + File.separator + "bin" + File.pathSeparator +
+        System.getenv("PATH"));
     envList.add("JAVA_HOME=" + System.getenv("JAVA_HOME"));
-    envList.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
+    envList.add("HADOOP_HOME=" + System.getenv("HADOOP_YARN_HOME"));
     envList.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
     envList.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-        "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+        "/jre/lib/amd64/server:" + System.getenv("HADOOP_YARN_HOME") + "/lib/native");
     envList.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
     envList.add("PYTHONUNBUFFERED=1");
     envList.add(XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList);

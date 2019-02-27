@@ -18,6 +18,7 @@ import org.apache.hadoop.yarn.util.Records;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -186,6 +187,23 @@ public final class Utilities {
       LOG.error("Docker check error:", e);
     }
     return isAlive;
+  }
+
+  public static boolean isProcessAlive(Process processid){
+    try {
+      Method isAliveMethod = processid.getClass().getMethod("isAlive");
+      Boolean isAlive = (Boolean) isAliveMethod.invoke(processid);
+      return isAlive;
+    } catch (NoSuchMethodException e){
+      try {
+        processid.exitValue();
+        return false;
+      } catch(IllegalThreadStateException e1) {
+        return true;
+      }
+    } catch (Exception et){
+      return true;
+    }
   }
 
 }

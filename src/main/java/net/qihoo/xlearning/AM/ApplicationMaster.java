@@ -923,25 +923,16 @@ public class ApplicationMaster extends CompositeService {
       }
     }
     if (xlearningContainerType.equalsIgnoreCase("DOCKER")) {
-      String dockeRegistryHost = conf.get(XLearningConfiguration.XLEARNING_DOCKER_REGISTRY_HOST,
-          XLearningConfiguration.DEFAULT_XLEARNING_DOCKER_REGISTRY_HOST);
-      String dockeRegistryPort = conf.get(XLearningConfiguration.XLEARNING_DOCKER_REGISTRY_PORT,
-          XLearningConfiguration.DEFAULT_XLEARNING_DOCKER_REGISTRY_PORT);
-      String dockeImage = conf.get(XLearningConfiguration.XLEARNING_DOCKER_IMAGE,
-          XLearningConfiguration.DEFAULT_XLEARNING_DOCKER_IMAGE);
+      String dockeImage = conf.get(XLearningConfiguration.XLEARNING_DOCKER_IMAGE);
       int containerMemory = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_MEMORY,
           XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
       int containerCpu = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_VCORES,
           XLearningConfiguration.DEFAULT_XLEARNING_WORKER_VCORES);
-      containerEnv.put("DOCKER_REGISTRY_HOST", dockeRegistryHost);
-      containerEnv.put("DOCKER_REGISTRY_PORT", dockeRegistryPort);
-      containerEnv.put("DOCKER_REGISTRY_IMAGE", dockeImage);
       containerEnv.put("DOCKER_CONTAINER_MEMORY", containerMemory + "");
       containerEnv.put("DOCKER_CONTAINER_CPU", containerCpu + "");
       if (dockeImage == null || dockeImage.equals("")) {
         throw new RuntimeException("Docker need image!");
       }
-
     }
     return containerEnv;
   }
@@ -1516,6 +1507,9 @@ public class ApplicationMaster extends CompositeService {
     Map<String, String> psContainerEnv = buildContainerEnv(XLearningConstants.PS);
     List<String> workerContainerLaunchCommands = buildContainerLaunchCommand(workerMemory);
     List<String> psContainerLaunchCommands = buildContainerLaunchCommand(psMemory);
+    for (String k : workerContainerEnv.keySet()) {
+      LOG.info("key:" + k + "\tvalue:" + workerContainerEnv.get(k));
+    }
 
     LOG.info("Launching containers");
     int index = 0;
