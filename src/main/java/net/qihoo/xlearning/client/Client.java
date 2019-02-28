@@ -96,6 +96,8 @@ public class Client {
     conf.set(XLearningConfiguration.XLEARNING_TF_BOARD_HISTORY_DIR, clientArguments.boardHistoryDir);
     conf.set(XLearningConfiguration.XLEARNING_BOARD_MODELPB, clientArguments.boardModelPB);
     conf.set(XLearningConfiguration.XLEARNING_BOARD_CACHE_TIMEOUT, String.valueOf(clientArguments.boardCacheTimeout));
+    conf.set(XLearningConfiguration.XLEARNING_DOCKER_IMAGE, String.valueOf(clientArguments.dockerImage));
+    conf.set(XLearningConfiguration.XLEARNING_CONTAINER_TYPE, String.valueOf(clientArguments.containerType));
     conf.set(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, clientArguments.inputStrategy);
     conf.set(XLearningConfiguration.XLEARNING_OUTPUT_STRATEGY, clientArguments.outputStrategy);
     conf.setBoolean(XLearningConfiguration.XLEARNING_INPUTFILE_RENAME, clientArguments.isRenameInputFile);
@@ -399,6 +401,7 @@ public class Client {
     GetNewApplicationResponse newAppResponse = newAPP.getNewApplicationResponse();
     applicationId = newAppResponse.getApplicationId();
     LOG.info("Got new Application: " + applicationId.toString());
+    conf.set(XLearningConfiguration.XLEARNING_APP_ID, applicationId.toString());
 
     Path jobConfPath = Utilities
         .getRemotePath(conf, applicationId, XLearningConstants.XLEARNING_JOB_CONFIGURATION);
@@ -518,7 +521,10 @@ public class Client {
     appMasterEnv.put(XLearningConstants.Environment.XLEARNING_JOB_CONF_LOCATION.toString(), jobConfPath.toString());
 
     if (clientArguments.launchCmd != null && !clientArguments.launchCmd.equals("")) {
-      appMasterEnv.put(XLearningConstants.Environment.XLEARNING_EXEC_CMD.toString(), clientArguments.launchCmd);
+      appMasterEnv.put(XLearningConstants.Environment.XLEARNING_EXEC_CMD.toString(),
+          clientArguments.launchCmd);
+    } else if (clientArguments.containerType.equals("docker")) {
+      appMasterEnv.put(XLearningConstants.Environment.XLEARNING_EXEC_CMD.toString(), "");
     } else {
       throw new IllegalArgumentException("Invalid launch cmd for the application");
     }
