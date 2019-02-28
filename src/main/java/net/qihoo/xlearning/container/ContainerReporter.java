@@ -2,7 +2,9 @@ package net.qihoo.xlearning.container;
 
 import com.google.gson.Gson;
 import net.qihoo.xlearning.api.ApplicationContainerProtocol;
+import net.qihoo.xlearning.conf.XLearningConfiguration;
 import net.qihoo.xlearning.util.Utilities;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +41,8 @@ public class ContainerReporter extends Thread {
 
   private ConcurrentHashMap<String, List> cpuMetrics;
 
+  private String containerType;
+
 
   public ContainerReporter(ApplicationContainerProtocol protocol, Configuration conf,
                            XLearningContainerId xlearningContainerId, String xlearningCmdProcessId) {
@@ -50,10 +54,13 @@ public class ContainerReporter extends Thread {
     this.processTreeClass = conf.getClass(YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE, null,
         ResourceCalculatorProcessTree.class);
     this.cpuMetrics = new ConcurrentHashMap<>();
+    this.containerType = conf.get(XLearningConfiguration.XLEARNING_CONTAINER_TYPE,
+        XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_TYPE);
   }
 
   public void run() {
     try {
+//        produceCpuMetricsDocker(this.containerId.toString());
       produceCpuMetrics(this.xlearningCmdProcessId);
     } catch (IOException e) {
       e.printStackTrace();
@@ -157,43 +164,77 @@ public class ContainerReporter extends Thread {
     final DecimalFormat df = new DecimalFormat("#.00");
     df.setRoundingMode(RoundingMode.HALF_UP);
     LOG.info("Starting thread to read cpu metrics");
+    final String statsCommand = "docker stats --no-stream --format {{.CPUPerc}}{{.MemUsage}} " + this.containerId.toString();
     Thread cpuMetricsThread = new Thread(new Runnable() {
       @Override
       public void run() {
         try {
           while (true) {
             pTree.updateProcessTree();
+            List memPoint = new ArrayList();
+            List utilPoint = new ArrayList();
             Long time = (new Date()).getTime();
             double currentPmemUsage = 0.0;
+            float cpuUsagePercentPerCore = 0f;
             try {
               Method getMemorySize = pTree.getClass().getMethod("getRssMemorySize");
               currentPmemUsage = Double.parseDouble(df.format(((long) getMemorySize.invoke(pTree)) / 1024.0 / 1024.0 / 1024.0));
             } catch (NoSuchMethodException e) {
-              LOG.debug("current hadoop version don't have the method getRssMemorySize of Class " + pTree.getClass().toString() + ". For More Detail: " + e);
+              LOG.info("current hadoop version don't have the method getRssMemorySize of Class " + pTree.getClass().toString() + ". For More Detail: " + e);
               currentPmemUsage = Double.parseDouble(df.format(pTree.getCumulativeRssmem() / 1024.0 / 1024.0 / 1024.0));
             }
-            if (currentPmemUsage < 0.0) {
-              currentPmemUsage = 0.0;
-            }
-            List memPoint = new ArrayList();
-            memPoint.add(time);
-            memPoint.add(currentPmemUsage);
-            cpuMetrics.put("CPUMEM", memPoint);
+
             try {
               Method getCpuUsage = pTree.getClass().getMethod("getCpuUsagePercent");
-              int cpuUsagePercentPerCore = (int) (float) getCpuUsage.invoke(pTree);
-              if (cpuUsagePercentPerCore < 0) {
-                cpuUsagePercentPerCore = 0;
-              }
-              List utilPoint = new ArrayList();
-              utilPoint.add(time);
-              utilPoint.add(cpuUsagePercentPerCore);
-              cpuMetrics.put("CPUUTIL", utilPoint);
+              cpuUsagePercentPerCore = (float) getCpuUsage.invoke(pTree);
             } catch (NoSuchMethodException e) {
               LOG.debug("current hadoop version don't have the method getCpuUsagePercent of Class " + pTree.getClass().toString() + ". For More Detail: " + e);
             } catch (Exception e) {
               LOG.debug("getCpuUsagePercent Exception: " + e);
             }
+
+            if (containerType.equalsIgnoreCase("DOCKER")) {
+              try {
+                Runtime rt = Runtime.getRuntime();
+                Process process = rt.exec(statsCommand);
+                int i = process.waitFor();
+                LOG.debug("Docker Stats Get:" + (i == 0 ? "Success" : "Failed"));
+                if (i == 0) {
+                  BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                  String line;
+                  while ((line = br.readLine()) != null) {
+                    if (StringUtils.split(line, '%').length < 2)
+                      continue;
+                    String[] statsInfo = StringUtils.split(line, '%');
+                    cpuUsagePercentPerCore += Float.parseFloat(statsInfo[0].trim());
+                    String currentPmemUsageStr = statsInfo[1].trim().split("/")[0].trim();
+                    if (currentPmemUsageStr.contains("M")) {
+                      currentPmemUsage += Double.parseDouble(currentPmemUsageStr.split("M")[0].trim()) / 1024.0;
+                    } else if (currentPmemUsageStr.contains("G")) {
+                      currentPmemUsage += Double.parseDouble(currentPmemUsageStr.split("G")[0].trim());
+                    }
+                  }
+                }
+              } catch (Exception e){
+                LOG.warn("Exception of getting the docker stats.");
+                e.printStackTrace();
+              }
+            }
+
+            if (currentPmemUsage < 0.0) {
+              currentPmemUsage = 0.0;
+            }
+            memPoint.add(time);
+            memPoint.add(currentPmemUsage);
+            cpuMetrics.put("CPUMEM", memPoint);
+
+            if (cpuUsagePercentPerCore < 0) {
+              cpuUsagePercentPerCore = 0;
+            }
+            utilPoint.add(time);
+            utilPoint.add(cpuUsagePercentPerCore);
+            cpuMetrics.put("CPUUTIL", utilPoint);
+
             Utilities.sleep(1000);
           }
         } catch (Exception e) {

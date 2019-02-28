@@ -1507,9 +1507,6 @@ public class ApplicationMaster extends CompositeService {
     Map<String, String> psContainerEnv = buildContainerEnv(XLearningConstants.PS);
     List<String> workerContainerLaunchCommands = buildContainerLaunchCommand(workerMemory);
     List<String> psContainerLaunchCommands = buildContainerLaunchCommand(psMemory);
-    for (String k : workerContainerEnv.keySet()) {
-      LOG.info("key:" + k + "\tvalue:" + workerContainerEnv.get(k));
-    }
 
     LOG.info("Launching containers");
     int index = 0;
