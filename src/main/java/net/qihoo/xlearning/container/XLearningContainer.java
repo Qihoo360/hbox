@@ -3,10 +3,12 @@ package net.qihoo.xlearning.container;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import net.qihoo.xlearning.AM.ApplicationMaster;
 import net.qihoo.xlearning.api.ApplicationContainerProtocol;
 import net.qihoo.xlearning.api.XLearningConstants;
 import net.qihoo.xlearning.common.InputInfo;
 import net.qihoo.xlearning.common.OutputInfo;
+import net.qihoo.xlearning.common.SecurityUtil;
 import net.qihoo.xlearning.common.XLearningContainerStatus;
 import net.qihoo.xlearning.common.TextMultiOutputFormat;
 import net.qihoo.xlearning.conf.XLearningConfiguration;
@@ -19,7 +21,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.*;
@@ -32,6 +36,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.util.concurrent.*;
 import java.text.SimpleDateFormat;
@@ -1009,16 +1014,23 @@ public class XLearningContainer {
   }
 
   public static void main(String[] args) {
-    XLearningContainer container = new XLearningContainer();
+    final XLearningContainer container = new XLearningContainer();
     try {
-      container.init();
-      if (container.run()) {
-        LOG.info("XLearningContainer " + container.getContainerId().toString() + " finish successfully");
-        container.reportSucceededAndExit();
-      } else {
-        LOG.error("XLearningContainer run failed!");
-        container.reportFailedAndExit();
-      }
+      UserGroupInformation ugi = SecurityUtil.setupUserGroupInformation();
+      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          container.init();
+          if (container.run()) {
+            LOG.info("XLearningContainer " + container.getContainerId().toString() + " finish successfully");
+            container.reportSucceededAndExit();
+          } else {
+            LOG.error("XLearningContainer run failed!");
+            container.reportFailedAndExit();
+          }
+          return null;
+        }
+      });
     } catch (Exception e) {
       LOG.error("Some errors has occurred during container running!", e);
       container.reportFailedAndExit();

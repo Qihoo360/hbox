@@ -130,7 +130,8 @@ public class ApplicationContainerListener extends AbstractService implements App
   @Override
   public void start() {
     LOG.info("Starting application containers handler server");
-    RPC.Builder builder = new RPC.Builder(getConfig());
+    Configuration conf = SecurityUtil.disableSecureRpc(getConfig());
+    RPC.Builder builder = new RPC.Builder(conf);
     builder.setProtocol(ApplicationContainerProtocol.class);
     builder.setInstance(this);
     builder.setBindAddress("0.0.0.0");

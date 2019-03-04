@@ -16,6 +16,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -34,7 +35,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.RoundingMode;
 import java.net.*;
+import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivilegedExceptionAction;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -903,6 +906,7 @@ public class ApplicationMaster extends CompositeService {
         String.valueOf(containerListener.getServerPort()));
     containerEnv.put("PATH", System.getenv("PATH") + ":" + System.getenv(XLearningConstants.Environment.USER_PATH.toString()));
     containerEnv.put("LD_LIBRARY_PATH", System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv(XLearningConstants.Environment.USER_LD_LIBRARY_PATH.toString()));
+    SecurityUtil.setupUserEnv(containerEnv);
 
     LOG.debug("env:" + containerEnv.toString());
     Set<String> envStr = containerEnv.keySet();
@@ -985,8 +989,9 @@ public class ApplicationMaster extends CompositeService {
         + container.getId());
 
     containerEnv.put(XLearningConstants.Environment.XLEARNING_TF_INDEX.toString(), String.valueOf(index));
+    ByteBuffer tokenBuffer = SecurityUtil.copyUserToken();
     ContainerLaunchContext ctx = ContainerLaunchContext.newInstance(
-        containerLocalResource, containerEnv, containerLaunchcommands, null, null, null);
+        containerLocalResource, containerEnv, containerLaunchcommands, null, tokenBuffer, null);
 
     try {
       nmAsync.startContainerAsync(container, ctx);
@@ -1895,17 +1900,24 @@ public class ApplicationMaster extends CompositeService {
    * @param args Command line args
    */
   public static void main(String[] args) {
-    ApplicationMaster appMaster;
     try {
-      appMaster = new ApplicationMaster();
-      appMaster.init();
-      if (appMaster.run()) {
-        LOG.info("Application completed successfully.");
-        System.exit(0);
-      } else {
-        LOG.info("Application failed.");
-        System.exit(1);
-      }
+      UserGroupInformation ugi = SecurityUtil.setupUserGroupInformation();
+      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          ApplicationMaster appMaster;
+          appMaster = new ApplicationMaster();
+          appMaster.init();
+          if (appMaster.run()) {
+            LOG.info("Application completed successfully.");
+            System.exit(0);
+          } else {
+            LOG.info("Application failed.");
+            System.exit(1);
+          }
+          return null;
+        }
+      });
     } catch (Exception e) {
       LOG.fatal("Error running ApplicationMaster", e);
       System.exit(1);

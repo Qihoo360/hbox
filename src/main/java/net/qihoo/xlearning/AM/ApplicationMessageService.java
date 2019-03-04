@@ -3,6 +3,7 @@ package net.qihoo.xlearning.AM;
 import net.qihoo.xlearning.api.ApplicationContext;
 import net.qihoo.xlearning.api.ApplicationMessageProtocol;
 import net.qihoo.xlearning.common.Message;
+import net.qihoo.xlearning.common.SecurityUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,7 +36,8 @@ public class ApplicationMessageService extends AbstractService implements
   @Override
   public void start() {
     LOG.info("Starting application message server");
-    RPC.Builder builder = new RPC.Builder(getConfig());
+    Configuration conf = SecurityUtil.disableSecureRpc(getConfig());
+    RPC.Builder builder = new RPC.Builder(conf);
     builder.setProtocol(ApplicationMessageProtocol.class);
     builder.setInstance(this);
     builder.setBindAddress("0.0.0.0");
