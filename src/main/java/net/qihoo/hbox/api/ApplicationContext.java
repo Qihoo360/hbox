@@ -39,6 +39,10 @@ public interface ApplicationContext {
 
   int getPsVCores();
 
+  int getChiefWorkerMemory();
+
+  int getEvaluatorWorkerMemory();
+
   List<Container> getWorkerContainers();
 
   List<Container> getPsContainers();
@@ -100,6 +104,10 @@ public interface ApplicationContext {
   Boolean getContainerStarted();
 
   String getTfEvaluatorId();
+
+  String getChiefWorkerId();
+
+  Boolean getChiefWorker();
 
   String getAMContainerID();
 

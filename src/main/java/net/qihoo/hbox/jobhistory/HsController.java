@@ -76,6 +76,8 @@ public class HsController extends Controller implements AMParams {
       readLog = (Map<String, List<String>>) gson.fromJson(line, readLog.getClass());
       set("PS_GCORES", "0");
       set("PS_NUM", "0");
+      set("chiefWorkerMemory", "");
+      set("evaluatorWorkerMemory", "");
       set("USAGED_INFO", "false");
       if(readLog.keySet().contains("hboxVersion")) {
         set("VERSION", readLog.get("hboxVersion").get(0));
@@ -135,7 +137,7 @@ public class HsController extends Controller implements AMParams {
             set(CONTAINER_HTTP_ADDRESS + i, readLog.get(info).get(0));
             if (readLog.get(info).get(1).trim().length() != 0) {
               set(CONTAINER_GPU_DEVICE + i, readLog.get(info).get(1));
-              if ((readLog.get(info).get(2).equals("worker") || readLog.get(info).get(2).equals(HboxConstants.EVALUATOR)) && !readLog.get(info).get(1).equals("-") && readLog.get(info).size() > 8) {
+              if ((readLog.get(info).get(2).equals("worker") || readLog.get(info).get(2).equals(HboxConstants.EVALUATOR) || readLog.get(info).get(2).equals(HboxConstants.Chief)) && !readLog.get(info).get(1).equals("-") && readLog.get(info).size() > 8) {
                 String  containersGpuMemMetrics = readLog.get(info).get(5);
                 String  containersGpuUtilMetrics = readLog.get(info).get(6);
                 if(containersGpuMemMetrics != null && containersGpuMemMetrics != "-") {
@@ -220,7 +222,7 @@ public class HsController extends Controller implements AMParams {
             } else {
               set(CONTAINER_GPU_DEVICE + i, "-");
             }
-            if((readLog.get(info).get(2).equals("worker") || readLog.get(info).get(2).equals(HboxConstants.EVALUATOR))&& readLog.get(info).size() > 8) {
+            if((readLog.get(info).get(2).equals("worker") || readLog.get(info).get(2).equals(HboxConstants.EVALUATOR) || readLog.get(info).get(2).equals(HboxConstants.Chief))&& readLog.get(info).size() > 8) {
               String cpuMetrics = readLog.get(info).get(4);
               if(cpuMetrics != null && cpuMetrics != "-") {
                 Gson gson2 = new GsonBuilder()
@@ -323,7 +325,11 @@ public class HsController extends Controller implements AMParams {
                 set("USAGED_INFO", "true");
               }
             }
-            set(CONTAINER_ROLE + i, readLog.get(info).get(2));
+            if (readLog.get(info).get(2).equals(HboxConstants.EVALUATOR) || readLog.get(info).get(2).equals(HboxConstants.Chief)) {
+              set(CONTAINER_ROLE + i, HboxConstants.WORKER + "/" + readLog.get(info).get(2));
+            } else {
+              set(CONTAINER_ROLE + i, readLog.get(info).get(2));
+            }
             set(CONTAINER_STATUS + i, readLog.get(info).get(3));
             if (readLog.get(info).size() > 8) {
               set(CONTAINER_START_TIME + i, readLog.get(info).get(7));
@@ -336,7 +342,7 @@ public class HsController extends Controller implements AMParams {
               set(CONTAINER_REPORTER_PROGRESS + i, readLog.get(info).get(6));
               set(CONTAINER_LOG_ADDRESS + i, readLog.get(info).get(7));
             }
-            if(readLog.get(info).get(2).equals("worker") || readLog.get(info).get(2).equals(HboxConstants.EVALUATOR)) {
+            if(readLog.get(info).get(2).equals("worker") || readLog.get(info).get(2).equals(HboxConstants.EVALUATOR) || readLog.get(info).get(2).equals(HboxConstants.Chief)) {
               set("WORKER_CONTAINER_ID" + workeri, info);
               workeri++;
             }
@@ -361,6 +367,10 @@ public class HsController extends Controller implements AMParams {
             set(PS_MEMORY, readLog.get(info).get(0));
           } else if (info.equals("psVCores")) {
             set(PS_VCORES, readLog.get(info).get(0));
+          } else if (info.equals("chiefWorkerMemory")){
+            set("chiefWorkerMemory", readLog.get(info).get(0));
+          } else if (info.equals("evaluatorWorkerMemory")){
+            set("evaluatorWorkerMemory", readLog.get(info).get(0));
           }
         }
         set(CONTAINER_NUMBER, String.valueOf(i));
@@ -433,8 +443,11 @@ public class HsController extends Controller implements AMParams {
             } else {
               set(CONTAINER_GPU_DEVICE + i, "-");
             }
-
-            set(CONTAINER_ROLE + i, readLog.get(info).get(2));
+            if (readLog.get(info).get(2).equals(HboxConstants.EVALUATOR) || readLog.get(info).get(2).equals(HboxConstants.Chief)) {
+              set(CONTAINER_ROLE + i, HboxConstants.WORKER + "/" + readLog.get(info).get(2));
+            } else {
+              set(CONTAINER_ROLE + i, readLog.get(info).get(2));
+            }
             set(CONTAINER_STATUS + i, readLog.get(info).get(3));
             set(CONTAINER_START_TIME + i, readLog.get(info).get(4));
             set(CONTAINER_FINISH_TIME + i, readLog.get(info).get(5));

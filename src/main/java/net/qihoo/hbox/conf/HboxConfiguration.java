@@ -92,6 +92,10 @@ public class HboxConfiguration extends YarnConfiguration {
 
   public static final int DEFAULT_HBOX_WORKER_NUM = 1;
 
+  public static final String HBOX_CHIEF_WORKER_MEMORY = "hbox.chief.worker.memory";
+
+  public static final String HBOX_EVALUATOR_WORKER_MEMORY = "hbox.evaluator.worker.memory";
+
   public static final String HBOX_WORKER_MEM_AUTO_SCALE = "hbox.worker.mem.autoscale";
 
   public static final Double DEFAULT_HBOX_WORKER_MEM_AUTO_SCALE = 0.0;

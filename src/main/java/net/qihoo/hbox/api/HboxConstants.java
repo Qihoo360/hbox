@@ -19,6 +19,8 @@ public interface HboxConstants {
 
   String EVALUATOR = "evaluator";
 
+  String Chief = "chief";
+
   String STREAM_INPUT_DIR = "mapreduce.input.fileinputformat.inputdir";
 
   String STREAM_OUTPUT_DIR = "mapreduce.output.fileoutputformat.outputdir";

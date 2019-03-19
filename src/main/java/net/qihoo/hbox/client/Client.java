@@ -89,6 +89,8 @@ public class Client {
     conf.set(HboxConfiguration.HBOX_WORKER_VCORES, String.valueOf(clientArguments.workerVCores));
     conf.set(HboxConfiguration.HBOX_WORKER_GPU, String.valueOf(clientArguments.workerGCores));
     conf.set(HboxConfiguration.HBOX_WORKER_NUM, String.valueOf(clientArguments.workerNum));
+    conf.set(HboxConfiguration.HBOX_CHIEF_WORKER_MEMORY, String.valueOf(clientArguments.chiefWorkerMemory));
+    conf.set(HboxConfiguration.HBOX_EVALUATOR_WORKER_MEMORY, String.valueOf(clientArguments.evaluatorWorkerMemory));
     conf.set(HboxConfiguration.HBOX_VPC_DURATION, clientArguments.duration);
     conf.set(HboxConfiguration.HBOX_PS_MEMORY, String.valueOf(clientArguments.psMemory));
     conf.set(HboxConfiguration.HBOX_PS_VCORES, String.valueOf(clientArguments.psVCores));
@@ -358,6 +360,35 @@ public class Client {
                       + "Specified memory=" + workerMemory);
     }
     LOG.info("Apply for worker Memory " + workerMemory + "M");
+
+    int chiefWorkerMemory = conf.getInt(HboxConfiguration.HBOX_CHIEF_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
+    if (chiefWorkerMemory != workerMemory) {
+      if (chiefWorkerMemory > maxMem) {
+        throw new RequestOverLimitException("Chief Worker memory requested " + chiefWorkerMemory +
+            " above the max threshold of yarn cluster " + maxMem);
+      }
+      if (chiefWorkerMemory <= 0) {
+        throw new IllegalArgumentException(
+            "Invalid memory specified for chief worker, exiting."
+                + "Specified memory=" + chiefWorkerMemory);
+      }
+      LOG.info("Apply for chief worker Memory " + chiefWorkerMemory + "M");
+    }
+
+    int evaluatorWorkerMemory = conf.getInt(HboxConfiguration.HBOX_EVALUATOR_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
+    if (evaluatorWorkerMemory != workerMemory && conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR)) {
+      if (evaluatorWorkerMemory > maxMem) {
+        throw new RequestOverLimitException("Evaluator Worker memory requested " + evaluatorWorkerMemory +
+            " above the max threshold of yarn cluster " + maxMem);
+      }
+      if (evaluatorWorkerMemory <= 0) {
+        throw new IllegalArgumentException(
+            "Invalid memory specified for evaluator worker, exiting."
+                + "Specified memory=" + evaluatorWorkerMemory);
+      }
+      LOG.info("Apply for evaluator worker Memory " + evaluatorWorkerMemory + "M");
+    }
+
     if (workerVcores > maxVCores) {
       throw new RequestOverLimitException("Worker vcores requested " + workerVcores +
               " above the max threshold of yarn cluster " + maxVCores);

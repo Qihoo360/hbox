@@ -79,8 +79,16 @@ public class AppController extends Controller implements AMParams {
     set(USER_NAME, StringUtils.split(conf.get("hadoop.job.ugi"), ',')[0]);
     set("WORKER_GCORES", String.valueOf(workerGcores));
     set("PS_GCORES", String.valueOf(psGcores));
-    set(WORKER_MEMORY, String.format("%.2f",workerMemory / 1024.0));
+    set(WORKER_MEMORY, String.format("%.2f", workerMemory / 1024.0));
     set(PS_MEMORY, String.format("%.2f", psMemory / 1024.0));
+    set("chiefWorkerMemory", "");
+    set("evaluatorWorkerMemory", "");
+    if (app.context.getChiefWorker()) {
+      set("chiefWorkerMemory", String.format("%.2f", app.context.getChiefWorkerMemory() / 1024.0));
+    }
+    if (conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR)) {
+      set("evaluatorWorkerMemory", String.format("%.2f", app.context.getEvaluatorWorkerMemory() / 1024.0));
+    }
     set(WORKER_VCORES, String.valueOf(workerVCores));
     set(PS_VCORES, String.valueOf(psVCores));
     int i = 0;
@@ -93,7 +101,9 @@ public class AppController extends Controller implements AMParams {
         set(CONTAINER_STATUS + i, "-");
       }
       if (conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR) && container.getId().toString().equals(app.context.getTfEvaluatorId())) {
-        set(CONTAINER_ROLE + i, HboxConstants.EVALUATOR);
+        set(CONTAINER_ROLE + i, HboxConstants.WORKER + "/" + HboxConstants.EVALUATOR);
+      } else if (app.context.getChiefWorker() && container.getId().toString().equals(app.context.getChiefWorkerId())) {
+        set(CONTAINER_ROLE + i, HboxConstants.WORKER + "/" + HboxConstants.Chief);
       } else {
         set(CONTAINER_ROLE + i, HboxConstants.WORKER);
       }

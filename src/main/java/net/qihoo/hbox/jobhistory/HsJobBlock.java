@@ -151,6 +151,30 @@ public class HsJobBlock extends HtmlBlock implements AMParams {
               td(String.valueOf(workerGcores)).
               _();
         }
+        if ($("chiefWorkerMemory") != null && $("chiefWorkerMemory").trim() != "") {
+          resourceAppliedInfo.
+              _().tbody("ui-widget-content").
+              tr().
+              $style("text-align:center;").
+              td("worker/chief").
+              td("-").
+              td($("chiefWorkerMemory")).
+              td("-").
+              td("-").
+              _();
+        }
+        if ($("evaluatorWorkerMemory") != null && $("evaluatorWorkerMemory").trim() != "") {
+          resourceAppliedInfo.
+              _().tbody("ui-widget-content").
+              tr().
+              $style("text-align:center;").
+              td("worker/evaluator").
+              td("-").
+              td($("evaluatorWorkerMemory")).
+              td("-").
+              td("-").
+              _();
+        }
         if (numPS > 0){
           resourceAppliedInfo.
               _().tbody("ui-widget-content").

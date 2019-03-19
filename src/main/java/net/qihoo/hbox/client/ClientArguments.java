@@ -24,6 +24,8 @@ class ClientArguments {
   int workerVCores;
   int workerGCores;
   int workerNum;
+  int chiefWorkerMemory;
+  int evaluatorWorkerMemory;
   int psMemory;
   int psVCores;
   int psGCores;
@@ -78,6 +80,8 @@ class ClientArguments {
     workerVCores = HboxConfiguration.DEFAULT_HBOX_WORKER_VCORES;
     workerGCores = HboxConfiguration.DEFAULT_HBOX_WORKER_GPU;
     workerNum = HboxConfiguration.DEFAULT_HBOX_WORKER_NUM;
+    chiefWorkerMemory = workerMemory;
+    evaluatorWorkerMemory = workerMemory;
     psMemory = HboxConfiguration.DEFAULT_HBOX_PS_MEMORY;
     psVCores = HboxConfiguration.DEFAULT_HBOX_PS_VCORES;
     psGCores = HboxConfiguration.DEFAULT_HBOX_PS_GPU;
@@ -135,6 +139,11 @@ class ClientArguments {
             "Amount of gpu cores to be requested to run worker");
     allOptions.addOption("workerNum", "worker-num", true,
         "No. of containers on which the worker needs to be executed");
+
+    allOptions.addOption("chiefWorkerMemory", "chiefworker-memory", true,
+        "Amount of memory in MB to be requested to run the chief worker");
+    allOptions.addOption("evaluatorWorkerMemory", "evaluatorworker-memory", true,
+        "Amount of memory in MB to be requested to run the evaluator worker");
 
     allOptions.addOption("duration", "duration", true,
             "Duration when use vpc and digits mode, default:1(hours)");
@@ -291,6 +300,8 @@ class ClientArguments {
 
     if (cliParser.hasOption("worker-memory")) {
       workerMemory = getNormalizedMem(cliParser.getOptionValue("worker-memory"));
+      chiefWorkerMemory = workerMemory;
+      evaluatorWorkerMemory = workerMemory;
     }
 
     if (cliParser.hasOption("worker-cores")) {
@@ -471,10 +482,17 @@ class ClientArguments {
       boardCacheTimeout = Integer.parseInt(boardCacheTimeoutStr);
     }
 
-    if (cliParser.hasOption("tf-evaluator")){
-      tfEvaluator = Boolean.parseBoolean(cliParser.getOptionValue("tf-evaluator"));
+    if ("TENSORFLOW".equals(appType)) {
+      if (cliParser.hasOption("tf-evaluator")) {
+        tfEvaluator = Boolean.parseBoolean(cliParser.getOptionValue("tf-evaluator"));
+      }
+      if (cliParser.hasOption("chiefworker-memory")) {
+        chiefWorkerMemory = getNormalizedMem(cliParser.getOptionValue("chiefworker-memory"));
+      }
+      if (cliParser.hasOption("evaluatorworker-memory")) {
+        evaluatorWorkerMemory = getNormalizedMem(cliParser.getOptionValue("evaluatorworker-memory"));
+      }
     }
-
     appMasterJar = JobConf.findContainingJar(ApplicationMaster.class);
     LOG.info("Application Master's jar is " + appMasterJar);
   }

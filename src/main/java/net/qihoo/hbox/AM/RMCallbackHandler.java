@@ -25,6 +25,10 @@ public class RMCallbackHandler implements CallbackHandler {
 
     public final List<Container> acquiredPsContainers;
 
+    public final List<Container> acquiredChiefWorkerContainers;
+
+    public final List<Container> acquiredEvaluatorWorkerContainers;
+
     public final Set<String> blackHosts;
 
     private int neededWorkerContainersCount;
@@ -36,6 +40,10 @@ public class RMCallbackHandler implements CallbackHandler {
     private final AtomicInteger acquiredPsContainersCount;
 
     private final AtomicBoolean workerContainersAllocating;
+
+    private final AtomicBoolean chiefWorkerContainersAllocating;
+
+    private final AtomicBoolean evaluatorWorkerContainersAllocating;
 
     private float progress;
 
@@ -55,10 +63,14 @@ public class RMCallbackHandler implements CallbackHandler {
         cancelContainers = Collections.synchronizedList(new ArrayList<Container>());
         acquiredWorkerContainers = Collections.synchronizedList(new ArrayList<Container>());
         acquiredPsContainers = Collections.synchronizedList(new ArrayList<Container>());
+        acquiredChiefWorkerContainers = Collections.synchronizedList(new ArrayList<Container>());
+        acquiredEvaluatorWorkerContainers = Collections.synchronizedList(new ArrayList<Container>());
         blackHosts = Collections.synchronizedSet(new HashSet<String>());
         acquiredWorkerContainersCount = new AtomicInteger(0);
         acquiredPsContainersCount = new AtomicInteger(0);
-        workerContainersAllocating = new AtomicBoolean(false);
+         workerContainersAllocating = new AtomicBoolean(false);
+        chiefWorkerContainersAllocating = new AtomicBoolean(false);
+        evaluatorWorkerContainersAllocating = new AtomicBoolean(false);
         progress = 0.0f;
         acquiredContainers = Collections.synchronizedList(new ArrayList<Container>());
         hboxAppType = "";
@@ -101,6 +113,14 @@ public class RMCallbackHandler implements CallbackHandler {
         return new ArrayList<>(acquiredPsContainers);
     }
 
+    public List<Container> getAcquiredChiefWorkerContainers() {
+        return new ArrayList<>(acquiredChiefWorkerContainers);
+    }
+
+    public List<Container> getAcquiredEvaluatorWorkerContainers() {
+        return new ArrayList<>(acquiredEvaluatorWorkerContainers);
+    }
+
     public void setNeededWorkerContainersCount(int count) {
         neededWorkerContainersCount = count;
     }
@@ -111,6 +131,14 @@ public class RMCallbackHandler implements CallbackHandler {
 
     public void setWorkerContainersAllocating() {
         workerContainersAllocating.set(true);
+    }
+
+    public void setChiefWorkerContainersAllocating(){
+        chiefWorkerContainersAllocating.set(true);
+    }
+
+    public void setEvaluatorWorkerContainersAllocating(){
+        evaluatorWorkerContainersAllocating.set(true);
     }
 
     @Override
@@ -141,7 +169,11 @@ public class RMCallbackHandler implements CallbackHandler {
                 if(countMap.get(host) >= blackHostsLimit)
                     blackHosts.add(host);
                 //add worker or ps
-                if (workerContainersAllocating.get()) {
+                if (evaluatorWorkerContainersAllocating.get()) {
+                    acquiredEvaluatorWorkerContainers.add(acquiredContainer);
+                } else if (chiefWorkerContainersAllocating.get()) {
+                    acquiredChiefWorkerContainers.add(acquiredContainer);
+                } else if (workerContainersAllocating.get()) {
                     acquiredWorkerContainers.add(acquiredContainer);
                     acquiredWorkerContainersCount.incrementAndGet();
                 } else {

@@ -126,12 +126,6 @@ public class HboxContainer {
     this.index = Integer.valueOf(envs.get(HboxConstants.Environment.HBOX_TF_INDEX.toString()));
     this.hboxCmdProcessId = "";
     if ("TENSORFLOW".equals(hboxAppType)) {
-      if (conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR)) {
-        if(this.role.equals(HboxConstants.WORKER) && conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM) == (this.index+1)){
-          this.index = 0;
-          this.role = HboxConstants.EVALUATOR;
-        }
-      }
       LOG.info("TensorFlow role is:" + this.role);
     }
     if (hboxAppType.equals("MXNET")) {

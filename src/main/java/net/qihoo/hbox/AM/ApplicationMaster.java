@@ -52,6 +52,8 @@ public class ApplicationMaster extends CompositeService {
   private String applicationMasterTrackingUrl;
   private String applicationHistoryUrl;
   private int workerMemory;
+  private int chiefWorkerMemory;
+  private int evaluatorWorkerMemory;
   private int workerVCores;
   private int workerGCores;
   private int workerNum;
@@ -60,6 +62,7 @@ public class ApplicationMaster extends CompositeService {
   private int psGCores;
   private int psNum;
   private int maxContainerMem;
+  private Boolean chiefWorker;
   private Boolean single;
   private Boolean singleMx;
   private int appPriority;
@@ -84,6 +87,8 @@ public class ApplicationMaster extends CompositeService {
   private String userName;
   private List<Container> acquiredWorkerContainers;
   private List<Container> acquiredPsContainers;
+  private List<Container> acquiredChiefWorkerContainers;
+  private List<Container> acquiredEvaluatorWorkerContainers;
   private final LinkedBlockingQueue<Message> applicationMessageQueue;
   private final List<OutputInfo> outputInfos;
   private ConcurrentHashMap<String, List<FileStatus>> input2FileStatus;
@@ -98,6 +103,8 @@ public class ApplicationMaster extends CompositeService {
   private RMCallbackHandler rmCallbackHandler;
   private ContainerRequest workerContainerRequest;
   private ContainerRequest psContainerRequest;
+  private ContainerRequest chiefWorkerContainerRequest;
+  private ContainerRequest evaluatorWorkerContainerRequest;
   private Map<String, LocalResource> containerLocalResource;
   private ApplicationWebService webService;
   private ApplicationMessageService messageService;
@@ -119,6 +126,7 @@ public class ApplicationMaster extends CompositeService {
   private int mpiExitCode;
 
   private Boolean tfEvaluator;
+  private String chiefWorkerContainerId;
   private String tfEvaluatorContainerId;
   private StringBuilder inputPath;
   private List<String> inputList;
@@ -158,6 +166,8 @@ public class ApplicationMaster extends CompositeService {
     envs = System.getenv();
     maxContainerMem = Integer.valueOf(envs.get(HboxConstants.Environment.HBOX_CONTAINER_MAX_MEMORY.toString()));
     workerMemory = conf.getInt(HboxConfiguration.HBOX_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
+    chiefWorkerMemory = conf.getInt(HboxConfiguration.HBOX_CHIEF_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
+    evaluatorWorkerMemory = conf.getInt(HboxConfiguration.HBOX_EVALUATOR_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
     workerVCores = conf.getInt(HboxConfiguration.HBOX_WORKER_VCORES, HboxConfiguration.DEFAULT_HBOX_WORKER_VCORES);
     workerGCores = conf.getInt(HboxConfiguration.HBOX_WORKER_GPU, HboxConfiguration.DEFAULT_HBOX_WORKER_GPU);
     workerNum = conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM);
@@ -165,13 +175,21 @@ public class ApplicationMaster extends CompositeService {
     psVCores = conf.getInt(HboxConfiguration.HBOX_PS_VCORES, HboxConfiguration.DEFAULT_HBOX_PS_VCORES);
     psGCores = conf.getInt(HboxConfiguration.HBOX_PS_GPU, HboxConfiguration.DEFAULT_HBOX_PS_GPU);
     psNum = conf.getInt(HboxConfiguration.HBOX_PS_NUM, HboxConfiguration.DEFAULT_HBOX_PS_NUM);
+    if (chiefWorkerMemory != workerMemory) {
+      chiefWorker = true;
+    } else {
+      chiefWorker = false;
+    }
     single = conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE);
     singleMx = conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE);
     appPriority = conf.getInt(HboxConfiguration.HBOX_APP_PRIORITY, HboxConfiguration.DEFAULT_HBOX_APP_PRIORITY);
     tfEvaluator = conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR);
     tfEvaluatorContainerId = "";
+    chiefWorkerContainerId = "";
     acquiredWorkerContainers = new ArrayList<>();
     acquiredPsContainers = new ArrayList<>();
+    acquiredChiefWorkerContainers = new ArrayList<>();
+    acquiredEvaluatorWorkerContainers = new ArrayList<>();
     dmlcPsRootUri = null;
     dmlcPsRootPort = 0;
     dmlcTrackerUri = null;
@@ -212,6 +230,24 @@ public class ApplicationMaster extends CompositeService {
         workerMemory = maxContainerMem;
       }
       LOG.info("Auto Scale the Worker Memory from " + conf.getInt(HboxConfiguration.HBOX_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY) + " to " + workerMemory);
+      chiefWorkerMemory = workerMemory;
+      evaluatorWorkerMemory = workerMemory;
+      if (chiefWorker) {
+        chiefWorkerMemory = chiefWorkerMemory + (applicationAttemptID.getAttemptId() - 1) * (int) Math.ceil(chiefWorkerMemory * conf.getDouble(HboxConfiguration.HBOX_WORKER_MEM_AUTO_SCALE, HboxConfiguration.DEFAULT_HBOX_WORKER_MEM_AUTO_SCALE));
+        if (chiefWorkerMemory > maxContainerMem) {
+          chiefWorkerMemory = maxContainerMem;
+        }
+        LOG.info("Auto Scale the chief Worker Memory from " + conf.getInt(HboxConfiguration.HBOX_CHIEF_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY) + " to " + chiefWorkerMemory);
+      }
+      if (tfEvaluator) {
+        if (conf.getInt(HboxConfiguration.HBOX_EVALUATOR_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY) != conf.getInt(HboxConfiguration.HBOX_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY)) {
+          evaluatorWorkerMemory = evaluatorWorkerMemory + (applicationAttemptID.getAttemptId() - 1) * (int) Math.ceil(evaluatorWorkerMemory * conf.getDouble(HboxConfiguration.HBOX_WORKER_MEM_AUTO_SCALE, HboxConfiguration.DEFAULT_HBOX_WORKER_MEM_AUTO_SCALE));
+          if (evaluatorWorkerMemory > maxContainerMem) {
+            evaluatorWorkerMemory = maxContainerMem;
+          }
+          LOG.info("Auto Scale the evaluator Worker Memory from " + conf.getInt(HboxConfiguration.HBOX_EVALUATOR_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY) + " to " + chiefWorkerMemory);
+        }
+      }
       if (psNum > 0) {
         psMemory = psMemory + (applicationAttemptID.getAttemptId() - 1) * (int) Math.ceil(psMemory * conf.getDouble(HboxConfiguration.HBOX_PS_MEM_AUTO_SCALE, HboxConfiguration.DEFAULT_HBOX_PS_MEM_AUTO_SCALE));
         if (psMemory > maxContainerMem) {
@@ -415,6 +451,8 @@ public class ApplicationMaster extends CompositeService {
             }
             if (tfEvaluator && currentContainerID.toString().equals(tfEvaluatorContainerId)) {
               containerMessage.add(HboxConstants.EVALUATOR);
+            } else if (chiefWorker && currentContainerID.toString().equals(chiefWorkerContainerId)){
+              containerMessage.add(HboxConstants.Chief);
             } else {
               containerMessage.add(HboxConstants.WORKER);
             }
@@ -448,7 +486,14 @@ public class ApplicationMaster extends CompositeService {
 
             if (cpuStatistics.size() != 0) {
               Double cpuMemUsagedMax = cpuStatistics.get("CPUMEM").get(1);
-              if (status != null && status.toString().equalsIgnoreCase("SUCCEEDED") && (cpuMemUsagedMax / (workerMemory / 1024.0)) < conf.getDouble(HboxConfiguration.HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION, HboxConfiguration.DEFAULT_HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
+              int currentWorkerMemory = workerMemory;
+              if (chiefWorker && container.getId().toString().equals(chiefWorkerContainerId)) {
+                currentWorkerMemory = chiefWorkerMemory;
+              }
+              if (tfEvaluator && container.getId().toString().equals(tfEvaluatorContainerId)) {
+                currentWorkerMemory = evaluatorWorkerMemory;
+              }
+              if (status != null && status.toString().equalsIgnoreCase("SUCCEEDED") && (cpuMemUsagedMax / (currentWorkerMemory / 1024.0)) < conf.getDouble(HboxConfiguration.HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION, HboxConfiguration.DEFAULT_HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
                 usageStatistics.add("true");
               } else {
                 usageStatistics.add("false");
@@ -607,6 +652,12 @@ public class ApplicationMaster extends CompositeService {
           logMessage.put("hboxVersion", Arrays.asList("1.3a"));
           logMessage.put("queue", Arrays.asList(conf.get(HboxConfiguration.HBOX_APP_QUEUE, HboxConfiguration.DEFAULT_HBOX_APP_QUEUE)));
           logMessage.put("user", Arrays.asList(conf.get("hadoop.job.ugi").split(",")[0]));
+          if (chiefWorker) {
+            logMessage.put("chiefWorkerMemory", Arrays.asList(String.format("%.2f", chiefWorkerMemory / 1024.0)));
+          }
+          if (tfEvaluator) {
+            logMessage.put("evaluatorWorkerMemory", Arrays.asList(String.format("%.2f", evaluatorWorkerMemory / 1024.0)));
+          }
 
           out.writeBytes(new Gson().toJson(logMessage));
           out.close();
@@ -914,9 +965,32 @@ public class ApplicationMaster extends CompositeService {
     workerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
     LOG.info("Create worker container request: " + workerContainerRequest.toString());
 
+    if ("TENSORFLOW".equals(hboxAppType) && workerNum > 1) {
+      if (chiefWorker) {
+        Resource chiefWorkerCapability = Records.newRecord(Resource.class);
+        int chiefWorkerOverheadMem = (int) Math.max(chiefWorkerMemory * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
+            conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
+        chiefWorkerCapability.setMemory(Math.min(chiefWorkerMemory + chiefWorkerOverheadMem, maxContainerMem));
+        chiefWorkerCapability.setVirtualCores(workerVCores);
+        chiefWorkerCapability.setGpuCores(workerGCores);
+        chiefWorkerContainerRequest = new ContainerRequest(chiefWorkerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
+        LOG.info("Create chief worker container request: " + chiefWorkerContainerRequest.toString());
+      }
+      if (tfEvaluator) {
+        Resource evaluatorWorkerCapability = Records.newRecord(Resource.class);
+        int evaluatorWorkerOverheadMem = (int) Math.max(evaluatorWorkerMemory * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
+            conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
+        evaluatorWorkerCapability.setMemory(Math.min(evaluatorWorkerMemory + evaluatorWorkerOverheadMem, maxContainerMem));
+        evaluatorWorkerCapability.setVirtualCores(workerVCores);
+        evaluatorWorkerCapability.setGpuCores(workerGCores);
+        evaluatorWorkerContainerRequest = new ContainerRequest(evaluatorWorkerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
+        LOG.info("Create evaluator worker container request: " + evaluatorWorkerContainerRequest.toString());
+      }
+    }
+
     if("TENSORFLOW".equals(hboxAppType) && !single) {
       Resource psCapability = Records.newRecord(Resource.class);
-      int psOverheadMem = (int) Math.max(workerMemory * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
+      int psOverheadMem = (int) Math.max(psMemory * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
           conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
       psCapability.setMemory(Math.min(psMemory + psOverheadMem, maxContainerMem));
       psCapability.setVirtualCores(psVCores);
@@ -1516,8 +1590,16 @@ public class ApplicationMaster extends CompositeService {
 
     buildContainerRequest(hostLocals);
 
+    int requestWorkerNum = workerNum;
+    if ("TENSORFLOW".equals(hboxAppType)) {
+      if (chiefWorker)
+        requestWorkerNum--;
+      if (tfEvaluator)
+        requestWorkerNum--;
+    }
+
     rmCallbackHandler.setNeededPsContainersCount(psNum);
-    rmCallbackHandler.setNeededWorkerContainersCount(workerNum);
+    rmCallbackHandler.setNeededWorkerContainersCount(requestWorkerNum);
     rmCallbackHandler.setHboxAppType(hboxAppType);
 
     int allocateInterval = conf.getInt(HboxConfiguration.HBOX_ALLOCATE_INTERVAL, HboxConfiguration.DEFAULT_HBOX_ALLOCATE_INTERVAL);
@@ -1556,17 +1638,21 @@ public class ApplicationMaster extends CompositeService {
 
     Boolean startAllocatedContainer = false;
     Long startAllocatedTimeStamp = Long.MIN_VALUE;
+    int psCancelCount = 0;
     while (rmCallbackHandler.getAllocatedPsContainerNumber() < psNum) {
       List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
       List<String> blackHosts = rmCallbackHandler.getBlackHosts();
       amrmAsync.updateBlacklist(blackHosts, null);
-      if (cancelContainers.size() != 0) {
-        for (Container container : cancelContainers) {
-          LOG.info("Canceling container: " + container.getId().toString());
-          amrmAsync.releaseAssignedContainer(container.getId());
-          amrmAsync.addContainerRequest(psContainerRequest);
+      synchronized (cancelContainers) {
+        if (cancelContainers.size() != 0) {
+          for (Container container : cancelContainers) {
+            LOG.info("Canceling container: " + container.getId().toString());
+            amrmAsync.releaseAssignedContainer(container.getId());
+            amrmAsync.addContainerRequest(psContainerRequest);
+            psCancelCount++;
+          }
+          cancelContainers.clear();
         }
-        cancelContainers.clear();
       }
       if (rmCallbackHandler.getAllocatedPsContainerNumber() > 0 && !startAllocatedContainer) {
         startAllocatedContainer = true;
@@ -1597,13 +1683,13 @@ public class ApplicationMaster extends CompositeService {
 
     rmCallbackHandler.setWorkerContainersAllocating();
 
-    for (int i = 0; i < workerNum; i++) {
+    for (int i = 0; i < requestWorkerNum; i++) {
       amrmAsync.addContainerRequest(workerContainerRequest);
     }
 
-    LOG.info("Try to allocate " + workerNum + " worker containers");
-
-    while (rmCallbackHandler.getAllocatedWorkerContainerNumber() < workerNum) {
+    LOG.info("Try to allocate " + requestWorkerNum + " worker containers");
+    int workerCancelCount = 0;
+    while (rmCallbackHandler.getAllocatedWorkerContainerNumber() < requestWorkerNum) {
       if(hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
         rmCallbackHandler.addBlackHost(applicationMasterHostname);
         List<String> blackAMs = rmCallbackHandler.getBlackHosts();
@@ -1612,13 +1698,16 @@ public class ApplicationMaster extends CompositeService {
       List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
       List<String> blackHosts = rmCallbackHandler.getBlackHosts();
       amrmAsync.updateBlacklist(blackHosts, null);
-      if (cancelContainers.size() != 0) {
-        for (Container container : cancelContainers) {
-          LOG.info("Canceling container: " + container.getId().toString());
-          amrmAsync.releaseAssignedContainer(container.getId());
-          amrmAsync.addContainerRequest(workerContainerRequest);
+      synchronized (cancelContainers) {
+        if (cancelContainers.size() != 0) {
+          for (Container container : cancelContainers) {
+            LOG.info("Canceling container: " + container.getId().toString());
+            amrmAsync.releaseAssignedContainer(container.getId());
+            amrmAsync.addContainerRequest(workerContainerRequest);
+            workerCancelCount++;
+          }
+          cancelContainers.clear();
         }
-        cancelContainers.clear();
       }
       if (rmCallbackHandler.getAllocatedWorkerContainerNumber() > 0 && !startAllocatedContainer) {
         startAllocatedContainer = true;
@@ -1636,29 +1725,145 @@ public class ApplicationMaster extends CompositeService {
 
     acquiredWorkerContainers = rmCallbackHandler.getAcquiredWorkerContainer();
     int totalNumAllocatedWorkers = rmCallbackHandler.getAllocatedWorkerContainerNumber();
-    if(totalNumAllocatedWorkers > workerNum) {
-      while(acquiredWorkerContainers.size() > workerNum) {
+    if(totalNumAllocatedWorkers > requestWorkerNum) {
+      while(acquiredWorkerContainers.size() > requestWorkerNum) {
         Container releaseContainer = acquiredWorkerContainers.remove(0);
         amrmAsync.releaseAssignedContainer(releaseContainer.getId());
         LOG.info("Release container " + releaseContainer.getId().toString());
       }
     }
     LOG.info("Total " + acquiredWorkerContainers.size() + " worker containers has allocated.");
-    for (int i = 0; i < psNum; i++) {
+
+    for (int i = 0; i < psNum + psCancelCount; i++) {
       amrmAsync.removeContainerRequest(psContainerRequest);
     }
-    for (int i = 0; i < workerNum; i++) {
+    for (int i = 0; i < requestWorkerNum + workerCancelCount; i++) {
       amrmAsync.removeContainerRequest(workerContainerRequest);
     }
 
-    List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
-    if (cancelContainers.size() != 0) {
-      for (Container container : cancelContainers) {
-        LOG.info("Canceling unnecessary container: " + container.getId().toString());
-        amrmAsync.releaseAssignedContainer(container.getId());
+    List<Container> cancelContainersTotal = rmCallbackHandler.getCancelContainer();
+    synchronized (cancelContainersTotal) {
+      if (cancelContainersTotal.size() != 0) {
+        for (Container container : cancelContainersTotal) {
+          LOG.info("Canceling container: " + container.getId().toString());
+          amrmAsync.releaseAssignedContainer(container.getId());
+        }
+        cancelContainersTotal.clear();
       }
-      cancelContainers.clear();
     }
+
+    if(requestWorkerNum != workerNum){
+      int chiefWorkerCancelCount = 0;
+      int evaluatorCancelCount = 0;
+      if(chiefWorker) {
+        LOG.info("Try to allocate chief worker containers");
+        rmCallbackHandler.setChiefWorkerContainersAllocating();
+        amrmAsync.addContainerRequest(chiefWorkerContainerRequest);
+        chiefWorkerCancelCount ++;
+        while (rmCallbackHandler.getAcquiredChiefWorkerContainers().size() < 1) {
+          List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
+          List<String> blackHosts = rmCallbackHandler.getBlackHosts();
+          amrmAsync.updateBlacklist(blackHosts, null);
+          synchronized (cancelContainers) {
+            if (cancelContainers.size() != 0) {
+              for (Container container : cancelContainers) {
+                LOG.info("Canceling container: " + container.getId().toString());
+                amrmAsync.releaseAssignedContainer(container.getId());
+                amrmAsync.addContainerRequest(chiefWorkerContainerRequest);
+                chiefWorkerCancelCount++;
+              }
+              cancelContainers.clear();
+            }
+          }
+          if (startAllocatedContainer && (System.currentTimeMillis() - startAllocatedTimeStamp) > conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
+            String failMessage = "Container waiting except the allocated expiry time. Maybe the Cluster resource not satisfied the user necessary. Please resubmit !";
+            LOG.info(failMessage);
+            this.appendMessage("Unregister  Application", true);
+            unregisterApp(FinalApplicationStatus.FAILED, failMessage);
+            return false;
+          }
+          Utilities.sleep(allocateInterval);
+        }
+
+        acquiredChiefWorkerContainers = rmCallbackHandler.getAcquiredChiefWorkerContainers();
+        synchronized (acquiredChiefWorkerContainers) {
+          if (acquiredChiefWorkerContainers.size() > 1) {
+            while (acquiredChiefWorkerContainers.size() > 1) {
+              Container releaseContainer = acquiredChiefWorkerContainers.remove(0);
+              amrmAsync.releaseAssignedContainer(releaseContainer.getId());
+              LOG.info("Release chief container " + releaseContainer.getId().toString());
+            }
+          }
+        }
+        LOG.info("Total " + acquiredChiefWorkerContainers.size() + " chief worker containers has allocated.");
+        acquiredWorkerContainers.add(0, acquiredChiefWorkerContainers.get(0));
+      }
+
+      if (tfEvaluator) {
+        LOG.info("Try to allocate evaluator worker containers");
+        rmCallbackHandler.setEvaluatorWorkerContainersAllocating();
+        amrmAsync.addContainerRequest(evaluatorWorkerContainerRequest);
+        evaluatorCancelCount ++;
+        while (rmCallbackHandler.getAcquiredEvaluatorWorkerContainers().size() < 1) {
+          List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
+          List<String> blackHosts = rmCallbackHandler.getBlackHosts();
+          amrmAsync.updateBlacklist(blackHosts, null);
+          synchronized (cancelContainers) {
+            if (cancelContainers.size() != 0) {
+              for (Container container : cancelContainers) {
+                LOG.info("Canceling container: " + container.getId().toString());
+                amrmAsync.releaseAssignedContainer(container.getId());
+                amrmAsync.addContainerRequest(evaluatorWorkerContainerRequest);
+                evaluatorCancelCount++;
+              }
+              cancelContainers.clear();
+            }
+          }
+          if (startAllocatedContainer && (System.currentTimeMillis() - startAllocatedTimeStamp) > conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
+            String failMessage = "Container waiting except the allocated expiry time. Maybe the Cluster resource not satisfied the user necessary. Please resubmit !";
+            LOG.info(failMessage);
+            this.appendMessage("Unregister  Application", true);
+            unregisterApp(FinalApplicationStatus.FAILED, failMessage);
+            return false;
+          }
+          Utilities.sleep(allocateInterval);
+        }
+
+
+
+        acquiredEvaluatorWorkerContainers = rmCallbackHandler.getAcquiredEvaluatorWorkerContainers();
+        synchronized (acquiredEvaluatorWorkerContainers) {
+          if (acquiredEvaluatorWorkerContainers.size() > 1) {
+            while (acquiredEvaluatorWorkerContainers.size() > 1) {
+              Container releaseContainer = acquiredEvaluatorWorkerContainers.remove(0);
+              amrmAsync.releaseAssignedContainer(releaseContainer.getId());
+              LOG.info("Release evaluator container " + releaseContainer.getId().toString());
+            }
+          }
+        }
+        LOG.info("Total " + acquiredEvaluatorWorkerContainers.size() + " evaluator worker containers has allocated.");
+        acquiredWorkerContainers.add(acquiredEvaluatorWorkerContainers.get(0));
+      }
+
+      for (int i = 0; i < chiefWorkerCancelCount; i++) {
+        amrmAsync.removeContainerRequest(chiefWorkerContainerRequest);
+      }
+      for (int i = 0; i < evaluatorCancelCount; i++) {
+        amrmAsync.removeContainerRequest(evaluatorWorkerContainerRequest);
+      }
+    }
+
+    List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
+    synchronized (cancelContainers) {
+      if (cancelContainers.size() != 0) {
+        for (Container container : cancelContainers) {
+          LOG.info("Canceling unnecessary container: " + container.getId().toString());
+          amrmAsync.releaseAssignedContainer(container.getId());
+        }
+        cancelContainers.clear();
+      }
+    }
+
     if(conf.getBoolean(HboxConfiguration.HBOX_HOST_LOCAL_ENABLE, HboxConfiguration.DEFAULT_HBOX_HOST_LOCAL_ENABLE)) {
       containerHostnames = new HashSet<>();
       if(acquiredPsContainers.size() > 0) {
@@ -2077,17 +2282,32 @@ public class ApplicationMaster extends CompositeService {
     } else {
       index = 0;
     }
+
+    if (chiefWorker) {
+      chiefWorkerContainerId = acquiredChiefWorkerContainers.get(0).getId().toString();
+    }
+    if(tfEvaluator){
+      tfEvaluatorContainerId = acquiredEvaluatorWorkerContainers.get(0).getId().toString();
+    }
+
     for (Container container : acquiredWorkerContainers) {
       LOG.info("Launching worker container " + container.getId()
           + " on " + container.getNodeId().getHost() + ":" + container.getNodeId().getPort());
 
       //TODO launch container in special thread take with fault-tolerant
-      launchContainer(containerLocalResource, workerContainerEnv,
-          workerContainerLaunchcommands,container, index ++);
-      containerListener.registerContainer(new HboxContainerId(container.getId()), HboxConstants.WORKER);
-      if (conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR) && index == workerNum) {
-        tfEvaluatorContainerId = container.getId().toString();
+      if (chiefWorker && container.getId().toString().equals(chiefWorkerContainerId)) {
+        List<String> chiefWorkerContainerLaunchcommands = buildContainerLaunchCommand(chiefWorkerMemory);
+        launchContainer(containerLocalResource, workerContainerEnv,
+            chiefWorkerContainerLaunchcommands, container, index++);
+      } else if (tfEvaluator && container.getId().toString().equals(tfEvaluatorContainerId)) {
+        Map<String, String> evaluatorWorkerContainerEnv = buildContainerEnv(HboxConstants.EVALUATOR);
+        List<String> evaluatorWorkerContainerLaunchcommands = buildContainerLaunchCommand(evaluatorWorkerMemory);
+        launchContainer(containerLocalResource, evaluatorWorkerContainerEnv, evaluatorWorkerContainerLaunchcommands, container, 0);
+      } else {
+        launchContainer(containerLocalResource, workerContainerEnv,
+            workerContainerLaunchcommands, container, index++);
       }
+      containerListener.registerContainer(new HboxContainerId(container.getId()), HboxConstants.WORKER);
     }
 
     if(hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
@@ -2471,6 +2691,16 @@ public class ApplicationMaster extends CompositeService {
     }
 
     @Override
+    public int getChiefWorkerMemory() {
+      return chiefWorkerMemory;
+    }
+
+    @Override
+    public int getEvaluatorWorkerMemory() {
+      return evaluatorWorkerMemory;
+    }
+
+    @Override
     public List<Container> getWorkerContainers() {
       return acquiredWorkerContainers;
     }
@@ -2641,6 +2871,16 @@ public class ApplicationMaster extends CompositeService {
     @Override
     public String getTfEvaluatorId(){
       return tfEvaluatorContainerId;
+    }
+
+    @Override
+    public String getChiefWorkerId() {
+      return chiefWorkerContainerId;
+    }
+
+    @Override
+    public Boolean getChiefWorker() {
+      return chiefWorker;
     }
 
     @Override
