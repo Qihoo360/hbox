@@ -638,9 +638,9 @@ public class ApplicationMaster extends CompositeService {
         String inputPathRemote = inputPathTuple[0];
         if (!StringUtils.isBlank(inputPathRemote)) {
           try {
-            FileSystem inputFs = FileSystem.get(conf);
             for (String singlePath : StringUtils.split(inputPathRemote, ",")) {
               Path inputPathTotal = new Path(singlePath);
+              FileSystem inputFs = inputPathTotal.getFileSystem(conf);
               FileStatus[] inputStatus = inputFs.globStatus(inputPathTotal);
               for (Path inputPath : FileUtil.stat2Paths(inputStatus)) {
                 this.inputList.add(inputPath.toString());
@@ -649,8 +649,8 @@ public class ApplicationMaster extends CompositeService {
                     inputFs, null, Integer.MAX_VALUE);
                 fileStatus.addAll(downLoadFile);
               }
+              inputFs.close();
             }
-            inputFs.close();
           } catch (IOException e) {
             e.printStackTrace();
           }

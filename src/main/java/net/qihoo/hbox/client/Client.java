@@ -274,15 +274,15 @@ public class Client {
       if (inputLocal.equals("true")) {
         inputLocal = "input";
       }
-      FileSystem fs = FileSystem.get(conf);
       for (String pathdir : StringUtils.split(inputRemote, ",")) {
         Path path = new Path(pathdir);
+        FileSystem fs = path.getFileSystem(conf);
         FileStatus[] pathStatus = fs.globStatus(path);
         if (pathStatus == null || pathStatus.length <= 0) {
           throw new IOException("Input path " + path + "not existed!");
         }
+        fs.close();
       }
-      fs.close();
       if (inputPaths.containsKey(inputLocal)) {
         inputPaths.put(inputLocal, inputPaths.get(inputLocal) + "," + inputRemote);
       } else {

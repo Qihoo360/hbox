@@ -291,15 +291,15 @@ public class ApplicationContainerListener extends AbstractService implements App
         this.interResultTimeStamp = System.currentTimeMillis();
         try {
           Configuration conf = this.getConfig();
-          FileSystem fs = FileSystem.get(conf);
-          for(OutputInfo output : this.applicationContext.getOutputs()) {
+          for (OutputInfo output : this.applicationContext.getOutputs()) {
             Path innerResult = new Path(output.getDfsLocation()
                 + conf.get(HboxConfiguration.HBOX_INTERRESULT_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
                 + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date(this.interResultTimeStamp)));
+            FileSystem fs = innerResult.getFileSystem(conf);
             fs.mkdirs(innerResult);
+            fs.close();
             LOG.info("interResult path:" + innerResult);
           }
-          fs.close();
         } catch (IOException e) {
           LOG.info("create the interResult path error: " + e);
         }
