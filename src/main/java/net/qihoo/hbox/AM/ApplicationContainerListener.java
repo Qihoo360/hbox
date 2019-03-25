@@ -49,6 +49,12 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   private final Map<String, List<ContainerHostPair>> clusterDef;
 
+  private final Boolean single;
+
+  private final Boolean tfDistributionStrategy;
+
+  private final Boolean tfEvaluator;
+
   private final Map<HboxContainerId, String> reporterProgress;
 
   private final Map<HboxContainerId, String> mapedTaskID;
@@ -131,10 +137,14 @@ public class ApplicationContainerListener extends AbstractService implements App
     this.digitsUrlMap = new ConcurrentHashMap<>();
     this.containersAppStartTimeMap = new ConcurrentHashMap<>();
     this.containersAppFinishTimeMap = new ConcurrentHashMap<>();
+    this.single = conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE);
     this.clusterDef = new ConcurrentHashMap<>();
     this.clusterDef.put(HboxConstants.WORKER, Collections.synchronizedList(new ArrayList<ContainerHostPair>()));
     this.clusterDef.put(HboxConstants.PS, Collections.synchronizedList(new ArrayList<ContainerHostPair>()));
+    this.clusterDef.put(HboxConstants.EVALUATOR, Collections.synchronizedList(new ArrayList<ContainerHostPair>()));
     this.clusterDefStr = null;
+    this.tfDistributionStrategy = conf.getBoolean(HboxConfiguration.HBOX_TF_DISTRIBUTION_STRATEGY, HboxConfiguration.DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY);
+    this.tfEvaluator = conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR);
     this.lightGBMIpPortStr = null;
     this.lightLDAIpPortStr = null;
     this.torchRank0IP = null;
@@ -745,21 +755,31 @@ public class ApplicationContainerListener extends AbstractService implements App
   @Override
   public synchronized String getClusterDef() {
     if (this.clusterDef.get(HboxConstants.WORKER.toString()).size() == applicationContext.getWorkerNum()
-        && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum()) {
+        && ((!tfDistributionStrategy && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum())
+        || (tfDistributionStrategy
+        && (applicationContext.getPsNum() == 0 || (applicationContext.getPsNum() > 0 && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum()))
+        && (!tfEvaluator || (tfEvaluator && this.clusterDef.get(HboxConstants.EVALUATOR.toString()).size() == 1))))) {
       if (this.clusterDefStr == null) {
         Collections.sort(this.clusterDef.get(HboxConstants.PS.toString()), new compairIndex());
         Collections.sort(this.clusterDef.get(HboxConstants.WORKER.toString()), new compairIndex());
         List workerList = new ArrayList<String>();
-        List psList = new ArrayList<String>();
-        for (int i = 0; i < this.clusterDef.get(HboxConstants.WORKER.toString()).size(); i++) {
+        for (int i = 0; i < applicationContext.getWorkerNum(); i++) {
           workerList.add(this.clusterDef.get(HboxConstants.WORKER.toString()).get(i).getHost());
-        }
-        for (int i = 0; i < this.clusterDef.get(HboxConstants.PS.toString()).size(); i++) {
-          psList.add(this.clusterDef.get(HboxConstants.PS.toString()).get(i).getHost());
         }
         Map<String, List<String>> clusterMessage = new HashMap<>();
         clusterMessage.put(HboxConstants.WORKER, workerList);
-        clusterMessage.put(HboxConstants.PS, psList);
+        if (applicationContext.getPsNum() > 0) {
+          List psList = new ArrayList<String>();
+          for (int i = 0; i < applicationContext.getPsNum(); i++) {
+            psList.add(this.clusterDef.get(HboxConstants.PS.toString()).get(i).getHost());
+          }
+          clusterMessage.put(HboxConstants.PS, psList);
+        }
+        if (tfDistributionStrategy && tfEvaluator) {
+          List evaluatorList = new ArrayList<String>();
+          evaluatorList.add(this.clusterDef.get(HboxConstants.EVALUATOR.toString()).get(0).getHost());
+          clusterMessage.put(HboxConstants.EVALUATOR, evaluatorList);
+        }
         LOG.info("Sending cluster def \"" + new Gson().toJson(clusterMessage) + "\"to container");
         this.clusterDefStr = new Gson().toJson(clusterMessage);
       }

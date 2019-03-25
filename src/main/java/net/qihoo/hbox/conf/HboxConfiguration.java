@@ -231,6 +231,8 @@ public class HboxConfiguration extends YarnConfiguration {
       "$HADOOP_YARN_HOME/share/hadoop/mapreduce/*",
       "$HADOOP_YARN_HOME/share/hadoop/mapreduce/lib/*"
   };
+  public static final String HBOX_TF_DISTRIBUTION_STRATEGY = "hbox.tf.distribution.strategy";
+  public static final Boolean DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY = false;
   public static final String HBOX_TF_BOARD_WORKER_INDEX = "hbox.tf.board.worker.index";
   public static final int DEFAULT_HBOX_TF_BOARD_WORKER_INDEX = 0;
   public static final String HBOX_TF_BOARD_RELOAD_INTERVAL = "hbox.tf.board.reload.interval";

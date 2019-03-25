@@ -152,8 +152,14 @@ public class Client {
     }
 
     if ("TENSORFLOW".equals(clientArguments.appType)) {
-      if (conf.getInt(HboxConfiguration.HBOX_PS_NUM, HboxConfiguration.DEFAULT_HBOX_PS_NUM) == 0) {
-        conf.setBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, true);
+      if (conf.getBoolean(HboxConfiguration.HBOX_TF_DISTRIBUTION_STRATEGY, HboxConfiguration.DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY)) {
+        if ((conf.getInt(HboxConfiguration.HBOX_PS_NUM, HboxConfiguration.DEFAULT_HBOX_PS_NUM) + conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM)) == 1) {
+          conf.setBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, true);
+        }
+      } else {
+        if (conf.getInt(HboxConfiguration.HBOX_PS_NUM, HboxConfiguration.DEFAULT_HBOX_PS_NUM) == 0) {
+          conf.setBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, true);
+        }
       }
       if (conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR)) {
         if ((!conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) && conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM) > 1) {
@@ -438,48 +444,50 @@ public class Client {
       if (psNum < 0) {
         throw new IllegalArgumentException(
                 "Invalid no. of ps specified, exiting."
-                        + " Specified container number=" + psNum);
+                    + " Specified container number=" + psNum);
       }
       LOG.info("Apply for ps number " + psNum);
-      if(!single) {
-        if (psNum < 1) {
-          throw new IllegalArgumentException(
-              "Invalid no. of ps specified for distributed job, exiting."
-                  + " Specified container number=" + psNum);
+      if (!single) {
+        if (!conf.getBoolean(HboxConfiguration.HBOX_TF_DISTRIBUTION_STRATEGY, HboxConfiguration.DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY)) {
+          if (psNum < 1) {
+            throw new IllegalArgumentException(
+                "Invalid no. of ps specified for distributed job, exiting."
+                    + " Specified container number=" + psNum);
+          }
+          int psMemory = conf.getInt(HboxConfiguration.HBOX_PS_MEMORY, HboxConfiguration.DEFAULT_HBOX_PS_MEMORY);
+          int psVcores = conf.getInt(HboxConfiguration.HBOX_PS_VCORES, HboxConfiguration.DEFAULT_HBOX_PS_VCORES);
+          int psGcores = conf.getInt(HboxConfiguration.HBOX_PS_GPU, HboxConfiguration.DEFAULT_HBOX_PS_GPU);
+          if (psMemory > maxMem) {
+            throw new RequestOverLimitException("ps memory requested " + psMemory +
+                " above the max threshold of yarn cluster " + maxMem);
+          }
+          if (psMemory <= 0) {
+            throw new IllegalArgumentException(
+                "Invalid memory specified for ps, exiting."
+                    + "Specified memory=" + psMemory);
+          }
+          LOG.info("Apply for ps Memory " + psMemory + "M");
+          if (psVcores > maxVCores) {
+            throw new RequestOverLimitException("ps vcores requested " + psVcores +
+                " above the max threshold of yarn cluster " + maxVCores);
+          }
+          if (psVcores <= 0) {
+            throw new IllegalArgumentException(
+                "Invalid vcores specified for ps, exiting."
+                    + "Specified vcores=" + psVcores);
+          }
+          LOG.info("Apply for ps vcores " + psVcores);
+          if (psGcores > maxGCores) {
+            throw new RequestOverLimitException("ps gpu cores requested " + psGcores +
+                " above the max threshold of yarn cluster " + maxGCores);
+          }
+          if (psGcores < 0) {
+            throw new IllegalArgumentException(
+                "Invalid gpu cores specified for ps, exiting."
+                    + "Specified gpu cores=" + psGcores);
+          }
+          LOG.info("Apply for ps gpu cores " + psGcores);
         }
-        int psMemory = conf.getInt(HboxConfiguration.HBOX_PS_MEMORY, HboxConfiguration.DEFAULT_HBOX_PS_MEMORY);
-        int psVcores = conf.getInt(HboxConfiguration.HBOX_PS_VCORES, HboxConfiguration.DEFAULT_HBOX_PS_VCORES);
-        int psGcores = conf.getInt(HboxConfiguration.HBOX_PS_GPU, HboxConfiguration.DEFAULT_HBOX_PS_GPU);
-        if (psMemory > maxMem) {
-          throw new RequestOverLimitException("ps memory requested " + psMemory +
-                  " above the max threshold of yarn cluster " + maxMem);
-        }
-        if (psMemory <= 0) {
-          throw new IllegalArgumentException(
-                  "Invalid memory specified for ps, exiting."
-                          + "Specified memory=" + psMemory);
-        }
-        LOG.info("Apply for ps Memory " + psMemory + "M");
-        if (psVcores > maxVCores) {
-          throw new RequestOverLimitException("ps vcores requested " + psVcores +
-                  " above the max threshold of yarn cluster " + maxVCores);
-        }
-        if (psVcores <= 0) {
-          throw new IllegalArgumentException(
-                  "Invalid vcores specified for ps, exiting."
-                          + "Specified vcores=" + psVcores);
-        }
-        LOG.info("Apply for ps vcores " + psVcores);
-        if (psGcores > maxGCores) {
-          throw new RequestOverLimitException("ps gpu cores requested " + psGcores +
-                  " above the max threshold of yarn cluster " + maxGCores);
-        }
-        if (psGcores < 0) {
-          throw new IllegalArgumentException(
-                  "Invalid gpu cores specified for ps, exiting."
-                          + "Specified gpu cores=" + psGcores);
-        }
-        LOG.info("Apply for ps gpu cores " + psGcores);
       }
       int limitNode = conf.getInt(HboxConfiguration.HBOX_EXECUTE_NODE_LIMIT, HboxConfiguration.DEFAULT_HBOX_EXECUTENODE_LIMIT);
       if (workerNum + psNum > limitNode) {

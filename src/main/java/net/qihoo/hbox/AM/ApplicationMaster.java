@@ -988,7 +988,7 @@ public class ApplicationMaster extends CompositeService {
       }
     }
 
-    if("TENSORFLOW".equals(hboxAppType) && !single) {
+    if("TENSORFLOW".equals(hboxAppType) && psNum > 0) {
       Resource psCapability = Records.newRecord(Resource.class);
       int psOverheadMem = (int) Math.max(psMemory * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
           conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
@@ -1620,7 +1620,7 @@ public class ApplicationMaster extends CompositeService {
       amrmAsync.addContainerRequest(psContainerRequest);
     }
 
-    if("TENSORFLOW".equals(hboxAppType) && !single) {
+    if("TENSORFLOW".equals(hboxAppType) && psNum > 0) {
       LOG.info("Try to allocate " + psNum + " ps containers");
     }
 
@@ -2506,7 +2506,7 @@ public class ApplicationMaster extends CompositeService {
         LOG.info("Train completed");
         containerListener.setTrainFinished();
 
-        if("TENSORFLOW".equals(hboxAppType) && !single) {
+        if("TENSORFLOW".equals(hboxAppType) && psNum > 0) {
           LOG.info("Waiting all ps contianers completed");
           while (!containerListener.isAllPsContainersFinished()) {
             Utilities.sleep(statusUpdateInterval);

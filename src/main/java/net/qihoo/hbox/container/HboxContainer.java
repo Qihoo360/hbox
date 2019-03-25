@@ -618,7 +618,7 @@ public class HboxContainer {
 
     if ("TENSORFLOW".equals(hboxAppType) && !single) {
       LOG.info("Reserved available port: " + reservedSocket.getLocalPort());
-      if (!this.role.equals(HboxConstants.EVALUATOR)) {
+      if (!this.role.equals(HboxConstants.EVALUATOR) || conf.getBoolean(HboxConfiguration.HBOX_TF_DISTRIBUTION_STRATEGY, HboxConfiguration.DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY)) {
         amClient.reportReservedPort(envs.get(ApplicationConstants.Environment.NM_HOST.toString()),
             reservedSocket.getLocalPort(), this.role, this.index);
       }
