@@ -1,7 +1,13 @@
 package net.qihoo.xlearning.container;
 
 import com.google.gson.Gson;
+import java.io.File;
+import java.io.PrintWriter;
+import jnr.unixsocket.UnixSocket;
+import jnr.unixsocket.UnixSocketAddress;
+import jnr.unixsocket.UnixSocketChannel;
 import net.qihoo.xlearning.api.ApplicationContainerProtocol;
+import net.qihoo.xlearning.conf.XLearningConfiguration;
 import net.qihoo.xlearning.util.Utilities;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -21,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import org.json.JSONObject;
 
 public class ContainerReporter extends Thread {
   private static final Log LOG = LogFactory.getLog(ContainerReporter.class);
@@ -39,6 +46,9 @@ public class ContainerReporter extends Thread {
 
   private ConcurrentHashMap<String, List> cpuMetrics;
 
+  private String containerType;
+
+  private JSONObject dockerMetric;
 
   public ContainerReporter(ApplicationContainerProtocol protocol, Configuration conf,
                            XLearningContainerId xlearningContainerId, String xlearningCmdProcessId) {
@@ -50,11 +60,18 @@ public class ContainerReporter extends Thread {
     this.processTreeClass = conf.getClass(YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE, null,
         ResourceCalculatorProcessTree.class);
     this.cpuMetrics = new ConcurrentHashMap<>();
+    this.containerType = conf.get(XLearningConfiguration.XLEARNING_CONTAINER_TYPE,
+        XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_TYPE);
+
   }
 
   public void run() {
     try {
-      produceCpuMetrics(this.xlearningCmdProcessId);
+      if (containerType.equalsIgnoreCase("docker")) {
+        dockerProduceMetrics(this.containerId.toString(), this.xlearningCmdProcessId);
+      } else {
+        produceMetrics(this.xlearningCmdProcessId);
+      }
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -130,7 +147,112 @@ public class ContainerReporter extends Thread {
 
   }
 
-  private void produceCpuMetrics(String xlearningCmdProcessId) throws IOException {
+  private void dockerProduceMetrics(final String containerId,final String xlearningCmdProcessId) {
+    final DecimalFormat df = new DecimalFormat("#.00");
+    df.setRoundingMode(RoundingMode.HALF_UP);
+    LOG.info("Starting thread to read cpu metrics");
+    Thread cpuMetricsThread = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          while (true) {
+            getDockerMetric(containerId);
+            Long time = (new Date()).getTime();
+            double currentPmemUsage = 0.0;
+            currentPmemUsage = Double.parseDouble(df.format(getDockerMemory()  / 1024.0 / 1024.0 / 1024.0));
+            if (currentPmemUsage < 0.0) {
+              currentPmemUsage = 0.0;
+            }
+            List memPoint = new ArrayList();
+            memPoint.add(time);
+            memPoint.add(currentPmemUsage);
+            cpuMetrics.put("CPUMEM", memPoint);
+            try {
+              double cpuUsagePercentPerCore = Double.parseDouble(df.format(getDockerCpu()));
+              if (cpuUsagePercentPerCore < 0) {
+                cpuUsagePercentPerCore = 0;
+              }
+              List utilPoint = new ArrayList();
+              utilPoint.add(time);
+              utilPoint.add(cpuUsagePercentPerCore);
+              cpuMetrics.put("CPUUTIL", utilPoint);
+            } catch (Exception e) {
+              LOG.debug("getCpuUsagePercent Exception: " + e);
+            }
+            Utilities.sleep(1000);
+          }
+        } catch (Exception e) {
+          LOG.warn("Exception in thread read cpu metrics");
+          e.printStackTrace();
+        }
+      }
+    });
+    cpuMetricsThread.start();
+  }
+
+  private void getDockerMetric(String containerId) {
+    try {
+      File sockFile = new File("/var/run/docker.sock");
+      UnixSocketAddress address = new UnixSocketAddress(sockFile);
+      UnixSocketChannel channel = UnixSocketChannel.open(address);
+      UnixSocket unixSocket = new UnixSocket(channel);
+      PrintWriter w = new PrintWriter(unixSocket.getOutputStream());
+      w.println("GET /v1.27/containers/" + containerId + "/stats?stream=False HTTP/1.1");
+      w.println("Host: http");
+      w.println("Accept: */*");
+      w.println("");
+      w.flush();
+      BufferedReader br = new BufferedReader(new InputStreamReader(unixSocket.getInputStream()));
+      String line;
+      while ((line = br.readLine()) != null) {
+        if (line.trim().equals("")) {
+          br.readLine();
+          unixSocket.shutdownOutput();
+          line = br.readLine();
+          br.readLine();
+          break;
+        }
+      }
+      unixSocket.close();
+      if (line != null && !line.trim().equals("")) {
+        dockerMetric = new JSONObject(line);
+      }
+    } catch (Exception e) {
+      LOG.error("Get docker metric error:", e);
+    }
+  }
+
+  private long getDockerMemory() {
+    long result = 0;
+    try {
+      result = dockerMetric.getJSONObject("memory_stats").getLong("usage");
+    } catch (Exception e) {
+      LOG.warn("Docker Metric Error:", e);
+    }
+    return result;
+  }
+
+  private double getDockerCpu() {
+    double result = 0;
+    try {
+      int cpuNum = dockerMetric.getJSONObject("cpu_stats").getInt("online_cpus");
+      long cpuUsage = dockerMetric.getJSONObject("cpu_stats").getJSONObject("cpu_usage")
+          .getLong("total_usage");
+      long systemCpuUsage = dockerMetric.getJSONObject("cpu_stats").getLong("system_cpu_usage");
+      long perCpuUsage = dockerMetric.getJSONObject("precpu_stats").getJSONObject("cpu_usage")
+          .getLong("total_usage");
+      long perSystemCpuUsage = dockerMetric.getJSONObject("precpu_stats")
+          .getLong("system_cpu_usage");
+      result = ((double) (cpuUsage - perCpuUsage) / (double) (systemCpuUsage - perSystemCpuUsage))
+          * cpuNum * 100.0;
+    } catch (Exception e) {
+      LOG.warn("Docker Metric Error:", e);
+    }
+    return result;
+  }
+
+
+  private void produceMetrics(String xlearningCmdProcessId) throws IOException {
     String command = "cat /proc/" + xlearningCmdProcessId + "/stat";
     try {
       Process process = Runtime.getRuntime().exec(command);

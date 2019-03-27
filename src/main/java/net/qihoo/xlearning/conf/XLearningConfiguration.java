@@ -387,4 +387,13 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final String XLEARNING_APP_ID = "xlearning.app.id";
 
+  public static final String XLEARNING_DOCKER_USERNAME = "xlearning.docker.username";
+  public static final String XLEARNING_DOCKER_PASSWORD = "xlearning.docker.password";
+
+  public static final String XLEARNING_DOCKER_USEHARBOR = "xlearning.docker.useharbor";
+  public static final boolean DEFAULT_XLEARNING_DOCKER_USEHARBOR = false;
+
+  public static final String XLEARNING_DOCKER_SKIP_ENV = "xlearning.docker.skip.env";
+  public static final String[] DEFAULT_XLEARNING_DOCKER_SKIP_ENV = {"PATH,JAVA_HOME,LD_LIBRARY_PATH"};
+
 }

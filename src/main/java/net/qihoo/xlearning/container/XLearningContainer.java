@@ -91,6 +91,8 @@ public class XLearningContainer {
 
   private String containerType;
 
+  private int reservedPort = -1;
+
   private XLearningContainer() {
     this.conf = new XLearningConfiguration();
     conf.addResource(new Path(XLearningConstants.XLEARNING_JOB_CONFIGURATION));
@@ -221,6 +223,7 @@ public class XLearningContainer {
     if ((("TENSORFLOW".equals(xlearningAppType) || "LIGHTLDA".equals(xlearningAppType)) && !single) || xlearningAppType.equals("DISTLIGHTGBM") || containerLaunch instanceof DockerContainer) {
       try {
         Utilities.getReservePort(reservedSocket, InetAddress.getByName(localHost).getHostAddress(), reservePortBegin, reservePortEnd);
+        reservedPort = reservedSocket.getLocalPort();
         conf.set("RESERVED_PORT", reservedSocket.getLocalPort() + "");
         LOG.error(conf.get("RESERVED_PORT"));
       } catch (IOException e) {
@@ -612,6 +615,7 @@ public class XLearningContainer {
         }
       }
     }
+    envList.add("DOCKER_RESERVED_PORT=" + reservedPort);
     envList.add("PATH=" + System.getenv("PATH"));
     envList.add("JAVA_HOME=" + System.getenv("JAVA_HOME"));
     envList.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));

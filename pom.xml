@@ -65,6 +65,11 @@
             <artifactId>json</artifactId>
             <version>20140107</version>
         </dependency>
+        <dependency>
+            <groupId>com.github.jnr</groupId>
+            <artifactId>jnr-unixsocket</artifactId>
+            <version>0.22</version>
+        </dependency>
         <!-- junit -->
         <dependency>
             <groupId>junit</groupId>
@@ -127,6 +132,30 @@
                         <manifestFile>src/main/resources/META-INF/MANIFEST.MF</manifestFile>
                     </archive>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createSourcesJar>true</createSourcesJar>
+                            <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
+                            <artifactSet>
+                                <includes>
+                                    <include>org.json:json</include>
+                                    <include>com.github.jnr:jnr-*</include>
+                                    <include>com.github.jnr:jffi</include>
+                                    <include>org.ow2.asm:asm</include>
+                                </includes>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>
