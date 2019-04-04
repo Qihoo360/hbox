@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -681,6 +682,15 @@ public class Client {
     priority.setPriority(conf.getInt(XLearningConfiguration.XLEARNING_APP_PRIORITY, XLearningConfiguration.DEFAULT_XLEARNING_APP_PRIORITY));
     applicationContext.setPriority(priority);
     applicationContext.setQueue(conf.get(XLearningConfiguration.XLEARNING_APP_QUEUE, XLearningConfiguration.DEFAULT_XLEARNING_APP_QUEUE));
+    String amNodeLabelExpression = conf.get(XLearningConfiguration.XLEARNING_AM_NODELABELEXPRESSION);
+    if (amNodeLabelExpression != null && amNodeLabelExpression.trim() != "") {
+      try {
+        Method method = applicationContext.getClass().getMethod("setNodeLabelExpression", String.class);
+        method.invoke(applicationContext, amNodeLabelExpression);
+      } catch (Exception e) {
+        LOG.warn("Set am node label expression error: " + e);
+      }
+    }
 
     try {
       LOG.info("Submitting application to ResourceManager");

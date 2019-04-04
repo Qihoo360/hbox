@@ -737,19 +737,39 @@ public class ApplicationMaster extends CompositeService {
       }
     }
 
+    String workerNodeLabelExpression = conf.get(XLearningConfiguration.XLEARNING_WORKER_NODELABELEXPRESSION);
     Priority priority = Records.newRecord(Priority.class);
     priority.setPriority(appPriority);
     Resource workerCapability = Records.newRecord(Resource.class);
     workerCapability.setMemory(workerMemory);
     workerCapability.setVirtualCores(workerVCores);
-    workerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority);
+    if (workerNodeLabelExpression != null && workerNodeLabelExpression.trim() != "") {
+      try {
+        workerContainerRequest = ContainerRequest.class.getConstructor(Resource.class, String[].class, String[].class, Priority.class, boolean.class, String.class).newInstance(workerCapability, hostLocals, null, priority, true, workerNodeLabelExpression);
+      } catch (Exception e) {
+        workerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority);
+        LOG.warn("Set worker node label expression error:" + e);
+      }
+    } else {
+      workerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority);
+    }
     LOG.info("Create worker container request: " + workerContainerRequest.toString());
 
     if (!single) {
+      String psNodeLabelExpression = conf.get(XLearningConfiguration.XLEARNING_PS_NODELABELEXPRESSION);
       Resource psCapability = Records.newRecord(Resource.class);
       psCapability.setMemory(psMemory);
       psCapability.setVirtualCores(psVCores);
-      psContainerRequest = new ContainerRequest(psCapability, hostLocals, null, priority);
+      if (psNodeLabelExpression != null && psNodeLabelExpression.trim() != "") {
+        try {
+          psContainerRequest = ContainerRequest.class.getConstructor(Resource.class, String[].class, String[].class, Priority.class, boolean.class, String.class).newInstance(psCapability, hostLocals, null, priority, true, psNodeLabelExpression);
+        } catch (Exception e) {
+          psContainerRequest = new ContainerRequest(psCapability, hostLocals, null, priority);
+          LOG.warn("Set ps node label expression error:" + e);
+        }
+      } else {
+        psContainerRequest = new ContainerRequest(psCapability, hostLocals, null, priority);
+      }
       LOG.info("Create ps container request: " + psContainerRequest.toString());
     }
   }

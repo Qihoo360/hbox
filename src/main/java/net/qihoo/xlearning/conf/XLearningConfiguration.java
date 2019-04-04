@@ -49,6 +49,12 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final boolean DEFAULT_XLEARNING_HOST_LOCAL_ENABLE = false;
 
+  public static final String XLEARNING_AM_NODELABELEXPRESSION = "xlearning.am.nodeLabelExpression";
+
+  public static final String XLEARNING_WORKER_NODELABELEXPRESSION = "xlearning.worker.nodeLabelExpression";
+
+  public static final String XLEARNING_PS_NODELABELEXPRESSION = "xlearning.ps.nodeLabelExpression";
+
   public static final String XLEARNING_REPORT_CONTAINER_STATUS = "xlearning.report.container.status";
 
   public static final boolean DEFAULT_XLEARNING_REPORT_CONTAINER_STATUS = true;
