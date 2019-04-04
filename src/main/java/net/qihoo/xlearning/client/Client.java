@@ -13,6 +13,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -223,8 +224,10 @@ public class Client {
       }
       for (String pathdir : StringUtils.split(inputRemote, ",")) {
         Path path = new Path(pathdir);
-        if (!path.getFileSystem(conf).exists(path)) {
-          throw new IOException("Input path " + path + " not existed!");
+        FileSystem fs = path.getFileSystem(conf);
+        FileStatus[] pathStatus = fs.globStatus(path);
+        if (pathStatus == null || pathStatus.length <= 0) {
+          throw new IOException("Input path " + path + "not existed!");
         }
       }
       if (inputPaths.containsKey(inputLocal)) {
