@@ -5,16 +5,14 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import net.qihoo.xlearning.api.ApplicationContainerProtocol;
 import net.qihoo.xlearning.api.XLearningConstants;
-import net.qihoo.xlearning.common.InputInfo;
-import net.qihoo.xlearning.common.OutputInfo;
-import net.qihoo.xlearning.common.XLearningContainerStatus;
-import net.qihoo.xlearning.common.TextMultiOutputFormat;
+import net.qihoo.xlearning.common.*;
 import net.qihoo.xlearning.conf.XLearningConfiguration;
 import net.qihoo.xlearning.util.Utilities;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
@@ -410,6 +408,13 @@ public class XLearningContainer {
         LOG.info("Output path: " + s.getLocalLocation() + "#" + s.getDfsLocation());
       }
       if (outputs.size() > 0) {
+        ExecutorService executor = Executors.newFixedThreadPool(
+            conf.getInt(XLearningConfiguration.XLEARNING_UPLOAD_OUTPUT_THREAD_NUMS, XLearningConfiguration.DEFAULT_XLEARNING_DOWNLOAD_FILE_THREAD_NUMS),
+            new ThreadFactoryBuilder()
+                .setDaemon(true)
+                .setNameFormat("Upload-Output-Thread #%d")
+                .build()
+        );
         for (OutputInfo outputInfo : outputs) {
           FileSystem localFs = FileSystem.getLocal(conf);
           Path localPath = new Path(outputInfo.getLocalLocation());
@@ -426,11 +431,41 @@ public class XLearningContainer {
             dfs.delete(remotePath);
           }
           if (localFs.exists(localPath)) {
-            dfs.copyFromLocalFile(false, false, localPath, remotePath);
-            LOG.info("Upload output " + localPath + " to remote path " + remotePath + " finished.");
+            String splitDir = localPath.toString();
+            if (!localPath.toString().endsWith("/")) {
+              splitDir = localPath.toString() + "/";
+            } else if (!localPath.toString().startsWith("/")) {
+              splitDir = "/" + localPath.toString();
+            }
+            FileStatus[] uploadFiles = localFs.listStatus(localPath);
+            for (FileStatus uploadFile : uploadFiles) {
+              Path uploadPath = uploadFile.getPath();
+              LOG.debug("upload:" + uploadPath + " \tfrom\tlocalPath:" + localPath);
+              String[] fileName = StringUtils.splitByWholeSeparator(uploadPath.toString() + "/", splitDir, 2);
+              if (fileName.length == 2) {
+                Path uploadDstPath = new Path(remotePath.toString() + "/" + fileName[1]);
+                UploadTask uploadTask = new UploadTask(conf, uploadDstPath, uploadPath);
+                LOG.debug("upload from " + uploadPath + " to " + uploadDstPath);
+                executor.submit(uploadTask);
+              } else {
+                LOG.error("Get the local path error");
+              }
+            }
           }
           localFs.close();
         }
+        boolean allUploadTaskFinished = false;
+        executor.shutdown();
+        do {
+          try {
+            executor.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
+            allUploadTaskFinished = true;
+          } catch (InterruptedException e) {
+            reportFailedAndExit();
+            break;
+          }
+        } while (!allUploadTaskFinished);
+        LOG.info("All output files upload finished.");
       }
     }
 

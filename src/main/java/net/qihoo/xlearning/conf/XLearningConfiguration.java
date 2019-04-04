@@ -263,6 +263,8 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final int DEFAULT_XLEARNING_DOWNLOAD_FILE_THREAD_NUMS = 10;
 
+  public static final String XLEARNING_UPLOAD_OUTPUT_THREAD_NUMS = "xlearning.upload.output.thread.nums";
+
   public static final String XLEARNING_CONTAINER_HEARTBEAT_INTERVAL = "xlearning.container.heartbeat.interval";
 
   public static final int DEFAULT_XLEARNING_CONTAINER_HEARTBEAT_INTERVAL = 10 * 1000;

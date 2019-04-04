@@ -204,15 +204,15 @@ public class ApplicationContainerListener extends AbstractService implements App
         this.interResultTimeStamp = System.currentTimeMillis();
         try {
           Configuration conf = this.getConfig();
-          FileSystem fs = FileSystem.get(conf);
           for (OutputInfo output : this.applicationContext.getOutputs()) {
             Path innerResult = new Path(output.getDfsLocation()
                 + conf.get(XLearningConfiguration.XLEARNING_INTERREAULST_DIR, XLearningConfiguration.DEFAULT_XLEARNING_INTERRESULT_DIR)
                 + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date(this.interResultTimeStamp)));
+            FileSystem fs = innerResult.getFileSystem(conf);
             fs.mkdirs(innerResult);
+            fs.close();
             LOG.info("interResult path:" + innerResult);
           }
-          fs.close();
         } catch (IOException e) {
           LOG.error("create the interResult path error: " + e);
         }
