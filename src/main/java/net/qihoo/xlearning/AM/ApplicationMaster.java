@@ -358,8 +358,9 @@ public class ApplicationMaster extends CompositeService {
             } else {
               containerMessage.put(AMParams.CONTAINER_ROLE, XLearningConstants.WORKER);
             }
-            if (applicationContext.getContainerStatus(new XLearningContainerId(container.getId())) != null) {
-              containerMessage.put(AMParams.CONTAINER_STATUS, applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).toString());
+            XLearningContainerStatus status = applicationContext.getContainerStatus(new XLearningContainerId(container.getId()));
+            if (status != null) {
+              containerMessage.put(AMParams.CONTAINER_STATUS, status.toString());
             } else {
               containerMessage.put(AMParams.CONTAINER_STATUS, "-");
             }
@@ -386,7 +387,7 @@ public class ApplicationMaster extends CompositeService {
               containerMessage.put(AMParams.CONTAINER_CPU_STATISTICS, new Gson().toJson(cpuStatistics));
               if (cpuStatistics.size() != 0) {
                 Double cpuMemUsagedMax = cpuStatistics.get("CPUMEM").get(1);
-                if (cpuMemUsagedMax * 1024.0 / workerMemory < conf.getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
+                if (status != null && status.toString().equalsIgnoreCase("SUCCEEDED") && cpuMemUsagedMax * 1024.0 / workerMemory < conf.getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
                   containerMessage.put(AMParams.CONTAINER_CPU_USAGE_WARN_MEM, "true");
                 } else {
                   containerMessage.put(AMParams.CONTAINER_CPU_USAGE_WARN_MEM, "false");
@@ -436,8 +437,9 @@ public class ApplicationMaster extends CompositeService {
               containerMessage.put(AMParams.CONTAINER_ROLE, "server");
             }
 
-            if (applicationContext.getContainerStatus(new XLearningContainerId(container.getId())) != null) {
-              containerMessage.put(AMParams.CONTAINER_STATUS, applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).toString());
+            XLearningContainerStatus status = applicationContext.getContainerStatus(new XLearningContainerId(container.getId()));
+            if (status != null) {
+              containerMessage.put(AMParams.CONTAINER_STATUS, status.toString());
             } else {
               containerMessage.put(AMParams.CONTAINER_STATUS, "-");
             }
@@ -465,7 +467,7 @@ public class ApplicationMaster extends CompositeService {
               containerMessage.put(AMParams.CONTAINER_CPU_STATISTICS, new Gson().toJson(cpuStatistics));
               if (cpuStatistics.size() != 0) {
                 Double cpuMemUsagedMax = cpuStatistics.get("CPUMEM").get(1);
-                if (cpuMemUsagedMax * 1024.0 / workerMemory < conf.getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
+                if (status != null && status.toString().equalsIgnoreCase("SUCCEEDED") && cpuMemUsagedMax * 1024.0 / workerMemory < conf.getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
                   containerMessage.put(AMParams.CONTAINER_CPU_USAGE_WARN_MEM, "true");
                 } else {
                   containerMessage.put(AMParams.CONTAINER_CPU_USAGE_WARN_MEM, "false");
