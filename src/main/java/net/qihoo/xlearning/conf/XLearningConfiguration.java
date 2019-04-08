@@ -171,6 +171,11 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final String DEFAULT_XLEARNING_INTERRESULT_DIR = "/interResult_";
 
+  public static final String XLEARNING_INTERRESULT_SAVE_INC = "xlearning.interresult.save.inc";
+
+  public static final Boolean DEFAULT_XLEARNING_INTERRESULT_SAVE_INC = false;
+
+
   public static final String[] DEFAULT_XLEARNING_APPLICATION_CLASSPATH = {
       "$HADOOP_CONF_DIR",
       "$HADOOP_COMMON_HOME/share/hadoop/common/*",
@@ -264,6 +269,10 @@ public class XLearningConfiguration extends YarnConfiguration {
   public static final int DEFAULT_XLEARNING_DOWNLOAD_FILE_THREAD_NUMS = 10;
 
   public static final String XLEARNING_UPLOAD_OUTPUT_THREAD_NUMS = "xlearning.upload.output.thread.nums";
+
+  public static final String XLEARNING_FILE_LIST_LEVEL = "xlearning.file.list.level";
+
+  public static final int DEFAULT_XLEARNING_FILE_LIST_LEVEL = 2;
 
   public static final String XLEARNING_CONTAINER_HEARTBEAT_INTERVAL = "xlearning.container.heartbeat.interval";
 

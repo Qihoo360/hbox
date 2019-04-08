@@ -544,7 +544,7 @@ public class ApplicationMaster extends CompositeService {
               for (Path inputPath : FileUtil.stat2Paths(inputStatus)) {
                 inputPath = inputFs.makeQualified(inputPath);
                 List<FileStatus> downLoadFile = Utilities.listStatusRecursively(inputPath,
-                    inputFs, null);
+                    inputFs, null, Integer.MAX_VALUE);
                 fileStatus.addAll(downLoadFile);
               }
             }
