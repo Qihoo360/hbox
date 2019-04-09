@@ -25,6 +25,10 @@ public interface ApplicationContext {
 
   int getWorkerMemory();
 
+  int getChiefWorkerMemory();
+
+  int getEvaluatorWorkerMemory();
+
   int getPsMemory();
 
   int getWorkerVCores();
@@ -72,5 +76,9 @@ public interface ApplicationContext {
   List<Long> getModelSavingList();
 
   String getTfEvaluatorId();
+
+  String getChiefWorkerId();
+
+  Boolean getChiefWorker();
 
 }

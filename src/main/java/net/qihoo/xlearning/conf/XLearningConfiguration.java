@@ -83,6 +83,10 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final int DEFAULT_XLEARNING_WORKER_NUM = 1;
 
+  public static final String XLEARNING_CHIEF_WORKER_MEMORY = "xlearning.chief.worker.memory";
+
+  public static final String XLEARNING_EVALUATOR_WORKER_MEMORY = "xlearning.evaluator.worker.memory";
+
   public static final String XLEARNING_PS_MEMORY = "xlearning.ps.memory";
 
   public static final int DEFAULT_XLEARNING_PS_MEMORY = 1024;

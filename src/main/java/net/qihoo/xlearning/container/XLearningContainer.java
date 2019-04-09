@@ -111,12 +111,6 @@ public class XLearningContainer {
       outputIndex = Integer.parseInt(envs.get(XLearningConstants.Environment.XLEARNING_OUTPUTS_WORKER_INDEX.toString()));
     }
     if ("TENSORFLOW".equals(xlearningAppType)) {
-      if (conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR)) {
-        if(this.role.equals(XLearningConstants.WORKER) && conf.getInt(XLearningConfiguration.XLEARNING_WORKER_NUM, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM) == (this.index+1)){
-          this.index = 0;
-          this.role = XLearningConstants.EVALUATOR;
-        }
-      }
       LOG.info("TensorFlow role is:" + this.role);
     }
     if (xlearningAppType.equals("MXNET")) {

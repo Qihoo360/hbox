@@ -55,6 +55,8 @@ public class ApplicationMaster extends CompositeService {
   private int workerMemory;
   private int workerVCores;
   private int workerNum;
+  private int chiefWorkerMemory;
+  private int evaluatorWorkerMemory;
   private int psMemory;
   private int psVCores;
   private int psNum;
@@ -80,6 +82,8 @@ public class ApplicationMaster extends CompositeService {
   private String xlearningAppType;
   private List<Container> acquiredWorkerContainers;
   private List<Container> acquiredPsContainers;
+  private List<Container> acquiredChiefWorkerContainers;
+  private List<Container> acquiredEvaluatorWorkerContainers;
   private final LinkedBlockingQueue<Message> applicationMessageQueue;
   private final List<OutputInfo> outputInfos;
   private ConcurrentHashMap<String, List<FileStatus>> input2FileStatus;
@@ -93,6 +97,8 @@ public class ApplicationMaster extends CompositeService {
   private RMCallbackHandler rmCallbackHandler;
   private ContainerRequest workerContainerRequest;
   private ContainerRequest psContainerRequest;
+  private ContainerRequest chiefWorkerContainerRequest;
+  private ContainerRequest evaluatorWorkerContainerRequest;
   private Map<String, LocalResource> containerLocalResource;
   private ApplicationWebService webService;
   private ApplicationMessageService messageService;
@@ -104,6 +110,9 @@ public class ApplicationMaster extends CompositeService {
   private Thread cleanApplication;
   private String[] hostLocals;
   private Set<String> containerHostnames;
+
+  private Boolean chiefWorker;
+  private String chiefWorkerContainerId;
 
   private Boolean tfEvaluator;
   private String tfEvaluatorContainerId;
@@ -143,6 +152,13 @@ public class ApplicationMaster extends CompositeService {
     workerMemory = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
     workerVCores = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_VCORES, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_VCORES);
     workerNum = conf.getInt(XLearningConfiguration.XLEARNING_WORKER_NUM, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM);
+    chiefWorkerMemory = conf.getInt(XLearningConfiguration.XLEARNING_CHIEF_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
+    evaluatorWorkerMemory = conf.getInt(XLearningConfiguration.XLEARNING_EVALUATOR_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
+    if (chiefWorkerMemory != workerMemory) {
+      chiefWorker = true;
+    } else {
+      chiefWorker = false;
+    }
     psMemory = conf.getInt(XLearningConfiguration.XLEARNING_PS_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_PS_MEMORY);
     psVCores = conf.getInt(XLearningConfiguration.XLEARNING_PS_VCORES, XLearningConfiguration.DEFAULT_XLEARNING_PS_VCORES);
     psNum = conf.getInt(XLearningConfiguration.XLEARNING_PS_NUM, XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM);
@@ -151,6 +167,8 @@ public class ApplicationMaster extends CompositeService {
     xlearningContainerType = conf.get(XLearningConfiguration.XLEARNING_CONTAINER_TYPE, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_TYPE);
     acquiredWorkerContainers = new ArrayList<>();
     acquiredPsContainers = new ArrayList<>();
+    acquiredChiefWorkerContainers = new ArrayList<>();
+    acquiredEvaluatorWorkerContainers = new ArrayList<>();
     dmlcPsRootUri = null;
     dmlcPsRootPort = 0;
     dmlcTrackerUri = null;
@@ -159,6 +177,7 @@ public class ApplicationMaster extends CompositeService {
     hostLocals = null;
     tfEvaluator = conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR);
     tfEvaluatorContainerId = "";
+    chiefWorkerContainerId = "";
     inputPath = new StringBuilder();
     outputIndex = -1;
     this.reservePortBegin = this.conf.getInt(XLearningConfiguration.XLEARNING_RESERVE_PORT_BEGIN,
@@ -355,6 +374,8 @@ public class ApplicationMaster extends CompositeService {
             containerMessage.put(AMParams.CONTAINER_HTTP_ADDRESS, container.getNodeHttpAddress());
             if (tfEvaluator && container.getId().toString().equals(tfEvaluatorContainerId)) {
               containerMessage.put(AMParams.CONTAINER_ROLE, XLearningConstants.EVALUATOR);
+            } else if (chiefWorker && container.getId().toString().equals(chiefWorkerContainerId)) {
+              containerMessage.put(AMParams.CONTAINER_ROLE, XLearningConstants.CHIEF);
             } else {
               containerMessage.put(AMParams.CONTAINER_ROLE, XLearningConstants.WORKER);
             }
@@ -387,7 +408,14 @@ public class ApplicationMaster extends CompositeService {
               containerMessage.put(AMParams.CONTAINER_CPU_STATISTICS, new Gson().toJson(cpuStatistics));
               if (cpuStatistics.size() != 0) {
                 Double cpuMemUsagedMax = cpuStatistics.get("CPUMEM").get(1);
-                if (status != null && status.toString().equalsIgnoreCase("SUCCEEDED") && cpuMemUsagedMax * 1024.0 / workerMemory < conf.getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
+                int currentWorkerMemory = workerMemory;
+                if (chiefWorker && container.getId().toString().equals(chiefWorkerContainerId)) {
+                  currentWorkerMemory = chiefWorkerMemory;
+                }
+                if (tfEvaluator && container.getId().toString().equals(tfEvaluatorContainerId)) {
+                  currentWorkerMemory = evaluatorWorkerMemory;
+                }
+                if (status != null && status.toString().equalsIgnoreCase("SUCCEEDED") && cpuMemUsagedMax * 1024.0 / currentWorkerMemory < conf.getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
                   containerMessage.put(AMParams.CONTAINER_CPU_USAGE_WARN_MEM, "true");
                 } else {
                   containerMessage.put(AMParams.CONTAINER_CPU_USAGE_WARN_MEM, "false");
@@ -508,6 +536,12 @@ public class ApplicationMaster extends CompositeService {
           logMessage.put(AMParams.PS_VCORES, String.valueOf(psVCores));
           logMessage.put(AMParams.WORKER_MEMORY, String.format("%.2f", workerMemory / 1024.0));
           logMessage.put(AMParams.PS_MEMORY, String.format("%.2f", psMemory / 1024.0));
+          if (chiefWorker) {
+            logMessage.put(AMParams.CHIEF_WORKER_MEMORY, String.format("%.2f", chiefWorkerMemory / 1024.0));
+          }
+          if (tfEvaluator) {
+            logMessage.put(AMParams.EVALUATOR_WORKER_MEMORY, String.format("%.2f", evaluatorWorkerMemory / 1024.0));
+          }
 
           out.writeBytes(new Gson().toJson(logMessage));
           out.close();
@@ -759,6 +793,43 @@ public class ApplicationMaster extends CompositeService {
       workerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority);
     }
     LOG.info("Create worker container request: " + workerContainerRequest.toString());
+
+
+    if ("TENSORFLOW".equals(xlearningAppType) && workerNum > 1) {
+      if (chiefWorker) {
+        Resource chiefWorkerCapability = Records.newRecord(Resource.class);
+        chiefWorkerCapability.setMemory(chiefWorkerMemory);
+        chiefWorkerCapability.setVirtualCores(workerVCores);
+        if (workerNodeLabelExpression != null && workerNodeLabelExpression.trim() != "") {
+          try {
+            chiefWorkerContainerRequest = ContainerRequest.class.getConstructor(Resource.class, String[].class, String[].class, Priority.class, boolean.class, String.class).newInstance(workerCapability, hostLocals, null, priority, true, workerNodeLabelExpression);
+          } catch (Exception e) {
+            chiefWorkerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority);
+            LOG.warn("Set chief worker node label expression error:" + e);
+          }
+        } else {
+          chiefWorkerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority);
+        }
+        LOG.info("Create chief worker container request: " + chiefWorkerContainerRequest.toString());
+      }
+
+      if (tfEvaluator) {
+        Resource evaluatorWorkerCapability = Records.newRecord(Resource.class);
+        evaluatorWorkerCapability.setMemory(evaluatorWorkerMemory);
+        evaluatorWorkerCapability.setVirtualCores(workerVCores);
+        if (workerNodeLabelExpression != null && workerNodeLabelExpression.trim() != "") {
+          try {
+            evaluatorWorkerContainerRequest = ContainerRequest.class.getConstructor(Resource.class, String[].class, String[].class, Priority.class, boolean.class, String.class).newInstance(workerCapability, hostLocals, null, priority, true, workerNodeLabelExpression);
+          } catch (Exception e) {
+            evaluatorWorkerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority);
+            LOG.warn("Set evaluator worker node label expression error:" + e);
+          }
+        } else {
+          evaluatorWorkerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority);
+        }
+        LOG.info("Create evaluator worker container request: " + evaluatorWorkerContainerRequest.toString());
+      }
+    }
 
     if (!single) {
       String psNodeLabelExpression = conf.get(XLearningConfiguration.XLEARNING_PS_NODELABELEXPRESSION);
@@ -1061,8 +1132,16 @@ public class ApplicationMaster extends CompositeService {
 
     buildContainerRequest(hostLocals);
 
+    int requestWorkerNum = workerNum;
+    if ("TENSORFLOW".equals(xlearningAppType)) {
+      if (chiefWorker)
+        requestWorkerNum--;
+      if (tfEvaluator)
+        requestWorkerNum--;
+    }
+
     rmCallbackHandler.setNeededPsContainersCount(psNum);
-    rmCallbackHandler.setNeededWorkerContainersCount(workerNum);
+    rmCallbackHandler.setNeededWorkerContainersCount(requestWorkerNum);
 
     int allocateInterval = conf.getInt(XLearningConfiguration.XLEARNING_ALLOCATE_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_ALLOCATE_INTERVAL);
     amrmAsync.setHeartbeatInterval(allocateInterval);
@@ -1077,6 +1156,7 @@ public class ApplicationMaster extends CompositeService {
 
     Boolean startAllocatedContainer = false;
     Long startAllocatedTimeStamp = Long.MIN_VALUE;
+    int psCancelCount = 0;
     String failMessage = "Container waiting except the allocated expiry time. Maybe the Cluster available resources are not satisfied the user need. Please resubmit !";
     while (rmCallbackHandler.getAllocatedPsContainerNumber() < psNum) {
       List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
@@ -1091,13 +1171,16 @@ public class ApplicationMaster extends CompositeService {
       } catch (IllegalAccessException e) {
         LOG.error("IllegalAccessException : " + e);
       }
-      if (cancelContainers.size() != 0) {
-        for (Container container : cancelContainers) {
-          LOG.info("Canceling container: " + container.getId().toString());
-          amrmAsync.releaseAssignedContainer(container.getId());
-          amrmAsync.addContainerRequest(psContainerRequest);
+      synchronized (cancelContainers) {
+        if (cancelContainers.size() != 0) {
+          for (Container container : cancelContainers) {
+            LOG.info("Canceling container: " + container.getId().toString());
+            amrmAsync.releaseAssignedContainer(container.getId());
+            amrmAsync.addContainerRequest(psContainerRequest);
+            psCancelCount ++;
+          }
+          cancelContainers.clear();
         }
-        cancelContainers.clear();
       }
       if (rmCallbackHandler.getAllocatedPsContainerNumber() > 0 && !startAllocatedContainer) {
         startAllocatedContainer = true;
@@ -1112,19 +1195,28 @@ public class ApplicationMaster extends CompositeService {
       Utilities.sleep(allocateInterval);
     }
 
+    acquiredPsContainers = rmCallbackHandler.getAcquiredPsContainer();
     if (!single) {
-      LOG.info("Total " + rmCallbackHandler.getAllocatedPsContainerNumber() + " ps containers has allocated.");
+      int totalNumAllocatedPs = rmCallbackHandler.getAllocatedPsContainerNumber();
+      if (totalNumAllocatedPs > psNum) {
+        while (acquiredPsContainers.size() > psNum) {
+          Container releaseContainer = acquiredPsContainers.remove(acquiredPsContainers.size() - 1);
+          amrmAsync.releaseAssignedContainer(releaseContainer.getId());
+          LOG.info("Release container " + releaseContainer.getId().toString());
+        }
+      }
+      LOG.info("Total " + acquiredPsContainers.size() + " ps containers has allocated.");
     }
 
     rmCallbackHandler.setWorkerContainersAllocating();
 
-    for (int i = 0; i < workerNum; i++) {
+    for (int i = 0; i < requestWorkerNum; i++) {
       amrmAsync.addContainerRequest(workerContainerRequest);
     }
 
-    LOG.info("Try to allocate " + workerNum + " worker containers");
-
-    while (rmCallbackHandler.getAllocatedWorkerContainerNumber() < workerNum) {
+    LOG.info("Try to allocate " + requestWorkerNum + " worker containers");
+    int workerCancelCount = 0;
+    while (rmCallbackHandler.getAllocatedWorkerContainerNumber() < requestWorkerNum) {
       List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
       List<String> blackHosts = rmCallbackHandler.getBlackHosts();
       try {
@@ -1137,13 +1229,16 @@ public class ApplicationMaster extends CompositeService {
       } catch (IllegalAccessException e) {
         LOG.error("invoke the method updateBlacklist of Class " + amrmAsync.getClass().toString() + " IllegalAccessException Error : " + e);
       }
-      if (cancelContainers.size() != 0) {
-        for (Container container : cancelContainers) {
-          LOG.info("Canceling container: " + container.getId().toString());
-          amrmAsync.releaseAssignedContainer(container.getId());
-          amrmAsync.addContainerRequest(workerContainerRequest);
+      synchronized (cancelContainers) {
+        if (cancelContainers.size() != 0) {
+          for (Container container : cancelContainers) {
+            LOG.info("Canceling container: " + container.getId().toString());
+            amrmAsync.releaseAssignedContainer(container.getId());
+            amrmAsync.addContainerRequest(workerContainerRequest);
+            workerCancelCount++;
+          }
+          cancelContainers.clear();
         }
-        cancelContainers.clear();
       }
       if (rmCallbackHandler.getAllocatedWorkerContainerNumber() > 0 && !startAllocatedContainer) {
         startAllocatedContainer = true;
@@ -1158,23 +1253,159 @@ public class ApplicationMaster extends CompositeService {
       Utilities.sleep(allocateInterval);
     }
 
-    acquiredPsContainers = rmCallbackHandler.getAcquiredPsContainer();
     acquiredWorkerContainers = rmCallbackHandler.getAcquiredWorkerContainer();
 
     int totalNumAllocatedWorkers = rmCallbackHandler.getAllocatedWorkerContainerNumber();
-    if (totalNumAllocatedWorkers > workerNum) {
-      while (acquiredWorkerContainers.size() > workerNum) {
+    if (totalNumAllocatedWorkers > requestWorkerNum) {
+      while (acquiredWorkerContainers.size() > requestWorkerNum) {
         Container releaseContainer = acquiredWorkerContainers.remove(0);
         amrmAsync.releaseAssignedContainer(releaseContainer.getId());
         LOG.info("Release container " + releaseContainer.getId().toString());
       }
     }
     LOG.info("Total " + acquiredWorkerContainers.size() + " worker containers has allocated.");
-    for (int i = 0; i < psNum; i++) {
+    for (int i = 0; i < psNum + psCancelCount; i++) {
       amrmAsync.removeContainerRequest(psContainerRequest);
     }
-    for (int i = 0; i < workerNum; i++) {
+    for (int i = 0; i < requestWorkerNum + workerCancelCount; i++) {
       amrmAsync.removeContainerRequest(workerContainerRequest);
+    }
+
+    List<Container> cancelContainersTotal = rmCallbackHandler.getCancelContainer();
+    synchronized (cancelContainersTotal) {
+      if (cancelContainersTotal.size() != 0) {
+        for (Container container : cancelContainersTotal) {
+          LOG.info("Canceling container: " + container.getId().toString());
+          amrmAsync.releaseAssignedContainer(container.getId());
+        }
+        cancelContainersTotal.clear();
+      }
+    }
+
+    if(requestWorkerNum != workerNum){
+      int chiefWorkerCancelCount = 0;
+      int evaluatorCancelCount = 0;
+      if(chiefWorker) {
+        LOG.info("Try to allocate chief worker containers");
+        rmCallbackHandler.setChiefWorkerContainersAllocating();
+        amrmAsync.addContainerRequest(chiefWorkerContainerRequest);
+        chiefWorkerCancelCount ++;
+        while (rmCallbackHandler.getAcquiredChiefWorkerContainers().size() < 1) {
+          List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
+          List<String> blackHosts = rmCallbackHandler.getBlackHosts();
+          try {
+            Method updateBlacklist = amrmAsync.getClass().getMethod("updateBlacklist", List.class, List.class);
+            updateBlacklist.invoke(amrmAsync, blackHosts, null);
+          } catch (NoSuchMethodException e) {
+            LOG.debug("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
+          } catch (InvocationTargetException e) {
+            LOG.error("invoke the method updateBlacklist of Class " + amrmAsync.getClass().toString() + " InvocationTargetException Error : " + e);
+          } catch (IllegalAccessException e) {
+            LOG.error("invoke the method updateBlacklist of Class " + amrmAsync.getClass().toString() + " IllegalAccessException Error : " + e);
+          }
+          synchronized (cancelContainers) {
+            if (cancelContainers.size() != 0) {
+              for (Container container : cancelContainers) {
+                LOG.info("Canceling container: " + container.getId().toString());
+                amrmAsync.releaseAssignedContainer(container.getId());
+                amrmAsync.addContainerRequest(chiefWorkerContainerRequest);
+                chiefWorkerCancelCount++;
+              }
+              cancelContainers.clear();
+            }
+          }
+          if (startAllocatedContainer && (System.currentTimeMillis() - startAllocatedTimeStamp) > conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
+            this.appendMessage(failMessage, true);
+            this.appendMessage("Unregister  Application", true);
+            unregisterApp(FinalApplicationStatus.FAILED, failMessage);
+            return false;
+          }
+          Utilities.sleep(allocateInterval);
+        }
+
+        acquiredChiefWorkerContainers = rmCallbackHandler.getAcquiredChiefWorkerContainers();
+        synchronized (acquiredChiefWorkerContainers) {
+          if (acquiredChiefWorkerContainers.size() > 1) {
+            while (acquiredChiefWorkerContainers.size() > 1) {
+              Container releaseContainer = acquiredChiefWorkerContainers.remove(0);
+              amrmAsync.releaseAssignedContainer(releaseContainer.getId());
+              LOG.info("Release chief container " + releaseContainer.getId().toString());
+            }
+          }
+        }
+        LOG.info("Total " + acquiredChiefWorkerContainers.size() + " chief worker containers has allocated.");
+        acquiredWorkerContainers.add(0, acquiredChiefWorkerContainers.get(0));
+      }
+
+      if (tfEvaluator) {
+        LOG.info("Try to allocate evaluator worker containers");
+        rmCallbackHandler.setEvaluatorWorkerContainersAllocating();
+        amrmAsync.addContainerRequest(evaluatorWorkerContainerRequest);
+        evaluatorCancelCount ++;
+        while (rmCallbackHandler.getAcquiredEvaluatorWorkerContainers().size() < 1) {
+          List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
+          List<String> blackHosts = rmCallbackHandler.getBlackHosts();
+          try {
+            Method updateBlacklist = amrmAsync.getClass().getMethod("updateBlacklist", List.class, List.class);
+            updateBlacklist.invoke(amrmAsync, blackHosts, null);
+          } catch (NoSuchMethodException e) {
+            LOG.debug("current hadoop version don't have the method updateBlacklist of Class " + amrmAsync.getClass().toString() + ". For More Detail:" + e);
+          } catch (InvocationTargetException e) {
+            LOG.error("invoke the method updateBlacklist of Class " + amrmAsync.getClass().toString() + " InvocationTargetException Error : " + e);
+          } catch (IllegalAccessException e) {
+            LOG.error("invoke the method updateBlacklist of Class " + amrmAsync.getClass().toString() + " IllegalAccessException Error : " + e);
+          }
+          synchronized (cancelContainers) {
+            if (cancelContainers.size() != 0) {
+              for (Container container : cancelContainers) {
+                LOG.info("Canceling container: " + container.getId().toString());
+                amrmAsync.releaseAssignedContainer(container.getId());
+                amrmAsync.addContainerRequest(evaluatorWorkerContainerRequest);
+                evaluatorCancelCount++;
+              }
+              cancelContainers.clear();
+            }
+          }
+          if (startAllocatedContainer && (System.currentTimeMillis() - startAllocatedTimeStamp) > conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
+            this.appendMessage(failMessage, true);
+            this.appendMessage("Unregister  Application", true);
+            unregisterApp(FinalApplicationStatus.FAILED, failMessage);
+            return false;
+          }
+          Utilities.sleep(allocateInterval);
+        }
+
+        acquiredEvaluatorWorkerContainers = rmCallbackHandler.getAcquiredEvaluatorWorkerContainers();
+        synchronized (acquiredEvaluatorWorkerContainers) {
+          if (acquiredEvaluatorWorkerContainers.size() > 1) {
+            while (acquiredEvaluatorWorkerContainers.size() > 1) {
+              Container releaseContainer = acquiredEvaluatorWorkerContainers.remove(0);
+              amrmAsync.releaseAssignedContainer(releaseContainer.getId());
+              LOG.info("Release evaluator container " + releaseContainer.getId().toString());
+            }
+          }
+        }
+        LOG.info("Total " + acquiredEvaluatorWorkerContainers.size() + " evaluator worker containers has allocated.");
+        acquiredWorkerContainers.add(acquiredEvaluatorWorkerContainers.get(0));
+      }
+
+      for (int i = 0; i < chiefWorkerCancelCount; i++) {
+        amrmAsync.removeContainerRequest(chiefWorkerContainerRequest);
+      }
+      for (int i = 0; i < evaluatorCancelCount; i++) {
+        amrmAsync.removeContainerRequest(evaluatorWorkerContainerRequest);
+      }
+    }
+
+    List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
+    synchronized (cancelContainers) {
+      if (cancelContainers.size() != 0) {
+        for (Container container : cancelContainers) {
+          LOG.info("Canceling unnecessary container: " + container.getId().toString());
+          amrmAsync.releaseAssignedContainer(container.getId());
+        }
+        cancelContainers.clear();
+      }
     }
 
     if (conf.getBoolean(XLearningConfiguration.XLEARNING_HOST_LOCAL_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_HOST_LOCAL_ENABLE)) {
@@ -1545,13 +1776,32 @@ public class ApplicationMaster extends CompositeService {
       containerListener.registerContainer(new XLearningContainerId(container.getId()), XLearningConstants.PS);
     }
     index = 0;
+
+    if (chiefWorker) {
+      chiefWorkerContainerId = acquiredChiefWorkerContainers.get(0).getId().toString();
+    }
+    if (tfEvaluator) {
+      tfEvaluatorContainerId = acquiredEvaluatorWorkerContainers.get(0).getId().toString();
+    }
+
     for (Container container : acquiredWorkerContainers) {
       LOG.info("Launching worker container " + container.getId()
           + " on " + container.getNodeId().getHost() + ":" + container.getNodeId().getPort());
 
       //TODO launch container in special thread take with fault-tolerant
-      launchContainer(containerLocalResource, workerContainerEnv,
-          workerContainerLaunchCommands, container, index++);
+      if (chiefWorker && container.getId().toString().equals(chiefWorkerContainerId)) {
+        List<String> chiefWorkerContainerLaunchCommands = buildContainerLaunchCommand(chiefWorkerMemory);
+        launchContainer(containerLocalResource, workerContainerEnv,
+            chiefWorkerContainerLaunchCommands, container, index++);
+      } else if (tfEvaluator && container.getId().toString().equals(tfEvaluatorContainerId)) {
+        Map<String, String> evaluatorWorkerContainerEnv = buildContainerEnv(XLearningConstants.EVALUATOR);
+        List<String> evaluatorWorkerContainerLaunchCommands = buildContainerLaunchCommand(evaluatorWorkerMemory);
+        launchContainer(containerLocalResource, evaluatorWorkerContainerEnv, evaluatorWorkerContainerLaunchCommands, container, 0);
+      } else {
+        launchContainer(containerLocalResource, workerContainerEnv,
+            workerContainerLaunchCommands, container, index++);
+      }
+
       containerListener.registerContainer(new XLearningContainerId(container.getId()), XLearningConstants.WORKER);
       if (conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR) && index == workerNum) {
         tfEvaluatorContainerId = container.getId().toString();
@@ -1777,6 +2027,16 @@ public class ApplicationMaster extends CompositeService {
     }
 
     @Override
+    public int getChiefWorkerMemory() {
+      return chiefWorkerMemory;
+    }
+
+    @Override
+    public int getEvaluatorWorkerMemory() {
+      return evaluatorWorkerMemory;
+    }
+
+    @Override
     public int getPsMemory() {
       return psMemory;
     }
@@ -1903,6 +2163,16 @@ public class ApplicationMaster extends CompositeService {
     @Override
     public String getTfEvaluatorId() {
       return tfEvaluatorContainerId;
+    }
+
+    @Override
+    public String getChiefWorkerId() {
+      return chiefWorkerContainerId;
+    }
+
+    @Override
+    public Boolean getChiefWorker() {
+      return chiefWorker;
     }
 
   }

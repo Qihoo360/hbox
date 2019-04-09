@@ -17,6 +17,10 @@ public interface AMParams {
 
   public static final String WORKER_MEMORY = "worker.memory";
 
+  public static final String CHIEF_WORKER_MEMORY = "chief.worker.memory";
+
+  public static final String EVALUATOR_WORKER_MEMORY = "evaluator.worker.memory";
+
   public static final String PS_MEMORY = "ps.memory";
 
   public static final String CONTAINER_HTTP_ADDRESS = "container.address";

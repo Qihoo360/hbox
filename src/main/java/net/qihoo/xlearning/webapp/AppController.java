@@ -70,6 +70,14 @@ public class AppController extends Controller implements AMParams {
     set(PS_VCORES, String.valueOf(app.context.getPsVCores()));
     set(WORKER_MEMORY, String.format("%.2f", app.context.getWorkerMemory() / 1024.0));
     set(PS_MEMORY, String.format("%.2f", app.context.getPsMemory() / 1024.0));
+    set(CHIEF_WORKER_MEMORY, "");
+    set(EVALUATOR_WORKER_MEMORY, "");
+    if (app.context.getChiefWorker()) {
+      set(CHIEF_WORKER_MEMORY, String.format("%.2f", app.context.getChiefWorkerMemory() / 1024.0));
+    }
+    if (conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR)) {
+      set(EVALUATOR_WORKER_MEMORY, String.format("%.2f", app.context.getEvaluatorWorkerMemory() / 1024.0));
+    }
     set(USER_NAME, StringUtils.split(conf.get("hadoop.job.ugi"), ',')[0]);
     int i = 0;
     for (Container container : workerContainers) {
@@ -81,7 +89,9 @@ public class AppController extends Controller implements AMParams {
         set(CONTAINER_STATUS + i, "-");
       }
       if (conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR) && container.getId().toString().equals(app.context.getTfEvaluatorId())) {
-        set(CONTAINER_ROLE + i, XLearningConstants.EVALUATOR);
+        set(CONTAINER_ROLE + i, XLearningConstants.WORKER + "/" + XLearningConstants.EVALUATOR);
+      } else if (app.context.getChiefWorker() && container.getId().toString().equals(app.context.getChiefWorkerId())) {
+        set(CONTAINER_ROLE + i, XLearningConstants.WORKER + "/" + XLearningConstants.CHIEF);
       } else {
         set(CONTAINER_ROLE + i, XLearningConstants.WORKER);
       }

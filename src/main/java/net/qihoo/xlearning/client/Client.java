@@ -86,6 +86,8 @@ public class Client {
     conf.set(XLearningConfiguration.XLEARNING_WORKER_MEMORY, String.valueOf(clientArguments.workerMemory));
     conf.set(XLearningConfiguration.XLEARNING_WORKER_VCORES, String.valueOf(clientArguments.workerVCores));
     conf.set(XLearningConfiguration.XLEARNING_WORKER_NUM, String.valueOf(clientArguments.workerNum));
+    conf.set(XLearningConfiguration.XLEARNING_CHIEF_WORKER_MEMORY, String.valueOf(clientArguments.chiefWorkerMemory));
+    conf.set(XLearningConfiguration.XLEARNING_EVALUATOR_WORKER_MEMORY, String.valueOf(clientArguments.evaluatorWorkerMemory));
     conf.set(XLearningConfiguration.XLEARNING_PS_MEMORY, String.valueOf(clientArguments.psMemory));
     conf.set(XLearningConfiguration.XLEARNING_PS_VCORES, String.valueOf(clientArguments.psVCores));
     conf.set(XLearningConfiguration.XLEARNING_PS_NUM, String.valueOf(clientArguments.psNum));
@@ -302,6 +304,35 @@ public class Client {
               + "Specified memory=" + workerMemory);
     }
     LOG.info("Apply for worker Memory " + workerMemory + "M");
+
+    int chiefWorkerMemory = conf.getInt(XLearningConfiguration.XLEARNING_CHIEF_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
+    if (chiefWorkerMemory != workerMemory) {
+      if (chiefWorkerMemory > maxMem) {
+        throw new RequestOverLimitException("Chief Worker memory requested " + chiefWorkerMemory +
+            " above the max threshold of yarn cluster " + maxMem);
+      }
+      if (chiefWorkerMemory <= 0) {
+        throw new IllegalArgumentException(
+            "Invalid memory specified for chief worker, exiting."
+                + "Specified memory=" + chiefWorkerMemory);
+      }
+      LOG.info("Apply for chief worker Memory " + chiefWorkerMemory + "M");
+    }
+
+    int evaluatorWorkerMemory = conf.getInt(XLearningConfiguration.XLEARNING_EVALUATOR_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
+    if (evaluatorWorkerMemory != workerMemory && conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR)) {
+      if (evaluatorWorkerMemory > maxMem) {
+        throw new RequestOverLimitException("Evaluator Worker memory requested " + evaluatorWorkerMemory +
+            " above the max threshold of yarn cluster " + maxMem);
+      }
+      if (evaluatorWorkerMemory <= 0) {
+        throw new IllegalArgumentException(
+            "Invalid memory specified for evaluator worker, exiting."
+                + "Specified memory=" + evaluatorWorkerMemory);
+      }
+      LOG.info("Apply for evaluator worker Memory " + evaluatorWorkerMemory + "M");
+    }
+
     if (workerVcores > maxVCores) {
       throw new RequestOverLimitException("Worker vcores requested " + workerVcores +
           " above the max threshold of yarn cluster " + maxVCores);
