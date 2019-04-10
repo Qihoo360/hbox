@@ -831,7 +831,7 @@ public class ApplicationMaster extends CompositeService {
       }
     }
 
-    if (!single) {
+    if (psNum > 0) {
       String psNodeLabelExpression = conf.get(XLearningConfiguration.XLEARNING_PS_NODELABELEXPRESSION);
       Resource psCapability = Records.newRecord(Resource.class);
       psCapability.setMemory(psMemory);
@@ -1150,7 +1150,7 @@ public class ApplicationMaster extends CompositeService {
       amrmAsync.addContainerRequest(psContainerRequest);
     }
 
-    if (!single) {
+    if (psNum > 0) {
       LOG.info("Try to allocate " + psNum + " ps/server containers");
     }
 
@@ -1196,7 +1196,7 @@ public class ApplicationMaster extends CompositeService {
     }
 
     acquiredPsContainers = rmCallbackHandler.getAcquiredPsContainer();
-    if (!single) {
+    if (psNum > 0) {
       int totalNumAllocatedPs = rmCallbackHandler.getAllocatedPsContainerNumber();
       if (totalNumAllocatedPs > psNum) {
         while (acquiredPsContainers.size() > psNum) {
@@ -1902,7 +1902,7 @@ public class ApplicationMaster extends CompositeService {
       LOG.info("Train completed");
       containerListener.setTrainFinished();
 
-      if (!single) {
+      if (psNum > 0) {
         LOG.info("Waiting all ps containers completed");
         while (!containerListener.isAllPsContainersFinished()) {
           Utilities.sleep(statusUpdateInterval);

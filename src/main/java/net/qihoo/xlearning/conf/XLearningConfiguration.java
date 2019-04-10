@@ -192,6 +192,8 @@ public class XLearningConfiguration extends YarnConfiguration {
       "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*"
   };
 
+  public static final String XLEARNING_TF_DISTRIBUTION_STRATEGY = "xlearning.tf.distribution.strategy";
+  public static final Boolean DEFAULT_XLEARNING_TF_DISTRIBUTION_STRATEGY = false;
   public static final String XLEARNING_TF_BOARD_PATH = "xlearning.tf.board.path";
   public static final String DEFAULT_XLEARNING_TF_BOARD_PATH = "tensorboard";
   public static final String XLEARNING_TF_BOARD_WORKER_INDEX = "xlearning.tf.board.worker.index";

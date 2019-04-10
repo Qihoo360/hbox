@@ -578,7 +578,7 @@ public class XLearningContainer {
 
     if ("TENSORFLOW".equals(xlearningAppType) && !single) {
       LOG.info("Reserved available port: " + reservedSocket.getLocalPort());
-      if (!this.role.equals(XLearningConstants.EVALUATOR)) {
+      if (!this.role.equals(XLearningConstants.EVALUATOR) || conf.getBoolean(XLearningConfiguration.XLEARNING_TF_DISTRIBUTION_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_TF_DISTRIBUTION_STRATEGY)) {
         amClient.reportReservedPort(envs.get(ApplicationConstants.Environment.NM_HOST.toString()),
             reservedSocket.getLocalPort(), this.role, this.index);
       }

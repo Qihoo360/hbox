@@ -131,7 +131,13 @@ public class Client {
     }
 
     if (conf.getInt(XLearningConfiguration.XLEARNING_PS_NUM, XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM) == 0) {
-      conf.setBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, true);
+      if ("TENSORFLOW".equals(clientArguments.appType)
+          && conf.getBoolean(XLearningConfiguration.XLEARNING_TF_DISTRIBUTION_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_TF_DISTRIBUTION_STRATEGY)
+          && conf.getInt(XLearningConfiguration.XLEARNING_WORKER_NUM, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM) > 1) {
+        conf.setBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, false);
+      } else {
+        conf.setBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, true);
+      }
     } else {
       conf.setBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, false);
     }
