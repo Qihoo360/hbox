@@ -8,6 +8,7 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync.CallbackHandler;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -42,6 +43,15 @@ public class RMCallbackHandler implements CallbackHandler {
 
   private float progress;
 
+  public final List<Container> acquiredContainers;
+
+  private String xlearningAppType;
+
+  private HashMap<String, Integer> countMap = new HashMap<>();
+
+  private int blackHostsLimit = Integer.MAX_VALUE;
+
+
   public RMCallbackHandler() {
     cancelContainers = Collections.synchronizedList(new ArrayList<Container>());
     acquiredWorkerContainers = Collections.synchronizedList(new ArrayList<Container>());
@@ -55,6 +65,9 @@ public class RMCallbackHandler implements CallbackHandler {
     chiefWorkerContainersAllocating = new AtomicBoolean(false);
     evaluatorWorkerContainersAllocating = new AtomicBoolean(false);
     progress = 0.0f;
+    acquiredContainers = Collections.synchronizedList(new ArrayList<Container>());
+    xlearningAppType = "";
+
   }
 
   public List<String> getBlackHosts() {
@@ -63,6 +76,14 @@ public class RMCallbackHandler implements CallbackHandler {
       blackHostList.add(host);
     }
     return blackHostList;
+  }
+
+  public void addBlackHost(String hostname) {
+    blackHosts.add(hostname);
+  }
+
+  public void setXLearningAppType(String appType) {
+    this.xlearningAppType = appType;
   }
 
   public int getAllocatedWorkerContainerNumber() {
@@ -123,12 +144,20 @@ public class RMCallbackHandler implements CallbackHandler {
 
   @Override
   public void onContainersAllocated(List<Container> containers) {
+    if ("MPI".equals(this.xlearningAppType)) {
+      blackHostsLimit = 1;
+    }
     for (Container acquiredContainer : containers) {
       LOG.info("Acquired container " + acquiredContainer.getId()
           + " on host " + acquiredContainer.getNodeId().getHost()
           + " , with the resource " + acquiredContainer.getResource().toString());
       String host = acquiredContainer.getNodeId().getHost();
       if (!blackHosts.contains(host)) {
+        //count and process blackHosts
+        int countContainerNum = countMap.get(host) == null ? 1 : countMap.get(host) + 1;
+        countMap.put(host, countContainerNum);
+        if (countMap.get(host) >= blackHostsLimit)
+          blackHosts.add(host);
         if (evaluatorWorkerContainersAllocating.get()) {
           acquiredEvaluatorWorkerContainers.add(acquiredContainer);
         } else if (chiefWorkerContainersAllocating.get()) {

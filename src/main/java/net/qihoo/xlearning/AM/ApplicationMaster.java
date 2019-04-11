@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import net.qihoo.xlearning.api.ApplicationContext;
 import net.qihoo.xlearning.api.XLearningConstants;
 import net.qihoo.xlearning.common.*;
+import net.qihoo.xlearning.common.exceptions.XLearningExecException;
 import net.qihoo.xlearning.conf.XLearningConfiguration;
 import net.qihoo.xlearning.container.XLearningContainer;
 import net.qihoo.xlearning.container.XLearningContainerId;
@@ -28,6 +29,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
@@ -111,6 +113,12 @@ public class ApplicationMaster extends CompositeService {
   private String[] hostLocals;
   private Set<String> containerHostnames;
 
+  private String mpiExecDir;
+  private Process mpiExecProcess;
+  private String mpiContainerCommand;
+  private StringBuilder reLinkFiles;
+  private int mpiExitCode;
+
   private Boolean chiefWorker;
   private String chiefWorkerContainerId;
 
@@ -175,6 +183,7 @@ public class ApplicationMaster extends CompositeService {
     dmlcTrackerPort = 0;
     containerHostnames = null;
     hostLocals = null;
+    reLinkFiles = new StringBuilder();
     tfEvaluator = conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR);
     tfEvaluatorContainerId = "";
     chiefWorkerContainerId = "";
@@ -256,6 +265,15 @@ public class ApplicationMaster extends CompositeService {
     } else {
       xlearningAppType = XLearningConfiguration.DEFAULT_XLEARNING_APP_TYPE.toUpperCase();
       LOG.info("XLearning app type: " + xlearningAppType);
+    }
+
+    if (xlearningAppType.equals("MPI")) {
+      Path pwd = new Path(envs.get("PWD"));
+      mpiExecDir = pwd.getParent().toString();
+      if (conf.getBoolean(XLearningConfiguration.XLEARNING_MPI_EXEC_DIR_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_MPI_EXEC_DIR_ENABLE)) {
+        mpiExecDir = conf.get(XLearningConfiguration.XLEARNING_MPI_EXEC_DIR, XLearningConfiguration.DEFAULT_XLEARNING_MPI_EXEC_DIR);
+      }
+      LOG.info("MPI exec path: " + mpiExecDir);
     }
 
     if (envs.containsKey(ApplicationConstants.Environment.NM_HOST.toString())) {
@@ -735,13 +753,18 @@ public class ApplicationMaster extends CompositeService {
         String pathRemote = outputPathTuple[0];
         OutputInfo outputInfo = new OutputInfo();
         outputInfo.setDfsLocation(pathRemote);
-        String pathLocal = outputPathTuple[1];
+        String pathLocal;
+        if ("MPI".equals(xlearningAppType)) {
+          pathLocal = mpiExecDir + File.separator + outputPathTuple[1];
+        } else {
+          pathLocal = outputPathTuple[1];
+        }
         outputInfo.setLocalLocation(pathLocal);
         outputInfos.add(outputInfo);
         LOG.info("Application output " + pathRemote + "#" + pathLocal);
       }
     } else {
-      throw new RuntimeException("Error input path format " + xlearningOutputs);
+      throw new RuntimeException("Error output path format " + xlearningOutputs);
     }
   }
 
@@ -863,6 +886,9 @@ public class ApplicationMaster extends CompositeService {
           Utilities.createApplicationResource(appConfRemoteLocation.getFileSystem(conf),
               appConfRemoteLocation,
               LocalResourceType.FILE));
+      if (xlearningAppType.equals("MPI")) {
+        reLinkFiles.append(XLearningConstants.XLEARNING_JOB_CONFIGURATION).append(",");
+      }
 
       if (appCacheFilesRemoteLocation != null) {
         String[] cacheFiles = StringUtils.split(appCacheFilesRemoteLocation, ",");
@@ -889,6 +915,9 @@ public class ApplicationMaster extends CompositeService {
               Utilities.createApplicationResource(pathRemote.getFileSystem(conf),
                   pathRemote,
                   LocalResourceType.FILE));
+          if (xlearningAppType.equals("MPI")) {
+            reLinkFiles.append(aliasName).append(",");
+          }
         }
       }
 
@@ -917,6 +946,9 @@ public class ApplicationMaster extends CompositeService {
               Utilities.createApplicationResource(pathRemote.getFileSystem(conf),
                   pathRemote,
                   LocalResourceType.ARCHIVE));
+          if (xlearningAppType.equals("MPI")) {
+            reLinkFiles.append(aliasName).append(",");
+          }
         }
       }
 
@@ -928,6 +960,9 @@ public class ApplicationMaster extends CompositeService {
               Utilities.createApplicationResource(path.getFileSystem(conf),
                   path,
                   LocalResourceType.FILE));
+          if (xlearningAppType.equals("MPI")) {
+            reLinkFiles.append(path.getName()).append(",");
+          }
         }
       }
 
@@ -939,6 +974,9 @@ public class ApplicationMaster extends CompositeService {
               Utilities.createApplicationResource(path.getFileSystem(conf),
                   path,
                   LocalResourceType.FILE));
+          if (xlearningAppType.equals("MPI")) {
+            reLinkFiles.append(path.getName()).append(",");
+          }
         }
       }
 
@@ -1000,6 +1038,15 @@ public class ApplicationMaster extends CompositeService {
     containerEnv.put("PATH", System.getenv("PATH") + ":" + System.getenv(XLearningConstants.Environment.USER_PATH.toString()));
     containerEnv.put("LD_LIBRARY_PATH", System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv(XLearningConstants.Environment.USER_LD_LIBRARY_PATH.toString()));
 
+    if (xlearningAppType.equals("MPI")) {
+      if (!mpiExecDir.equals("")) {
+        containerEnv.put(XLearningConstants.Environment.MPI_EXEC_DIR.toString(), mpiExecDir);
+      }
+      if (reLinkFiles.length() > 0) {
+        containerEnv.put(XLearningConstants.Environment.MPI_FILES_LINKS.toString(), reLinkFiles.substring(0, reLinkFiles.length() - 1));
+      }
+    }
+
     LOG.debug("env:" + containerEnv.toString());
     Set<String> envStr = containerEnv.keySet();
     for (String anEnvStr : envStr) {
@@ -1058,6 +1105,93 @@ public class ApplicationMaster extends CompositeService {
   }
 
   /**
+   * Application Master launch "mpiexec" process locally for mpi app
+   */
+  private void launchMpiExec() throws IOException {
+    LOG.info("Launching mpiexec in Application Master");
+    StringBuilder commandBuilder = new StringBuilder();
+    StringBuilder ldLibraryPath = new StringBuilder();
+
+    String mpiExtraLdLibraryPath = conf.get(XLearningConfiguration.XLEARNING_MPI_EXTRA_LD_LIBRARY_PATH);
+    if (mpiExtraLdLibraryPath != null && mpiExtraLdLibraryPath.trim() != "") {
+      ldLibraryPath.append(mpiExtraLdLibraryPath);
+      LOG.info("add " + ldLibraryPath + " to LD_LIBRARY_PATH");
+    }
+    if (conf.getBoolean(XLearningConfiguration.XLEARNING_MPI_INSTALL_DIR_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_MPI_INSTALL_DIR_ENABLE)) {
+      String mpiInstallDir = conf.get(XLearningConfiguration.XLEARNING_MPI_INSTALL_DIR, XLearningConfiguration.DEFAULT_XLEARNING_MPI_INSTALL_DIR);
+      commandBuilder.append(mpiInstallDir).append(File.separator).append("bin").append(File.separator);
+      ldLibraryPath.append(":").append(mpiInstallDir).append(File.separator).append("lib");
+    }
+    commandBuilder.append("mpiexec --host ");
+    ldLibraryPath.append(":").append(System.getenv("LD_LIBRARY_PATH"));
+    for (Container container : acquiredWorkerContainers) {
+      commandBuilder.append(container.getNodeId().getHost()).append(",");
+    }
+    commandBuilder.deleteCharAt(commandBuilder.length() - 1);
+    commandBuilder.append(" ").append(xlearningCommand);
+
+    String[] envs = new String[]{
+        "PATH=" + System.getenv("PATH"),
+        "PWD=" + mpiExecDir,
+        "LD_LIBRARY_PATH=" + ldLibraryPath.toString()
+    };
+
+    File mpiExec = new File(mpiExecDir);
+    LOG.info("Executing mpi exec command: " + commandBuilder.toString());
+    Runtime rt = Runtime.getRuntime();
+
+    StringTokenizer tokenizer = new StringTokenizer(commandBuilder.toString());
+    String[] commandArray = new String[tokenizer.countTokens()];
+    for (int i = 0; tokenizer.hasMoreTokens(); i++) {
+      commandArray[i] = tokenizer.nextToken();
+    }
+    LOG.info("Mpi exec Process run in: " + mpiExec.toString());
+    mpiExecProcess = rt.exec(commandArray, envs, mpiExec);
+
+    Thread stdinThread = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          BufferedReader reader;
+          reader = new BufferedReader(new InputStreamReader(mpiExecProcess.getInputStream()));
+          String mpiExecOutput;
+          while ((mpiExecOutput = reader.readLine()) != null) {
+            if (mpiExecOutput.startsWith("command")) {
+              LOG.info("Container mpi Command " + mpiExecOutput);
+              appendMessage(new Message(LogType.STDERR, mpiExecOutput));
+              mpiContainerCommand = mpiExecOutput.replaceFirst("command:", "").replaceFirst("--daemonize", "");
+            } else {
+              LOG.info(mpiExecOutput);
+              appendMessage(new Message(LogType.STDOUT, mpiExecOutput));
+            }
+          }
+        } catch (Exception e) {
+          LOG.warn("Error in mpi exec process stdinThread");
+        }
+      }
+    });
+    stdinThread.start();
+
+    Thread stderrThread = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          BufferedReader reader;
+          reader = new BufferedReader(new InputStreamReader(mpiExecProcess.getErrorStream()));
+          String mpiExecStderr;
+          while ((mpiExecStderr = reader.readLine()) != null) {
+            LOG.info(mpiExecStderr);
+            appendMessage(new Message(LogType.STDERR, mpiExecStderr));
+          }
+        } catch (Exception e) {
+          LOG.warn("Error in mpi exec process stderrThread");
+        }
+      }
+    });
+    stderrThread.start();
+  }
+
+  /**
    * Async Method telling NMClientAsync to launch specific container
    *
    * @param container the container which should be launched
@@ -1070,7 +1204,12 @@ public class ApplicationMaster extends CompositeService {
                                Container container, int index) throws IOException {
     LOG.info("Setting up launch context for containerID="
         + container.getId());
-
+    if(xlearningAppType.equals("MPI")) {
+      String containerMpiCommand = mpiContainerCommand.replace("<template>",
+          String.valueOf(index)).replaceAll("\"", "#");
+      containerEnv.put(XLearningConstants.Environment.CONTAINER_COMMAND.toString(), containerMpiCommand);
+      LOG.info("Container mpi command is:" + containerMpiCommand);
+    }
     containerEnv.put(XLearningConstants.Environment.XLEARNING_TF_INDEX.toString(), String.valueOf(index));
     ContainerLaunchContext ctx = ContainerLaunchContext.newInstance(
         containerLocalResource, containerEnv, containerLaunchcommands, null, null, null);
@@ -1142,6 +1281,10 @@ public class ApplicationMaster extends CompositeService {
 
     rmCallbackHandler.setNeededPsContainersCount(psNum);
     rmCallbackHandler.setNeededWorkerContainersCount(requestWorkerNum);
+    rmCallbackHandler.setXLearningAppType(xlearningAppType);
+    if (xlearningAppType.equals("MPI")) {
+      rmCallbackHandler.addBlackHost(applicationMasterHostname);
+    }
 
     int allocateInterval = conf.getInt(XLearningConfiguration.XLEARNING_ALLOCATE_INTERVAL, XLearningConfiguration.DEFAULT_XLEARNING_ALLOCATE_INTERVAL);
     amrmAsync.setHeartbeatInterval(allocateInterval);
@@ -1740,6 +1883,23 @@ public class ApplicationMaster extends CompositeService {
       }
     }
 
+    //launch mpi exec process
+    if (xlearningAppType.equals("MPI")) {
+      launchMpiExec();
+      mpiExitCode = -1;
+      while (mpiContainerCommand == null) {
+        Utilities.sleep(statusUpdateInterval);
+        try {
+          mpiExitCode = mpiExecProcess.exitValue();
+        } catch (IllegalThreadStateException e) {
+          LOG.debug(xlearningAppType.toLowerCase() + " exec process is running");
+        }
+        if (mpiExitCode != -1) {
+          appendMessage(new Message(LogType.STDERR, xlearningAppType.toLowerCase() + " exec exit with code " + mpiExitCode));
+          throw new XLearningExecException(xlearningAppType.toLowerCase() + "exec exit with code " + mpiExitCode);
+        }
+      }
+    }
 
     if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).equals("STREAM")) {
       allocateInputStreamSplits();
@@ -1775,7 +1935,11 @@ public class ApplicationMaster extends CompositeService {
           psContainerLaunchCommands, container, index++);
       containerListener.registerContainer(new XLearningContainerId(container.getId()), XLearningConstants.PS);
     }
-    index = 0;
+    if (xlearningAppType.equals("MPI")) {
+      index = 1;
+    } else {
+      index = 0;
+    }
 
     if (chiefWorker) {
       chiefWorkerContainerId = acquiredChiefWorkerContainers.get(0).getId().toString();
@@ -1840,77 +2004,100 @@ public class ApplicationMaster extends CompositeService {
     }
 
     try {
-      LOG.info("Waiting for train completed");
-      Map<XLearningContainerId, XLearningContainerStatus> lastWorkerContainerStatus = new ConcurrentHashMap<>();
-      Map<XLearningContainerId, XLearningContainerStatus> lastPsContainerStatus = new ConcurrentHashMap<>();
-      while (!containerListener.isTrainCompleted()) {
-        //report progress to client
-        if (conf.getBoolean(XLearningConfiguration.XLEARNING_REPORT_CONTAINER_STATUS, XLearningConfiguration.DEFAULT_XLEARNING_REPORT_CONTAINER_STATUS)) {
-          List<Container> workerContainersStatus = applicationContext.getWorkerContainers();
-          List<Container> psContainersStatus = applicationContext.getPsContainers();
-          for (Container container : workerContainersStatus) {
-            if (!lastWorkerContainerStatus.containsKey(new XLearningContainerId(container.getId()))) {
-              lastWorkerContainerStatus.put(new XLearningContainerId(container.getId()), XLearningContainerStatus.STARTED);
+      if (!xlearningAppType.equals("MPI")) {
+        LOG.info("Waiting for train completed");
+        Map<XLearningContainerId, XLearningContainerStatus> lastWorkerContainerStatus = new ConcurrentHashMap<>();
+        Map<XLearningContainerId, XLearningContainerStatus> lastPsContainerStatus = new ConcurrentHashMap<>();
+        while (!containerListener.isTrainCompleted()) {
+          //report progress to client
+          if (conf.getBoolean(XLearningConfiguration.XLEARNING_REPORT_CONTAINER_STATUS, XLearningConfiguration.DEFAULT_XLEARNING_REPORT_CONTAINER_STATUS)) {
+            List<Container> workerContainersStatus = applicationContext.getWorkerContainers();
+            List<Container> psContainersStatus = applicationContext.getPsContainers();
+            for (Container container : workerContainersStatus) {
+              if (!lastWorkerContainerStatus.containsKey(new XLearningContainerId(container.getId()))) {
+                lastWorkerContainerStatus.put(new XLearningContainerId(container.getId()), XLearningContainerStatus.STARTED);
+              }
+              if (!applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).equals(lastWorkerContainerStatus.get(new XLearningContainerId(container.getId())))) {
+                this.appendMessage("container " + container.getId().toString() + " status is " + applicationContext.getContainerStatus(new XLearningContainerId(container.getId())), false);
+                lastWorkerContainerStatus.put(new XLearningContainerId(container.getId()), applicationContext.getContainerStatus(new XLearningContainerId(container.getId())));
+              }
             }
-            if (!applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).equals(lastWorkerContainerStatus.get(new XLearningContainerId(container.getId())))) {
-              this.appendMessage("container " + container.getId().toString() + " status is " + applicationContext.getContainerStatus(new XLearningContainerId(container.getId())), false);
-              lastWorkerContainerStatus.put(new XLearningContainerId(container.getId()), applicationContext.getContainerStatus(new XLearningContainerId(container.getId())));
-            }
-          }
-          for (Container container : psContainersStatus) {
-            if (!lastPsContainerStatus.containsKey(new XLearningContainerId(container.getId()))) {
-              lastPsContainerStatus.put(new XLearningContainerId(container.getId()), XLearningContainerStatus.STARTED);
-            }
-            if (!applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).equals(lastPsContainerStatus.get(new XLearningContainerId(container.getId())))) {
-              this.appendMessage("container " + container.getId().toString() + " status is " + applicationContext.getContainerStatus(new XLearningContainerId(container.getId())), false);
-              lastPsContainerStatus.put(new XLearningContainerId(container.getId()), applicationContext.getContainerStatus(new XLearningContainerId(container.getId())));
-            }
-          }
-        }
-        List<Container> workerContainers = applicationContext.getWorkerContainers();
-        Map<XLearningContainerId, String> clientProgress = applicationContext.getReporterProgress();
-        float total = 0.0f;
-        for (Container container : workerContainers) {
-          String progressLog = clientProgress.get(new XLearningContainerId(container.getId()));
-          if (progressLog != null && !progressLog.equals("")) {
-            String[] progress = progressLog.toString().split(":");
-            if (progress.length != 2) {
-              this.appendMessage("progress log format error", false);
-            } else {
-              try {
-                Float percentProgress = Float.parseFloat(progress[1]);
-                if (percentProgress < 0.0 || percentProgress > 1.0) {
-                  this.appendMessage("progress log format error", false);
-                } else {
-                  total += Float.parseFloat(progress[1]);
-                }
-              } catch (Exception e) {
-                this.appendMessage("progress log format error", false);
+            for (Container container : psContainersStatus) {
+              if (!lastPsContainerStatus.containsKey(new XLearningContainerId(container.getId()))) {
+                lastPsContainerStatus.put(new XLearningContainerId(container.getId()), XLearningContainerStatus.STARTED);
+              }
+              if (!applicationContext.getContainerStatus(new XLearningContainerId(container.getId())).equals(lastPsContainerStatus.get(new XLearningContainerId(container.getId())))) {
+                this.appendMessage("container " + container.getId().toString() + " status is " + applicationContext.getContainerStatus(new XLearningContainerId(container.getId())), false);
+                lastPsContainerStatus.put(new XLearningContainerId(container.getId()), applicationContext.getContainerStatus(new XLearningContainerId(container.getId())));
               }
             }
           }
-        }
-        if (total > 0.0f) {
-          float finalProgress = total / workerContainers.size();
-          DecimalFormat df = new DecimalFormat("0.00");
-          df.setRoundingMode(RoundingMode.HALF_UP);
-          this.appendMessage("reporter progress:" + df.format(finalProgress * 100) + "%", false);
-          rmCallbackHandler.setProgress(finalProgress);
-        }
-        Utilities.sleep(statusUpdateInterval);
-      }
-      LOG.info("Train completed");
-      containerListener.setTrainFinished();
-
-      if (psNum > 0) {
-        LOG.info("Waiting all ps containers completed");
-        while (!containerListener.isAllPsContainersFinished()) {
+          List<Container> workerContainers = applicationContext.getWorkerContainers();
+          Map<XLearningContainerId, String> clientProgress = applicationContext.getReporterProgress();
+          float total = 0.0f;
+          for (Container container : workerContainers) {
+            String progressLog = clientProgress.get(new XLearningContainerId(container.getId()));
+            if (progressLog != null && !progressLog.equals("")) {
+              String[] progress = progressLog.toString().split(":");
+              if (progress.length != 2) {
+                this.appendMessage("progress log format error", false);
+              } else {
+                try {
+                  Float percentProgress = Float.parseFloat(progress[1]);
+                  if (percentProgress < 0.0 || percentProgress > 1.0) {
+                    this.appendMessage("progress log format error", false);
+                  } else {
+                    total += Float.parseFloat(progress[1]);
+                  }
+                } catch (Exception e) {
+                  this.appendMessage("progress log format error", false);
+                }
+              }
+            }
+          }
+          if (total > 0.0f) {
+            float finalProgress = total / workerContainers.size();
+            DecimalFormat df = new DecimalFormat("0.00");
+            df.setRoundingMode(RoundingMode.HALF_UP);
+            this.appendMessage("reporter progress:" + df.format(finalProgress * 100) + "%", false);
+            rmCallbackHandler.setProgress(finalProgress);
+          }
           Utilities.sleep(statusUpdateInterval);
         }
-        LOG.info("All ps/server containers completed");
+        LOG.info("Train completed");
+        containerListener.setTrainFinished();
+
+        if (psNum > 0) {
+          LOG.info("Waiting all ps containers completed");
+          while (!containerListener.isAllPsContainersFinished()) {
+            Utilities.sleep(statusUpdateInterval);
+          }
+          LOG.info("All ps/server containers completed");
+        }
+        finalSuccess = containerListener.isAllWorkerContainersSucceeded();
+      } else {
+        while (!containerListener.isAllContainerStarted()) {
+          Utilities.sleep(statusUpdateInterval);
+        }
+        this.appendMessage(new Message(LogType.STDERR, "All containers are launched successfully"));
+        while (mpiExitCode == -1) {
+          Utilities.sleep(statusUpdateInterval);
+          try {
+            mpiExitCode = mpiExecProcess.exitValue();
+          } catch (IllegalThreadStateException e) {
+            LOG.debug(xlearningAppType.toLowerCase() + " exec process is running");
+          }
+        }
+        appendMessage(new Message(LogType.STDERR, "finish mpiexec with code " + mpiExitCode));
+        containerListener.setAMFinished(mpiExitCode);
+        LOG.info("Waiting all containers completed");
+        finalSuccess = mpiExitCode == 0;
+        while (!containerListener.isTrainCompleted()) {
+          Utilities.sleep(statusUpdateInterval);
+        }
+        LOG.info("All containers completed");
       }
 
-      finalSuccess = containerListener.isAllWorkerContainersSucceeded();
       if (finalSuccess) {
         if ((conf.get(XLearningConfiguration.XLEARNING_OUTPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_OUTPUT_STRATEGY).equals("STREAM")) && outputInfos.size() > 0) {
           LOG.info("XLEARNING_OUTPUT_STRATEGY is STREAM, AM handling the final result...");

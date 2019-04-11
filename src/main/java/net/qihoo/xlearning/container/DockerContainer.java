@@ -36,7 +36,7 @@ public class DockerContainer implements IContainerLaunch {
   }
 
   @Override
-  public Process exec(String command, String[] envp, Map<String, String> envs) throws IOException {
+  public Process exec(String command, String[] envp, Map<String, String> envs, File dir) throws IOException {
     LOG.info("docker command:" + command + ",envs:" + envs);
     Runtime rt = Runtime.getRuntime();
     String port = conf.get("RESERVED_PORT");

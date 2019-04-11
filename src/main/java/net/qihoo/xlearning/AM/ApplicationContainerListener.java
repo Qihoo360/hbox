@@ -4,6 +4,8 @@ import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import net.qihoo.xlearning.api.*;
 import net.qihoo.xlearning.common.*;
+import net.qihoo.xlearning.common.exceptions.ContainerRuntimeException;
+import net.qihoo.xlearning.common.exceptions.XLearningExecException;
 import net.qihoo.xlearning.conf.XLearningConfiguration;
 import net.qihoo.xlearning.container.XLearningContainerId;
 import org.apache.commons.logging.Log;
@@ -96,6 +98,8 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   private String xlearningAppType;
 
+  private int isAMFinished;
+
   public ApplicationContainerListener(ApplicationContext applicationContext, Configuration conf) {
     super(ApplicationContainerListener.class.getSimpleName());
     this.setConfig(conf);
@@ -135,6 +139,7 @@ public class ApplicationContainerListener extends AbstractService implements App
     } else {
       xlearningAppType = "XLEARNING";
     }
+    this.isAMFinished = -1;
   }
 
   @Override
@@ -204,6 +209,10 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   public void setTrainFinished() {
     isXLearningTrainFinished = true;
+  }
+
+  public void setAMFinished(int exitcode) {
+    isAMFinished = exitcode;
   }
 
   public void setSaveInnerModel(Boolean isSaveInnerModel) {
@@ -314,6 +323,10 @@ public class ApplicationContainerListener extends AbstractService implements App
       if (failedNum > 0) {
         return true;
       }
+    } else if ("MPI".equals(xlearningAppType)) {
+      if (failedNum > 0) {
+        return true;
+      }
     } else {
       Double jobFailedNum = containerId2Status.size() * this.getConfig().getDouble(XLearningConfiguration.XLEARNING_CONTAINER_MAX_FAILURES_RATE, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_FAILURES_RATE);
       if (failedNum >= jobFailedNum) {
@@ -349,6 +362,31 @@ public class ApplicationContainerListener extends AbstractService implements App
     }
     return true;
   }
+
+  @Override
+  public int isApplicationCompleted() {
+    return isAMFinished;
+  }
+
+  @Override
+  public boolean isAllContainerStarted() throws XLearningExecException {
+    Iterator<Entry<XLearningContainerId, XLearningContainerStatus>> i = containerId2Status.entrySet()
+        .iterator();
+    if (containerId2Status.isEmpty()) {
+      return false;
+    }
+    while (i.hasNext()) {
+      Entry<XLearningContainerId, XLearningContainerStatus> e = i.next();
+      if (e.getValue().equals(XLearningContainerStatus.FAILED)) {
+        throw new ContainerRuntimeException("XLearning Container " + e.getKey().toString() + " run failed!");
+      } else if (e.getValue().equals(XLearningContainerStatus.UNDEFINED)
+          || e.getValue().equals(XLearningContainerStatus.INITIALIZING)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
 
   @Override
   public int interResultCompletedNum(Long lastInnerModelStr) {

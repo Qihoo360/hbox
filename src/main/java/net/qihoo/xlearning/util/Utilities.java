@@ -109,7 +109,7 @@ public final class Utilities {
     File file = new File(path);
     if (file.exists()) {
       if (needDelete) {
-        file.delete();
+        deleteDir(file);
       } else {
         return true;
       }
@@ -117,6 +117,18 @@ public final class Utilities {
     return file.mkdirs();
   }
 
+  public static boolean deleteDir(File dir) {
+    if (dir.isDirectory()) {
+      String[] children = dir.list();
+      for (String aChildren : children) {
+        boolean success = deleteDir(new File(dir, aChildren));
+        if (!success) {
+          return false;
+        }
+      }
+    }
+    return dir.delete();
+  }
   public static boolean mkParentDirs(String outFile) {
     File dir = new File(outFile);
     dir = dir.getParentFile();

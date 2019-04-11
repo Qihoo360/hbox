@@ -37,4 +37,6 @@ public interface ApplicationContainerProtocol extends VersionedProtocol {
 
   Long interResultTimeStamp();
 
+  int isApplicationCompleted();
+
 }

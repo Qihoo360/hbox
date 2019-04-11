@@ -30,6 +30,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.text.SimpleDateFormat;
@@ -62,6 +64,8 @@ public class XLearningContainer {
   private int lightLDALocalPort;
 
   private String lightLDAEndpoint;
+
+  private String mpiAppDir;
 
   private String role;
 
@@ -153,6 +157,17 @@ public class XLearningContainer {
     if (xlearningAppType.equals("XFLOW")) {
       LOG.info("XFlow index is:" + this.index);
     }
+
+    if (xlearningAppType.equals("MPI")) {
+      if (this.envs.containsKey(XLearningConstants.Environment.MPI_EXEC_DIR.toString())) {
+        this.mpiAppDir = envs.get(XLearningConstants.Environment.MPI_EXEC_DIR.toString());
+      } else {
+        this.mpiAppDir = envs.get(ApplicationConstants.Environment.PWD.name());
+      }
+      LOG.info(xlearningAppType.toLowerCase() + " app dir is:" + this.mpiAppDir);
+      LOG.info(xlearningAppType.toLowerCase() + " container index is: " + this.index);
+    }
+
     containerType = conf.get(XLearningConfiguration.XLEARNING_CONTAINER_TYPE,
         XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_TYPE);
     LOG.info("containerType:" + containerType);
@@ -331,8 +346,14 @@ public class XLearningContainer {
       );
 
       for (InputInfo inputInfo : inputs) {
-        String downloadDir = inputInfo.getAliasName();
-        Utilities.mkdirs(downloadDir.toString());
+        String downloadDir;
+        if (xlearningAppType.equals("MPI")) {
+          downloadDir = this.mpiAppDir + File.separator + inputInfo.getAliasName();
+          Utilities.mkdirs(downloadDir, true);
+        } else {
+          downloadDir = inputInfo.getAliasName();
+          Utilities.mkdirs(downloadDir);
+        }
         int index = 0;
         for (Path path : inputInfo.getPaths()) {
           String downloadDst;
@@ -375,7 +396,11 @@ public class XLearningContainer {
     } else {
       List<OutputInfo> outputs = Arrays.asList(amClient.getOutputLocation());
       for (OutputInfo outputInfo : outputs) {
-        Utilities.mkdirs(outputInfo.getLocalLocation());
+        if (xlearningAppType.equals("MPI")) {
+          Utilities.mkdirs(outputInfo.getLocalLocation(), true);
+        } else {
+          Utilities.mkdirs(outputInfo.getLocalLocation());
+        }
         LOG.info("Created output dir " + outputInfo.getLocalLocation());
       }
     }
@@ -503,6 +528,34 @@ public class XLearningContainer {
 
   }
 
+  /**
+   * build reLinksFiles for cacheFiles and cacheArchives for mpi app
+   */
+  public void reLinksFiles() {
+    if (this.mpiAppDir.equals(envs.get("PWD"))) {
+      LOG.info("PWD and mpi app dir are the same, so skip create symlinks");
+      return;
+    }
+    if (envs.containsKey(XLearningConstants.Environment.MPI_FILES_LINKS.toString())) {
+      String linkFileStr = envs.get(XLearningConstants.Environment.MPI_FILES_LINKS.toString());
+      String[] linkFiles = StringUtils.split(linkFileStr, ",");
+      try {
+        for (String file : linkFiles) {
+          java.nio.file.Path targetPath = Paths.get(envs.get("PWD"), file);
+          java.nio.file.Path linkPath = Paths.get(this.mpiAppDir, file);
+          File linkfile = new File(linkPath.toString());
+          if (linkfile.exists()) {
+            linkfile.delete();
+          }
+          Files.createSymbolicLink(linkPath, targetPath);
+          LOG.info("create Symlink " + linkPath + " -> " + targetPath);
+        }
+      } catch (IOException e) {
+        LOG.error("Create symlinks failed!", e);
+      }
+    }
+  }
+
   private static synchronized String getPidOfProcess(Process p) {
     long pid = -1;
     try {
@@ -534,6 +587,10 @@ public class XLearningContainer {
     } catch (ExecutionException e) {
       LOG.error("Container prepare inputs failed!", e);
       this.reportFailedAndExit();
+    }
+
+    if (xlearningAppType.equals("MPI")) {
+      reLinksFiles();
     }
 
     if (xlearningAppType.equals("LIGHTLDA") && !single) {
@@ -651,8 +708,23 @@ public class XLearningContainer {
     envList.add("JAVA_HOME=" + System.getenv("JAVA_HOME"));
     envList.add("HADOOP_HOME=" + System.getenv("HADOOP_YARN_HOME"));
     envList.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
-    envList.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-        "/jre/lib/amd64/server:" + System.getenv("HADOOP_YARN_HOME") + "/lib/native");
+    String ldLibraryPathStr = System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+        "/jre/lib/amd64/server:" + System.getenv("HADOOP_YARN_HOME") + "/lib/native";
+    if ("MPI".equals(xlearningAppType)) {
+      StringBuilder ldLibraryPath = new StringBuilder();
+      String mpiExtraLdLibraryPath = conf.get(XLearningConfiguration.XLEARNING_MPI_EXTRA_LD_LIBRARY_PATH);
+      if (mpiExtraLdLibraryPath != null) {
+        ldLibraryPath.append(mpiExtraLdLibraryPath);
+        LOG.info("add " + ldLibraryPath + " to LD_LIBRARY_PATH");
+      }
+      if (conf.getBoolean(XLearningConfiguration.XLEARNING_MPI_INSTALL_DIR_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_MPI_INSTALL_DIR_ENABLE)) {
+        String mpiInstallDir = conf.get(XLearningConfiguration.XLEARNING_MPI_INSTALL_DIR, XLearningConfiguration.DEFAULT_XLEARNING_MPI_INSTALL_DIR);
+        ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib");
+      }
+      envList.add("LD_LIBRARY_PATH=" + "./:" + ldLibraryPath.toString() + ":" + ldLibraryPathStr);
+    } else {
+      envList.add("LD_LIBRARY_PATH=" + "./:" + ldLibraryPathStr);
+    }
     envList.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
     envList.add("PYTHONUNBUFFERED=1");
     envList.add(XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList);
@@ -716,6 +788,8 @@ public class XLearningContainer {
       envList.add(dmlcID + "=" + this.index);
       envList.add("DMLC_ROLE=" + this.role);
       envList.add("HEAPPROFILE=" + heapprofile + this.index);
+    } else if (xlearningAppType.equals("MPI")) {
+      envList.add("PWD=" + this.mpiAppDir);
     }
 
     if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).toUpperCase().equals("PLACEHOLDER")) {
@@ -731,13 +805,22 @@ public class XLearningContainer {
     }
 
     String[] env = envList.toArray(new String[envList.size()]);
-    String command = envs.get(XLearningConstants.Environment.XLEARNING_EXEC_CMD.toString());
+    String command;
+    if (xlearningAppType.equals("MPI")) {
+      command = envs.get(XLearningConstants.Environment.CONTAINER_COMMAND.toString()).replaceAll("#", "\"");
+    } else {
+      command = envs.get(XLearningConstants.Environment.XLEARNING_EXEC_CMD.toString());
+    }
     LOG.info("Executing command:" + command);
     Runtime rt = Runtime.getRuntime();
 
     //close reserved socket as tf will bind this port later
     this.reservedSocket.close();
-    final Process xlearningProcess = containerLaunch.exec(command, env, envs);
+    File dir = null;
+    if (xlearningAppType.equals("MPI")) {
+      dir = new File(this.mpiAppDir);
+    }
+    final Process xlearningProcess = containerLaunch.exec(command, env, envs, dir);
     Date now = new Date();
     heartbeatThread.setContainersStartTime(now.toString());
 
@@ -983,48 +1066,80 @@ public class XLearningContainer {
     containerReporter.setDaemon(true);
     containerReporter.start();
 
-    int code = -1;
-    while (code == -1 && !heartbeatThread.isXLearningTrainCompleted()) {
-      Utilities.sleep(updateAppStatusInterval);
-      try {
-        code = xlearningProcess.exitValue();
-      } catch (IllegalThreadStateException e) {
-        LOG.debug("XLearning Process is running");
+    if("MPI".equals(xlearningAppType)){
+      int updateAppStatusRetry = this.conf.getInt(XLearningConfiguration.XLEARNING_MPI_CONTAINER_UPDATE_APP_STATUS_RETRY,
+          XLearningConfiguration.DEFAULT_XLEARNING_MPI_CONTAINER_UPDATE_APP_STATUS_RETRY);
+      int isAppFinished = -1;
+      while (true) {
+        int retry = 0;
+        while (true) {
+          try {
+            isAppFinished = this.amClient.isApplicationCompleted();
+            break;
+          } catch (Exception e) {
+            retry++;
+            if (retry < updateAppStatusRetry) {
+              LOG.info("Getting application status failed in retry " + retry);
+              Utilities.sleep(updateAppStatusInterval);
+            } else {
+              LOG.info("Getting application status failed in retry " + retry
+                  + ", container will suicide!", e);
+              return false;
+            }
+          }
+        }
+        if (isAppFinished == 0) {
+          this.uploadOutputFiles();
+          return true;
+        } else if (isAppFinished > 0) {
+          return false;
+        }
+        Utilities.sleep(updateAppStatusInterval);
       }
-    }
-
-    if (this.outputIndex < 0 && this.role.equals(XLearningConstants.PS) && this.xlearningAppType.equals("TENSORFLOW")) {
-      if (code == -1 || code == 0) {
-        this.uploadOutputFiles();
-      }
-    }
-
-    if (this.role.equals(XLearningConstants.PS) && !this.xlearningAppType.equals("LIGHTLDA")) {
-      if (code == -1) {
-        xlearningProcess.destroy();
-        return true;
-      } else if (code == 0) {
-        return true;
-      }
-      return false;
-    }
-
-    if (this.role.equals("server")) {
-      if (code == -1) {
-        xlearningProcess.destroy();
-        return true;
-      } else if (code == 0) {
-        return true;
-      }
-      return false;
-    }
-    //As role is worker
-    if (code == 0) {
-      this.uploadOutputFiles();
     } else {
-      return false;
+      int code = -1;
+      while (code == -1 && !heartbeatThread.isXLearningTrainCompleted()) {
+        Utilities.sleep(updateAppStatusInterval);
+        try {
+          code = xlearningProcess.exitValue();
+        } catch (IllegalThreadStateException e) {
+          LOG.debug("XLearning Process is running");
+        }
+      }
+
+      if (this.outputIndex < 0 && this.role.equals(XLearningConstants.PS) && this.xlearningAppType.equals("TENSORFLOW")) {
+        if (code == -1 || code == 0) {
+          this.uploadOutputFiles();
+        }
+      }
+
+      if (this.role.equals(XLearningConstants.PS) && !this.xlearningAppType.equals("LIGHTLDA")) {
+        if (code == -1) {
+          xlearningProcess.destroy();
+          return true;
+        } else if (code == 0) {
+          return true;
+        }
+        return false;
+      }
+
+      if (this.role.equals("server")) {
+        if (code == -1) {
+          xlearningProcess.destroy();
+          return true;
+        } else if (code == 0) {
+          return true;
+        }
+        return false;
+      }
+      //As role is worker
+      if (code == 0) {
+        this.uploadOutputFiles();
+      } else {
+        return false;
+      }
+      return true;
     }
-    return true;
   }
 
   private void reportFailedAndExit() {

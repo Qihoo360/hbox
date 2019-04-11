@@ -1,5 +1,6 @@
 package net.qihoo.xlearning.container;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
@@ -18,9 +19,9 @@ public class YarnContainer implements IContainerLaunch {
   }
 
   @Override
-  public Process exec(String command, String[] envp, Map<String, String> envs) throws IOException {
+  public Process exec(String command, String[] envp, Map<String, String> envs, File dir) throws IOException {
     Runtime rt = Runtime.getRuntime();
-    xlearningProcess = rt.exec(command, envp);
+    xlearningProcess = rt.exec(command, envp, dir);
     return xlearningProcess;
   }
 

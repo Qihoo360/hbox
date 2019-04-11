@@ -130,6 +130,11 @@ public class Client {
       }
     }
 
+    if ("MPI".equals(clientArguments.appType)) {
+      conf.setBoolean(XLearningConfiguration.XLEARNING_TF_BOARD_ENABLE, false);
+      conf.set(XLearningConfiguration.XLEARNING_CONTAINER_TYPE, XLearningConfiguration.DEFAULT_XLEARNING_CONTAINER_TYPE);
+    }
+
     if (conf.getInt(XLearningConfiguration.XLEARNING_PS_NUM, XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM) == 0) {
       if ("TENSORFLOW".equals(clientArguments.appType)
           && conf.getBoolean(XLearningConfiguration.XLEARNING_TF_DISTRIBUTION_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_TF_DISTRIBUTION_STRATEGY)
@@ -796,7 +801,7 @@ public class Client {
           }
         } catch (UndeclaredThrowableException e) {
           xlearningClient = null;
-          LOG.warn("Connecting to ResourceManager failed, try again later ", e);
+          LOG.warn("Connecting to ApplicationMaster failed, try again later ", e);
         }
       }
 

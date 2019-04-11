@@ -13,4 +13,6 @@ public interface ContainerListener {
   boolean isAllWorkerContainersSucceeded();
 
   int interResultCompletedNum(Long lastInnerModel);
+
+  boolean isAllContainerStarted();
 }
