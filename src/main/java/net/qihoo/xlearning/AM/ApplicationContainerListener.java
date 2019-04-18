@@ -48,6 +48,12 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   private final Map<XLearningContainerId, String> lightLDAIpPortMap;
 
+  private final Boolean single;
+
+  private final Boolean tfDistributionStrategy;
+
+  private final Boolean tfEvaluator;
+
   private final Map<XLearningContainerId, String> reporterProgress;
 
   private final Map<XLearningContainerId, String> mapedTaskID;
@@ -99,10 +105,14 @@ public class ApplicationContainerListener extends AbstractService implements App
     this.mapedTaskID = new ConcurrentHashMap<>();
     this.containersAppStartTimeMap = new ConcurrentHashMap<>();
     this.containersAppFinishTimeMap = new ConcurrentHashMap<>();
+    this.single = conf.getBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, XLearningConfiguration.DEFAULT_XLEARNING_MODE_SINGLE);
     this.clusterDef = new ConcurrentHashMap<>();
     this.clusterDef.put(XLearningConstants.WORKER, Collections.synchronizedList(new ArrayList<ContainerHostPair>()));
     this.clusterDef.put(XLearningConstants.PS, Collections.synchronizedList(new ArrayList<ContainerHostPair>()));
+    this.clusterDef.put(XLearningConstants.EVALUATOR, Collections.synchronizedList(new ArrayList<ContainerHostPair>()));
     this.clusterDefStr = null;
+    this.tfDistributionStrategy = conf.getBoolean(XLearningConfiguration.XLEARNING_TF_DISTRIBUTION_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_TF_DISTRIBUTION_STRATEGY);
+    this.tfEvaluator = conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR);
     this.lightGBMIpPortMap = new ConcurrentHashMap<>();
     this.lightGBMIpPortStr = null;
     this.lightLDAIpPortMap = new ConcurrentHashMap<>();
@@ -204,15 +214,15 @@ public class ApplicationContainerListener extends AbstractService implements App
         this.interResultTimeStamp = System.currentTimeMillis();
         try {
           Configuration conf = this.getConfig();
-          FileSystem fs = FileSystem.get(conf);
           for (OutputInfo output : this.applicationContext.getOutputs()) {
             Path innerResult = new Path(output.getDfsLocation()
                 + conf.get(XLearningConfiguration.XLEARNING_INTERREAULST_DIR, XLearningConfiguration.DEFAULT_XLEARNING_INTERRESULT_DIR)
                 + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date(this.interResultTimeStamp)));
+            FileSystem fs = innerResult.getFileSystem(conf);
             fs.mkdirs(innerResult);
+            fs.close();
             LOG.info("interResult path:" + innerResult);
           }
-          fs.close();
         } catch (IOException e) {
           LOG.error("create the interResult path error: " + e);
         }
@@ -492,21 +502,31 @@ public class ApplicationContainerListener extends AbstractService implements App
   @Override
   public synchronized String getClusterDef() {
     if (this.clusterDef.get(XLearningConstants.WORKER.toString()).size() == applicationContext.getWorkerNum()
-        && this.clusterDef.get(XLearningConstants.PS.toString()).size() == applicationContext.getPsNum()) {
+        && ((!tfDistributionStrategy && this.clusterDef.get(XLearningConstants.PS.toString()).size() == applicationContext.getPsNum())
+        || (tfDistributionStrategy
+        && (applicationContext.getPsNum() == 0 || (applicationContext.getPsNum() > 0 && this.clusterDef.get(XLearningConstants.PS.toString()).size() == applicationContext.getPsNum()))
+        && (!tfEvaluator || (tfEvaluator && this.clusterDef.get(XLearningConstants.EVALUATOR.toString()).size() == 1))))) {
       if (this.clusterDefStr == null) {
         Collections.sort(this.clusterDef.get(XLearningConstants.PS.toString()), new compairIndex());
         Collections.sort(this.clusterDef.get(XLearningConstants.WORKER.toString()), new compairIndex());
         List workerList = new ArrayList<String>();
-        List psList = new ArrayList<String>();
-        for (int i = 0; i < this.clusterDef.get(XLearningConstants.WORKER.toString()).size(); i++) {
+        for (int i = 0; i < applicationContext.getWorkerNum(); i++) {
           workerList.add(this.clusterDef.get(XLearningConstants.WORKER.toString()).get(i).getHost());
-        }
-        for (int i = 0; i < this.clusterDef.get(XLearningConstants.PS.toString()).size(); i++) {
-          psList.add(this.clusterDef.get(XLearningConstants.PS.toString()).get(i).getHost());
         }
         Map<String, List<String>> clusterMessage = new HashMap<>();
         clusterMessage.put(XLearningConstants.WORKER, workerList);
-        clusterMessage.put(XLearningConstants.PS, psList);
+        if (applicationContext.getPsNum() > 0) {
+          List psList = new ArrayList<String>();
+          for (int i = 0; i < applicationContext.getPsNum(); i++) {
+            psList.add(this.clusterDef.get(XLearningConstants.PS.toString()).get(i).getHost());
+          }
+          clusterMessage.put(XLearningConstants.PS, psList);
+        }
+        if (tfDistributionStrategy && tfEvaluator) {
+          List evaluatorList = new ArrayList<String>();
+          evaluatorList.add(this.clusterDef.get(XLearningConstants.EVALUATOR.toString()).get(0).getHost());
+          clusterMessage.put(XLearningConstants.EVALUATOR, evaluatorList);
+        }
         LOG.info("Sending cluster def \"" + new Gson().toJson(clusterMessage) + "\"to container");
         this.clusterDefStr = new Gson().toJson(clusterMessage);
       }

@@ -22,6 +22,8 @@ class ClientArguments {
   int workerMemory;
   int workerVCores;
   int workerNum;
+  int chiefWorkerMemory;
+  int evaluatorWorkerMemory;
   int psMemory;
   int psVCores;
   int psNum;
@@ -71,6 +73,8 @@ class ClientArguments {
     workerMemory = XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY;
     workerVCores = XLearningConfiguration.DEFAULT_XLEARNING_WORKER_VCORES;
     workerNum = XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM;
+    chiefWorkerMemory = workerMemory;
+    evaluatorWorkerMemory = workerMemory;
     psMemory = XLearningConfiguration.DEFAULT_XLEARNING_PS_MEMORY;
     psVCores = XLearningConfiguration.DEFAULT_XLEARNING_PS_VCORES;
     psNum = XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM;
@@ -121,6 +125,11 @@ class ClientArguments {
         "Amount of vcores to be requested to run worker");
     allOptions.addOption("workerNum", "worker-num", true,
         "No. of containers on which the worker needs to be executed");
+
+    allOptions.addOption("chiefWorkerMemory", "chiefworker-memory", true,
+        "Amount of memory in MB to be requested to run the chief worker");
+    allOptions.addOption("evaluatorWorkerMemory", "evaluatorworker-memory", true,
+        "Amount of memory in MB to be requested to run the evaluator worker");
 
     allOptions.addOption("psMemory", "ps-memory", true,
         "Amount of memory in MB to be requested to run ps");
@@ -268,6 +277,8 @@ class ClientArguments {
 
     if (cliParser.hasOption("worker-memory")) {
       workerMemory = getNormalizedMem(cliParser.getOptionValue("worker-memory"));
+      chiefWorkerMemory = workerMemory;
+      evaluatorWorkerMemory = workerMemory;
     }
 
     if (cliParser.hasOption("worker-cores")) {
@@ -413,8 +424,16 @@ class ClientArguments {
       boardCacheTimeout = Integer.parseInt(boardCacheTimeoutStr);
     }
 
-    if (cliParser.hasOption("tf-evaluator")){
-      tfEvaluator = Boolean.parseBoolean(cliParser.getOptionValue("tf-evaluator"));
+    if ("TENSORFLOW".equals(appType)) {
+      if (cliParser.hasOption("tf-evaluator")) {
+        tfEvaluator = Boolean.parseBoolean(cliParser.getOptionValue("tf-evaluator"));
+      }
+      if (cliParser.hasOption("chiefworker-memory")) {
+        chiefWorkerMemory = getNormalizedMem(cliParser.getOptionValue("chiefworker-memory"));
+      }
+      if (cliParser.hasOption("evaluatorworker-memory")) {
+        evaluatorWorkerMemory = getNormalizedMem(cliParser.getOptionValue("evaluatorworker-memory"));
+      }
     }
 
     if (cliParser.hasOption("output-index")) {

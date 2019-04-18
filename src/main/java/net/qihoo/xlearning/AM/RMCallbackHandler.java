@@ -20,6 +20,10 @@ public class RMCallbackHandler implements CallbackHandler {
 
   public final List<Container> acquiredPsContainers;
 
+  public final List<Container> acquiredChiefWorkerContainers;
+
+  public final List<Container> acquiredEvaluatorWorkerContainers;
+
   public final Set<String> blackHosts;
 
   private int neededWorkerContainersCount;
@@ -32,16 +36,24 @@ public class RMCallbackHandler implements CallbackHandler {
 
   private final AtomicBoolean workerContainersAllocating;
 
+  private final AtomicBoolean chiefWorkerContainersAllocating;
+
+  private final AtomicBoolean evaluatorWorkerContainersAllocating;
+
   private float progress;
 
   public RMCallbackHandler() {
     cancelContainers = Collections.synchronizedList(new ArrayList<Container>());
     acquiredWorkerContainers = Collections.synchronizedList(new ArrayList<Container>());
     acquiredPsContainers = Collections.synchronizedList(new ArrayList<Container>());
+    acquiredChiefWorkerContainers = Collections.synchronizedList(new ArrayList<Container>());
+    acquiredEvaluatorWorkerContainers = Collections.synchronizedList(new ArrayList<Container>());
     blackHosts = Collections.synchronizedSet(new HashSet<String>());
     acquiredWorkerContainersCount = new AtomicInteger(0);
     acquiredPsContainersCount = new AtomicInteger(0);
     workerContainersAllocating = new AtomicBoolean(false);
+    chiefWorkerContainersAllocating = new AtomicBoolean(false);
+    evaluatorWorkerContainersAllocating = new AtomicBoolean(false);
     progress = 0.0f;
   }
 
@@ -73,6 +85,14 @@ public class RMCallbackHandler implements CallbackHandler {
     return new ArrayList<>(acquiredPsContainers);
   }
 
+  public List<Container> getAcquiredChiefWorkerContainers() {
+    return new ArrayList<>(acquiredChiefWorkerContainers);
+  }
+
+  public List<Container> getAcquiredEvaluatorWorkerContainers() {
+    return new ArrayList<>(acquiredEvaluatorWorkerContainers);
+  }
+
   public void setNeededWorkerContainersCount(int count) {
     neededWorkerContainersCount = count;
   }
@@ -83,6 +103,14 @@ public class RMCallbackHandler implements CallbackHandler {
 
   public void setWorkerContainersAllocating() {
     workerContainersAllocating.set(true);
+  }
+
+  public void setChiefWorkerContainersAllocating(){
+    chiefWorkerContainersAllocating.set(true);
+  }
+
+  public void setEvaluatorWorkerContainersAllocating(){
+    evaluatorWorkerContainersAllocating.set(true);
   }
 
   @Override
@@ -101,7 +129,11 @@ public class RMCallbackHandler implements CallbackHandler {
           + " , with the resource " + acquiredContainer.getResource().toString());
       String host = acquiredContainer.getNodeId().getHost();
       if (!blackHosts.contains(host)) {
-        if (workerContainersAllocating.get()) {
+        if (evaluatorWorkerContainersAllocating.get()) {
+          acquiredEvaluatorWorkerContainers.add(acquiredContainer);
+        } else if (chiefWorkerContainersAllocating.get()) {
+          acquiredChiefWorkerContainers.add(acquiredContainer);
+        } else if (workerContainersAllocating.get()) {
           acquiredWorkerContainers.add(acquiredContainer);
           acquiredWorkerContainersCount.incrementAndGet();
         } else {

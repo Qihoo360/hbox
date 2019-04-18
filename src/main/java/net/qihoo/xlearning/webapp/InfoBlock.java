@@ -204,6 +204,28 @@ public class InfoBlock extends HtmlBlock implements AMParams {
             td($(WORKER_VCORES)).
             _();
       }
+      if ($(CHIEF_WORKER_MEMORY) != null && $(CHIEF_WORKER_MEMORY).trim() != "") {
+        resourceAppliedInfo.
+            _().tbody("ui-widget-content").
+            tr().
+            $style("text-align:center;").
+            td("worker/chief").
+            td("-").
+            td($(CHIEF_WORKER_MEMORY)).
+            td("-").
+            _();
+      }
+      if ($(EVALUATOR_WORKER_MEMORY) != null && $(EVALUATOR_WORKER_MEMORY).trim() != "") {
+        resourceAppliedInfo.
+            _().tbody("ui-widget-content").
+            tr().
+            $style("text-align:center;").
+            td("worker/evaluator").
+            td("-").
+            td($(EVALUATOR_WORKER_MEMORY)).
+            td("-").
+            _();
+      }
       if (numPS > 0){
         resourceAppliedInfo.
             _().tbody("ui-widget-content").

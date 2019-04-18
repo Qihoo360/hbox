@@ -19,6 +19,8 @@ public interface XLearningConstants {
 
   String EVALUATOR = "evaluator";
 
+  String CHIEF = "chief";
+
   String STREAM_INPUT_DIR = "mapreduce.input.fileinputformat.inputdir";
 
   String STREAM_OUTPUT_DIR = "mapreduce.output.fileoutputformat.outputdir";

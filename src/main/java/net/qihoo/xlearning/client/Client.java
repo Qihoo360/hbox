@@ -13,6 +13,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -30,6 +31,7 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -84,6 +86,8 @@ public class Client {
     conf.set(XLearningConfiguration.XLEARNING_WORKER_MEMORY, String.valueOf(clientArguments.workerMemory));
     conf.set(XLearningConfiguration.XLEARNING_WORKER_VCORES, String.valueOf(clientArguments.workerVCores));
     conf.set(XLearningConfiguration.XLEARNING_WORKER_NUM, String.valueOf(clientArguments.workerNum));
+    conf.set(XLearningConfiguration.XLEARNING_CHIEF_WORKER_MEMORY, String.valueOf(clientArguments.chiefWorkerMemory));
+    conf.set(XLearningConfiguration.XLEARNING_EVALUATOR_WORKER_MEMORY, String.valueOf(clientArguments.evaluatorWorkerMemory));
     conf.set(XLearningConfiguration.XLEARNING_PS_MEMORY, String.valueOf(clientArguments.psMemory));
     conf.set(XLearningConfiguration.XLEARNING_PS_VCORES, String.valueOf(clientArguments.psVCores));
     conf.set(XLearningConfiguration.XLEARNING_PS_NUM, String.valueOf(clientArguments.psNum));
@@ -127,7 +131,13 @@ public class Client {
     }
 
     if (conf.getInt(XLearningConfiguration.XLEARNING_PS_NUM, XLearningConfiguration.DEFAULT_XLEARNING_PS_NUM) == 0) {
-      conf.setBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, true);
+      if ("TENSORFLOW".equals(clientArguments.appType)
+          && conf.getBoolean(XLearningConfiguration.XLEARNING_TF_DISTRIBUTION_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_TF_DISTRIBUTION_STRATEGY)
+          && conf.getInt(XLearningConfiguration.XLEARNING_WORKER_NUM, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_NUM) > 1) {
+        conf.setBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, false);
+      } else {
+        conf.setBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, true);
+      }
     } else {
       conf.setBoolean(XLearningConfiguration.XLEARNING_MODE_SINGLE, false);
     }
@@ -222,8 +232,10 @@ public class Client {
       }
       for (String pathdir : StringUtils.split(inputRemote, ",")) {
         Path path = new Path(pathdir);
-        if (!path.getFileSystem(conf).exists(path)) {
-          throw new IOException("Input path " + path + " not existed!");
+        FileSystem fs = path.getFileSystem(conf);
+        FileStatus[] pathStatus = fs.globStatus(path);
+        if (pathStatus == null || pathStatus.length <= 0) {
+          throw new IOException("Input path " + path + "not existed!");
         }
       }
       if (inputPaths.containsKey(inputLocal)) {
@@ -298,6 +310,35 @@ public class Client {
               + "Specified memory=" + workerMemory);
     }
     LOG.info("Apply for worker Memory " + workerMemory + "M");
+
+    int chiefWorkerMemory = conf.getInt(XLearningConfiguration.XLEARNING_CHIEF_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
+    if (chiefWorkerMemory != workerMemory) {
+      if (chiefWorkerMemory > maxMem) {
+        throw new RequestOverLimitException("Chief Worker memory requested " + chiefWorkerMemory +
+            " above the max threshold of yarn cluster " + maxMem);
+      }
+      if (chiefWorkerMemory <= 0) {
+        throw new IllegalArgumentException(
+            "Invalid memory specified for chief worker, exiting."
+                + "Specified memory=" + chiefWorkerMemory);
+      }
+      LOG.info("Apply for chief worker Memory " + chiefWorkerMemory + "M");
+    }
+
+    int evaluatorWorkerMemory = conf.getInt(XLearningConfiguration.XLEARNING_EVALUATOR_WORKER_MEMORY, XLearningConfiguration.DEFAULT_XLEARNING_WORKER_MEMORY);
+    if (evaluatorWorkerMemory != workerMemory && conf.getBoolean(XLearningConfiguration.XLEARNING_TF_EVALUATOR, XLearningConfiguration.DEFAULT_XLEARNING_TF_EVALUATOR)) {
+      if (evaluatorWorkerMemory > maxMem) {
+        throw new RequestOverLimitException("Evaluator Worker memory requested " + evaluatorWorkerMemory +
+            " above the max threshold of yarn cluster " + maxMem);
+      }
+      if (evaluatorWorkerMemory <= 0) {
+        throw new IllegalArgumentException(
+            "Invalid memory specified for evaluator worker, exiting."
+                + "Specified memory=" + evaluatorWorkerMemory);
+      }
+      LOG.info("Apply for evaluator worker Memory " + evaluatorWorkerMemory + "M");
+    }
+
     if (workerVcores > maxVCores) {
       throw new RequestOverLimitException("Worker vcores requested " + workerVcores +
           " above the max threshold of yarn cluster " + maxVCores);
@@ -401,7 +442,6 @@ public class Client {
     GetNewApplicationResponse newAppResponse = newAPP.getNewApplicationResponse();
     applicationId = newAppResponse.getApplicationId();
     LOG.info("Got new Application: " + applicationId.toString());
-    conf.set(XLearningConfiguration.XLEARNING_APP_ID, applicationId.toString());
 
     Path jobConfPath = Utilities
         .getRemotePath(conf, applicationId, XLearningConstants.XLEARNING_JOB_CONFIGURATION);
@@ -682,6 +722,15 @@ public class Client {
     priority.setPriority(conf.getInt(XLearningConfiguration.XLEARNING_APP_PRIORITY, XLearningConfiguration.DEFAULT_XLEARNING_APP_PRIORITY));
     applicationContext.setPriority(priority);
     applicationContext.setQueue(conf.get(XLearningConfiguration.XLEARNING_APP_QUEUE, XLearningConfiguration.DEFAULT_XLEARNING_APP_QUEUE));
+    String amNodeLabelExpression = conf.get(XLearningConfiguration.XLEARNING_AM_NODELABELEXPRESSION);
+    if (amNodeLabelExpression != null && amNodeLabelExpression.trim() != "") {
+      try {
+        Method method = applicationContext.getClass().getMethod("setNodeLabelExpression", String.class);
+        method.invoke(applicationContext, amNodeLabelExpression);
+      } catch (Exception e) {
+        LOG.warn("Set am node label expression error: " + e);
+      }
+    }
 
     try {
       LOG.info("Submitting application to ResourceManager");

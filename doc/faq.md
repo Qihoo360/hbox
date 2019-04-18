@@ -134,3 +134,4 @@ User can get the file list like this:
 ### 13. How to use the custom module ?
 Upload the files using the `--files` to each container. Load the related path to the system path, such as `sys.path.append(os.getcwd())` before calling the module.  
 
+### 14. Recommended to directly operate the hdfs data for input and model output if use the TensorFlow Estimator advanced API.  

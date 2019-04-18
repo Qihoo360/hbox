@@ -49,6 +49,12 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final boolean DEFAULT_XLEARNING_HOST_LOCAL_ENABLE = false;
 
+  public static final String XLEARNING_AM_NODELABELEXPRESSION = "xlearning.am.nodeLabelExpression";
+
+  public static final String XLEARNING_WORKER_NODELABELEXPRESSION = "xlearning.worker.nodeLabelExpression";
+
+  public static final String XLEARNING_PS_NODELABELEXPRESSION = "xlearning.ps.nodeLabelExpression";
+
   public static final String XLEARNING_REPORT_CONTAINER_STATUS = "xlearning.report.container.status";
 
   public static final boolean DEFAULT_XLEARNING_REPORT_CONTAINER_STATUS = true;
@@ -76,6 +82,10 @@ public class XLearningConfiguration extends YarnConfiguration {
   public static final String XLEARNING_WORKER_NUM = "xlearning.worker.num";
 
   public static final int DEFAULT_XLEARNING_WORKER_NUM = 1;
+
+  public static final String XLEARNING_CHIEF_WORKER_MEMORY = "xlearning.chief.worker.memory";
+
+  public static final String XLEARNING_EVALUATOR_WORKER_MEMORY = "xlearning.evaluator.worker.memory";
 
   public static final String XLEARNING_PS_MEMORY = "xlearning.ps.memory";
 
@@ -165,6 +175,11 @@ public class XLearningConfiguration extends YarnConfiguration {
 
   public static final String DEFAULT_XLEARNING_INTERRESULT_DIR = "/interResult_";
 
+  public static final String XLEARNING_INTERRESULT_SAVE_INC = "xlearning.interresult.save.inc";
+
+  public static final Boolean DEFAULT_XLEARNING_INTERRESULT_SAVE_INC = false;
+
+
   public static final String[] DEFAULT_XLEARNING_APPLICATION_CLASSPATH = {
       "$HADOOP_CONF_DIR",
       "$HADOOP_COMMON_HOME/share/hadoop/common/*",
@@ -177,6 +192,8 @@ public class XLearningConfiguration extends YarnConfiguration {
       "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*"
   };
 
+  public static final String XLEARNING_TF_DISTRIBUTION_STRATEGY = "xlearning.tf.distribution.strategy";
+  public static final Boolean DEFAULT_XLEARNING_TF_DISTRIBUTION_STRATEGY = false;
   public static final String XLEARNING_TF_BOARD_PATH = "xlearning.tf.board.path";
   public static final String DEFAULT_XLEARNING_TF_BOARD_PATH = "tensorboard";
   public static final String XLEARNING_TF_BOARD_WORKER_INDEX = "xlearning.tf.board.worker.index";
@@ -256,6 +273,12 @@ public class XLearningConfiguration extends YarnConfiguration {
   public static final String XLEARNING_DOWNLOAD_FILE_THREAD_NUMS = "xlearning.download.file.thread.nums";
 
   public static final int DEFAULT_XLEARNING_DOWNLOAD_FILE_THREAD_NUMS = 10;
+
+  public static final String XLEARNING_UPLOAD_OUTPUT_THREAD_NUMS = "xlearning.upload.output.thread.nums";
+
+  public static final String XLEARNING_FILE_LIST_LEVEL = "xlearning.file.list.level";
+
+  public static final int DEFAULT_XLEARNING_FILE_LIST_LEVEL = 2;
 
   public static final String XLEARNING_CONTAINER_HEARTBEAT_INTERVAL = "xlearning.container.heartbeat.interval";
 
@@ -372,20 +395,19 @@ public class XLearningConfiguration extends YarnConfiguration {
    * xlearning support docker conf
    */
   public static final String XLEARNING_DOCKER_REGISTRY_HOST = "xlearning.docker.registry.host";
-  public static final String DEFAULT_XLEARNING_DOCKER_REGISTRY_HOST = "localhost";
 
   public static final String XLEARNING_DOCKER_REGISTRY_PORT = "xlearning.docker.registry.port";
-  public static final String DEFAULT_XLEARNING_DOCKER_REGISTRY_PORT = "50000";
 
   public static final String XLEARNING_DOCKER_IMAGE= "xlearning.docker.image";
-  public static final String DEFAULT_XLEARNING_DOCKER_IMAGE = "";
 
   public static final String XLEARNING_CONTAINER_TYPE= "xlearning.container.type";
   public static final String DEFAULT_XLEARNING_CONTAINER_TYPE = "yarn";
 
   public static final String XLEARNING_DOCKER_RUN_ARGS = "xlearning.docker.run.args";
 
-  public static final String XLEARNING_APP_ID = "xlearning.app.id";
+  public static final String XLEARNING_DOCKER_WORK_DIR = "xlearning.docker.worker.dir";
+
+  public static final String DEFAULT_XLEARNING_DOCKER_WORK_DIR = "work";
 
   public static final String XLEARNING_DOCKER_USERNAME = "xlearning.docker.username";
   public static final String XLEARNING_DOCKER_PASSWORD = "xlearning.docker.password";
