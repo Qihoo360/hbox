@@ -51,6 +51,7 @@ public class UploadTask implements Runnable {
           LOG.warn("Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " failed, retry in " + (++retry), e);
         } else {
           LOG.error("Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " failed after " + downloadRetry + " retry times!", e);
+          break;
         }
       }
     }
