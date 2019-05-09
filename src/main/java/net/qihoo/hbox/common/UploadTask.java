@@ -38,6 +38,10 @@ public class UploadTask implements Runnable {
     while (true) {
       try {
         FileSystem dfs = uploadDst.getFileSystem(conf);
+        if (dfs.exists(uploadDst)) {
+          LOG.info("Container remote output path " + uploadDst + " exists, so we has to delete is first.");
+          dfs.delete(uploadDst);
+        }
         dfs.copyFromLocalFile(false, false, uploadSrc, uploadDst);
         LOG.info("Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " successful.");
         dfs.close();
@@ -47,6 +51,7 @@ public class UploadTask implements Runnable {
           LOG.warn("Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " failed, retry in " + (++retry), e);
         } else {
           LOG.error("Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " failed after " + downloadRetry + " retry times!", e);
+          break;
         }
       }
     }
