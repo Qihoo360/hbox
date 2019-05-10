@@ -114,6 +114,7 @@ public class XLearningContainer {
     if (envs.containsKey(XLearningConstants.Environment.XLEARNING_OUTPUTS_WORKER_INDEX.toString())) {
       outputIndex = Integer.parseInt(envs.get(XLearningConstants.Environment.XLEARNING_OUTPUTS_WORKER_INDEX.toString()));
     }
+    this.inputFileList = "";
     if ("TENSORFLOW".equals(xlearningAppType)) {
       LOG.info("TensorFlow role is:" + this.role);
     }
@@ -727,7 +728,9 @@ public class XLearningContainer {
     }
     envList.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
     envList.add("PYTHONUNBUFFERED=1");
-    envList.add(XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList);
+    if (this.inputFileList != null && this.inputFileList.trim() != "") {
+      envList.add(XLearningConstants.Environment.XLEARNING_INPUT_FILE_LIST.toString() + "=" + this.inputFileList);
+    }
 
     if ("TENSORFLOW".equals(xlearningAppType)) {
       envList.add(XLearningConstants.Environment.XLEARNING_TF_INDEX.toString() + "=" + this.index);

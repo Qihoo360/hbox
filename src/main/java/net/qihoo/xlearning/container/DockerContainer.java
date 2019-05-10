@@ -63,11 +63,14 @@ public class DockerContainer implements IContainerLaunch {
       userName = userNameArr[0];
     }
     LOG.info("Container launch userName:" + userName);
-    String homePath = envs.get("HADOOP_HDFS_HOME");
     String mount = " -v " + path + ":" + workDir;
-    mount += " -v " + homePath + ":" + homePath;
+    mount = mount + " -v /etc/passwd:/etc/passwd:ro";
+    String homePath = envs.get("HADOOP_HDFS_HOME");
+    if (homePath != null && homePath != "")
+      mount += " -v " + homePath + ":" + homePath + ":ro";
     String javaPath = envs.get("JAVA_HOME");
-    mount += " -v " + javaPath + ":" + javaPath;
+    if (javaPath != null && javaPath != "")
+      mount += " -v " + javaPath + ":" + javaPath + ":ro";
     String[] localDirs = envs.get("LOCAL_DIRS").split(File.pathSeparator);
     if (localDirs.length > 0) {
       for (String perPath : localDirs) {
@@ -102,14 +105,35 @@ public class DockerContainer implements IContainerLaunch {
     } catch (InterruptedException e) {
       LOG.warn("Docker pull Error:", e);
     }
-    String dockerCommand =
-        "docker run" +
-            " --network host " +
+
+    String userId = "";
+    try {
+      String userIDCommand = "id -u";
+      LOG.info("Get the user id :" + userIDCommand);
+      Process process = rt.exec(userIDCommand, envp);
+      int i = process.waitFor();
+      LOG.info("Get the user id Wait:" + (i == 0 ? "Success" : "Failed"));
+      BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+      String line;
+      while ((line = br.readLine()) != null) {
+        LOG.info(line);
+        userId = line;
+      }
+    } catch (InterruptedException e) {
+      LOG.warn("Get the user id error:", e);
+    }
+
+    String dockerCommand = "docker run";
+    if (userId.trim() != "") {
+      dockerCommand += " -u " + userId;
+    }
+    dockerCommand +=
+        " --network host " +
             " --rm " +
             " --cpus " + containerCpu +
             " -m " + containerMemory + "m " +
             port +
-            " -w " +workDir +
+            " -w " + workDir +
             mount +
             envsParam.toString() +
             " --name " + containerId.toString() + " " +
