@@ -270,9 +270,6 @@ public class ApplicationMaster extends CompositeService {
     if (xlearningAppType.equals("MPI")) {
       Path pwd = new Path(envs.get("PWD"));
       mpiExecDir = pwd.getParent().toString();
-      if (conf.getBoolean(XLearningConfiguration.XLEARNING_MPI_EXEC_DIR_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_MPI_EXEC_DIR_ENABLE)) {
-        mpiExecDir = conf.get(XLearningConfiguration.XLEARNING_MPI_EXEC_DIR, XLearningConfiguration.DEFAULT_XLEARNING_MPI_EXEC_DIR);
-      }
       LOG.info("MPI exec path: " + mpiExecDir);
     }
 
@@ -1117,11 +1114,11 @@ public class ApplicationMaster extends CompositeService {
       ldLibraryPath.append(mpiExtraLdLibraryPath);
       LOG.info("add " + ldLibraryPath + " to LD_LIBRARY_PATH");
     }
-    if (conf.getBoolean(XLearningConfiguration.XLEARNING_MPI_INSTALL_DIR_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_MPI_INSTALL_DIR_ENABLE)) {
-      String mpiInstallDir = conf.get(XLearningConfiguration.XLEARNING_MPI_INSTALL_DIR, XLearningConfiguration.DEFAULT_XLEARNING_MPI_INSTALL_DIR);
-      commandBuilder.append(mpiInstallDir).append(File.separator).append("bin").append(File.separator);
-      ldLibraryPath.append(":").append(mpiInstallDir).append(File.separator).append("lib");
-    }
+
+    String mpiInstallDir = conf.get(XLearningConfiguration.XLEARNING_MPI_INSTALL_DIR, XLearningConfiguration.DEFAULT_XLEARNING_MPI_INSTALL_DIR);
+    commandBuilder.append(mpiInstallDir).append(File.separator).append("bin").append(File.separator);
+    ldLibraryPath.append(":").append(mpiInstallDir).append(File.separator).append("lib");
+
     commandBuilder.append("mpiexec --host ");
     ldLibraryPath.append(":").append(System.getenv("LD_LIBRARY_PATH"));
     for (Container container : acquiredWorkerContainers) {

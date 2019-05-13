@@ -410,16 +410,7 @@ public class XLearningConfiguration extends YarnConfiguration {
   public static final String DEFAULT_XLEARNING_DOCKER_WORK_DIR = "work";
 
   /** Configuration for mpi app */
-  public static final String XLEARNING_MPI_EXEC_DIR_ENABLE = "xlearning.mpi.exec.dir.enable";
-  public static final boolean DEFAULT_XLEARNING_MPI_EXEC_DIR_ENABLE = false;
-
-  public static final String XLEARNING_MPI_EXEC_DIR = "xlearning.mpi.exec.dir";
-  public static final String DEFAULT_XLEARNING_MPI_EXEC_DIR = "/tmp/";
-
   public static final String XLEARNING_MPI_EXTRA_LD_LIBRARY_PATH = "xlearning.mpi.extra.ld.library.path";
-
-  public static final String XLEARNING_MPI_INSTALL_DIR_ENABLE = "xlearning.mpi.install.dir.enable";
-  public static final boolean DEFAULT_XLEARNING_MPI_INSTALL_DIR_ENABLE = false;
 
   public static final String XLEARNING_MPI_INSTALL_DIR = "xlearning.mpi.install.dir";
   public static final String DEFAULT_XLEARNING_MPI_INSTALL_DIR = "/usr/local/openmpi/";

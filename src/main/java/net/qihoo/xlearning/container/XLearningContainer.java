@@ -718,10 +718,8 @@ public class XLearningContainer {
         ldLibraryPath.append(mpiExtraLdLibraryPath);
         LOG.info("add " + ldLibraryPath + " to LD_LIBRARY_PATH");
       }
-      if (conf.getBoolean(XLearningConfiguration.XLEARNING_MPI_INSTALL_DIR_ENABLE, XLearningConfiguration.DEFAULT_XLEARNING_MPI_INSTALL_DIR_ENABLE)) {
-        String mpiInstallDir = conf.get(XLearningConfiguration.XLEARNING_MPI_INSTALL_DIR, XLearningConfiguration.DEFAULT_XLEARNING_MPI_INSTALL_DIR);
-        ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib");
-      }
+      String mpiInstallDir = conf.get(XLearningConfiguration.XLEARNING_MPI_INSTALL_DIR, XLearningConfiguration.DEFAULT_XLEARNING_MPI_INSTALL_DIR);
+      ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib");
       envList.add("LD_LIBRARY_PATH=" + "./:" + ldLibraryPath.toString() + ":" + ldLibraryPathStr);
     } else {
       envList.add("LD_LIBRARY_PATH=" + "./:" + ldLibraryPathStr);
