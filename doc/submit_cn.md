@@ -26,6 +26,8 @@ ps-memory | 指定ps申请的内存大小，默认单位为MB，默认大小为�
 worker-num | 指定worker申请数目，默认个数为系统配置xlearning.worker.num  
 worker-cores | 指定worker申请的CPU核数，默认个数为系统配置xlearning.worker.cores  
 worker-memory | 指定worker申请内存，默认单位为MB，默认大小为系统配置xlearning.worker.memory  
+chiefworker-memory | 指定chief worker申请内存, 主要是针对TensorFlow作业中index 0的worker，默认大小同worker-memory一致  
+evaluatorworker-memory | 指定evaluator worker申请内存，主要针对TensorFlow Estimator作业中的estimator角色，默认大小同worker-memory一致  
 queue | 指定作业提交队列，默认为系统配置xlearning.app.queue  
 priority | 指定作业提交优先级，默认为系统配置xlearning.app.priority对应级别  
 board-enable | 是否开启Board服务，默认为系统配置xlearning.tf.board.enable  
@@ -41,6 +43,6 @@ stream-epoch | 当输入文件加载策略为STREAM时，流式数据读取次�
 inputformat | 当输入文件加载策略为STREAM时，指定inputformat类，默认为系统配置xlearning.inputformat.class  
 inputformat-shuffle | 当输入文件加载策略为STREAM时，指定inputformat输入是否需要shuffle操作，默认为系统配置xlearning.input.stream.shuffle  
 output-strategy | 输出文件加载策略，默认为系统配置xlearning.output.strategy  
-outputformat | 当输出文件加载模式为STREAM时，指定outputformat类，默认为系统配置xlearning.outputformat.class
-tf-evaluator | 在分布式TensorFlow作业类型下，是否设置evaluator角色，默认为系统配置xlearning.tf.evaluator
-output-index | 指定保存index对应worker的输出文件，默认保存所有worker的输出结果
+outputformat | 当输出文件加载模式为STREAM时，指定outputformat类，默认为系统配置xlearning.outputformat.class  
+tf-evaluator | 在分布式TensorFlow作业类型下，是否设置evaluator角色，默认为系统配置xlearning.tf.evaluator  
+output-index | 指定保存index对应worker的输出文件，默认保存所有worker的输出结果  

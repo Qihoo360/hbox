@@ -13,6 +13,8 @@ xlearning.am.cores | 1 | AM申请所需CPU核数
 xlearning.worker.num | 1 | worker启动数目  
 xlearning.worker.memory | 1024 | worker申请使用内存大小，单位为MB  
 xlearning.worker.cores | 1 | worker申请使用CPU核数  
+xlearning.chief.worker.memory | 1024 | chief worker申请使用的内存大小，主要针对TensorFlow作业中index为0时的特殊worker，单位为MB，默认与worker memory一致  
+xlearning.evaluator.worker.memory | 1024 | evaluator worker申请使用的内存大小，主要针对TensorFlow estimator作业中evaluator角色的内存分配使用，单位为MB，默认与worker memory一致  
 xlearning.ps.num | 0 | ps启动数目，默认作业不使用ParameterServer机制  
 xlearning.ps.memory | 1024 | ps申请使用内存大小，默认单位为MB  
 xlearning.ps.cores | 1 | ps申请使用CPU核数  
@@ -30,8 +32,10 @@ xlearning.output.local.dir | output | 输出文件本地默认路径，该选项
 xlearning.output.strategy | UPLOAD | 输出文件加载策略，目前主要有DOWNLOAD、STREAM  
 xlearning.outputformat.class | TextMultiOutputFormat.class | STREAM模式下，输出文件outputformat类指定  
 xlearning.interresult.dir | /interResult_ | 指定模型中间结果上传至HDFS子路径  
-xlearning.interresult.upload.timeout | 30 * 60 * 1000 | 模型中间结果上传至HDFS超时时长设置，单位为毫秒
-xlearning.tf.evaluator | false | TensorFlow类型分布式作业中，是否将最后一个worker视为evaluator角色，主要针对Estimator高级API
+xlearning.interresult.upload.timeout | 30 * 60 * 1000 | 模型中间结果上传至HDFS超时时长设置，单位为毫秒  
+xlearning.interresult.save.inc | false | 模型中间结果是否增量上传，默认为全部上传    
+xlearning.tf.evaluator | false | TensorFlow类型分布式作业中，是否将最后一个worker视为evaluator角色，主要针对Estimator高级API  
+xlearning.tf.distribution.strategy | false | 是否使用TensorFLow分布式策略方法，默认为false  
 
 
 
@@ -68,6 +72,7 @@ xlearning.cleanup.enable | true | 作业结束后，是否删除资源上传HDFS
 xlearning.container.maxFailures.rate | 0.5 | 作业允许container失败比例上限  
 xlearning.download.file.retry | 3 | DOWNLOAD模式下，输入文件下载尝试次数  
 xlearning.download.file.thread.nums | 10 | DOWNLOAD模式下，输入文件下载线程数  
+xlearning.upload.output.thread.nums | 10 | UPLOAD模式下，输出文件上传线程数  
 xlearning.container.heartbeat.interval | 10 * 1000 | container向AM发送心跳时间间隔，单位为毫秒  
 xlearning.container.heartbeat.retry | 3 | container发送心跳尝试次数  
 xlearning.container.update.appstatus.interval | 3 * 1000 | container获取作业执行状态时间间隔，单位为毫秒  
@@ -78,9 +83,12 @@ xlearning.worker.mem.autoscale | 0.5 | 作业失败重试时，worker内存自�
 xlearning.ps.mem.autoscale | 0.2 | 作业失败重试时，ps内存自动增长比例   
 xlearning.app.max.attempts | 1 | 作业执行次数，默认执行失败后不重试   
 xlearning.report.container.status | true | client端打印container运行状态信息  
-xlearning.env.maxlength | 102400 | container启动程序执行时，环境变量长度上限
-xlearning.am.env.[EnvironmentVariableName] | (none) | 用户自定义am环境变量，用户可通过定义多项来设置多个环境变量
-xlearning.container.env.[EnvironmentVariableName] | (none) | 用户自定义container环境变量，用户可通过定义多项来设置多个环境变量
+xlearning.env.maxlength | 102400 | container启动程序执行时，环境变量长度上限  
+xlearning.am.env.[EnvironmentVariableName] | (none) | 用户自定义am环境变量，用户可通过定义多项来设置多个环境变量  
+xlearning.container.env.[EnvironmentVariableName] | (none) | 用户自定义container环境变量，用户可通过定义多项来设置多个环境变量  
+xlearning.am.nodeLabelExpression | (none) | 指定调度AM的yarn节点标签表达  
+xlearning.worker.nodeLabelExpression | (none) | 指定调度worker的yarn节点标签表达  
+xlearning.ps.nodeLabelExpression | (none) | 指定调度ps的yarn节点标签表达  
 
 
 
@@ -99,3 +107,21 @@ xlearning.history.webapp.https.port | 19885 | history服务web应用https开放�
 xlearning.history.webapp.https.address | 0.0.0.0:19885 | history服务web应用https开放地址  
 
 
+### MPI使用配置
+
+配置名称 | 默认值 | 含义   
+---------------- | --------------- | ---------------  
+xlearning.mpi.install.dir | /usr/local/openmpi | openmpi安装路径  
+xlearning.mpi.extra.ld.library.path | (none) | openmpi额外所需的lib包路径  
+xlearning.mpi.container.update.status.retry | 3 | 更新作业状态重试次数  
+
+
+### Docker使用配置
+
+配置名称 | 默认值 | 含义   
+---------------- | --------------- | ---------------  
+xlearning.container.type | yarn | container运行类型  
+xlearning.docker.registry.host | (none) | docker register地址  
+xlearning.docker.registry.port | (none) | docker register端口  
+xlearning.docker.image | (none) | docker镜像名称  
+xlearning.docker.worker.dir | /work | docker container工作目录  

@@ -13,6 +13,8 @@ xlearning.am.cores | 1 | number of cores to use for the AM process
 xlearning.worker.num | 1 | number of worker containers to use for the application  
 xlearning.worker.memory | 1024MB | amount of memory to use for the worker process  
 xlearning.worker.cores | 1 | number of cores to use for the worker process    
+xlearning.chief.worker.memory | 1024 | amount of memory for chief worker,especially for the index 0 worker of the TensorFlow application, default as the setting of the worker memory.   
+xlearning.evaluator.worker.memory | 1024 | amount of memory for evaluator worker, especially for the TensorFlow Estimator application, default as the setting of the worker memory.  
 xlearning.ps.num | 0 | number of ps containers to use for the application  
 xlearning.ps.memory | 1024MB | amount of memory to use for the ps process  
 xlearning.ps.cores | 1 | number of cores to use for the ps process   
@@ -30,10 +32,10 @@ xlearning.output.local.dir | output | If the local output path is not specified,
 xlearning.output.strategy | UPLOAD | loading strategy of output file, including DOWNLOAD, STREAM  
 xlearning.outputformat.class | TextMultiOutputFormat.class | which outputformat implementation to use in the STREAM strategy of output file  
 xlearning.interresult.dir | /interResult_ | specify the HDFS subdirectory that the intermediate output file upload to  
-xlearning.interresult.upload.timeout | 30 * 60 * 1000 | upload timeout to save the intermediate output (in milliseconds)
-xlearning.tf.evaluator | false | whether to set the last worker as evaluator of the distributed TensorFlow job type for the estimator api
-xlearning.am.env.[EnvironmentVariableName] | (none) |  Add the environment variable specified by EnvironmentVariableName to the AM process. The user can specify multiple of these to set multiple environment variables.
-xlearning.container.env.[EnvironmentVariableName] | (none) | Add the environment variable specified by EnvironmentVariableName to the Container process. The user can specify multiple of these to set multiple environment variables.
+xlearning.interresult.upload.timeout | 30 * 60 * 1000 | upload timeout to save the intermediate output (in milliseconds)  
+xlearning.interresult.save.inc | false | increment upload the intermediate output file, default not (upload all output file each time)
+xlearning.tf.evaluator | false | whether to set the last worker as evaluator of the distributed TensorFlow job type for the estimator api  
+xlearning.tf.distribution.strategy | false | whether use the distribution strategy API for the TensorFlow, default as false  
 
 
 
@@ -68,7 +70,8 @@ xlearning.staging.dir | /tmp/XLearning/staging | HDFS directory that application
 xlearning.cleanup.enable | true | whether delete the resources after the application finished  
 xlearning.container.maxFailures.rate | 0.5 | maximum percentage of the failure containers   
 xlearning.download.file.retry | 3 | Maximum number of retries for the input file download when the strategy of input file is DOWNLOAD  
-xlearning.download.file.thread.nums | 10 | number of download threads of the input file in the strategy of DOWNLOAD
+xlearning.download.file.thread.nums | 10 | number of download threads of the input file in the strategy of DOWNLOAD  
+xlearning.upload.output.thread.nums | 10 | number of upload threads of the output file in the strategy of UPLOAD  
 xlearning.container.heartbeat.interval | 10 * 1000 | interval between each container to the AM (in milliseconds)  
 xlearning.container.heartbeat.retry | 3 | Maximum number of retries for the container send the heartbeat to the AM  
 xlearning.container.update.appstatus.interval | 3 * 1000 | how often the containers get the state of the application process (in milliseconds)  
@@ -79,7 +82,12 @@ xlearning.worker.mem.autoscale | 0.5 | automatic memory scale ratio of worker wh
 xlearning.ps.mem.autoscale | 0.2 | automatic memory scale ratio of ps when application retry after failed.   
 xlearning.app.max.attempts | 1 | the number of application attempts， default not retry after failed.   
 xlearning.report.container.status | true | whether the client report the status of the container.  
-xlearning.env.maxlength | 102400 | the maximum length of environment variable when container execute the user program.
+xlearning.env.maxlength | 102400 | the maximum length of environment variable when container execute the user program.  
+xlearning.am.env.[EnvironmentVariableName] | (none) |  Add the environment variable specified by EnvironmentVariableName to the AM process. The user can specify multiple of these to set multiple environment variables.  
+xlearning.container.env.[EnvironmentVariableName] | (none) | Add the environment variable specified by EnvironmentVariableName to the Container process. The user can specify multiple of these to set multiple environment variables.  
+xlearning.am.nodeLabelExpression | (none) | A YARN node label expression that restricts the set of nodes AM will be scheduled on.  
+xlearning.worker.nodeLabelExpression | (none) | A YARN node label expression that restricts the set of nodes Worker will be scheduled on.  
+xlearning.ps.nodeLabelExpression | (none) | A YARN node label expression that restricts the set of nodes PS will be scheduled on.  
 
 
 
@@ -98,3 +106,20 @@ xlearning.history.webapp.https.port | 19885 | port for the history https web ser
 xlearning.history.webapp.https.address | 0.0.0.0:19885 | address for the history https web service  
 
 
+### MPI Configuration
+
+Property Name | Default | Meaning   
+---------------- | --------------- | ---------------  
+xlearning.mpi.install.dir | /usr/local/openmpi | the installation path of the openmpi  
+xlearning.mpi.extra.ld.library.path | (none) | the extra library path that openmpi need  
+xlearning.mpi.container.update.status.retry | 3 | the retry times for the container status update  
+
+
+### Docker Configuration
+
+---------------- | --------------- | ---------------  
+xlearning.container.type | yarn | container running type  
+xlearning.docker.registry.host | (none) | docker register host  
+xlearning.docker.registry.port | (none) | docker register port  
+xlearning.docker.image | (none) | docker image name  
+xlearning.docker.worker.dir | /work | the work dir of the docker container  

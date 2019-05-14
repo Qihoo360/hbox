@@ -26,6 +26,8 @@ ps-memory | amount of memory to use for the ps process (in MB), default as the c
 worker-num | number of worker containers to use for the application, default as the configure of xlearning.worker.num  
 worker-cores | number of cores to use for the worker process, default as the configure of xlearning.worker.cores  
 worker-memory | amount of memory to use for the worker process(in MB), default as the configure of xlearning.worker.memory  
+chiefworker-memory | amount of memory for the chief worker, especially for the index 0 worker of the TensorFlow application, default as the worker-memory  
+evaluatorworker-memory | amount of memory for the estimator worker, especially for the TensorFlow Estimator application, default as the worker-memory  
 queue | the queue of application submitted to, default as the configure of xlearning.app.queue  
 priority | the priority of application, default as the configure of xlearning.app.priority  
 board-enable | whether to start the service of Board, default as the configure of xlearning.tf.board.enable  

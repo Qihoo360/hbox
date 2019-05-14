@@ -135,3 +135,23 @@ User can get the file list like this:
 Upload the files using the `--files` to each container. Load the related path to the system path, such as `sys.path.append(os.getcwd())` before calling the module.  
 
 ### 14. Recommended to directly operate the hdfs data for input and model output if use the TensorFlow Estimator advanced API.  
+
+### 15. YARN greater than or equal to 2.6 support node label expressions, XLearning support to configure `xlearning.am.nodeLabelException`、`xlearning.worker.nodeLabelExpression`、`xlearning.ps.nodeLabelExpression` to define the scheduled node.  
+
+### 16. TensorFlow support various distribution strategy not limited the ps/worker, but getting the cluster information is still necessary. According to set the `--conf xlearning.tf.distribution.strategy=true` , XLearning build the cluster information for application which use the advanced api for TensorFlow distribution strategy.  
+
+### 17. The following is the required for MPI job,  
+1) Unzip the version 3.1.1 of openmpi package to `/usr/local` as `/usr/local/openmpinossh` which provided by XLearning under the `examples/mpi/`;  
+2）Configure the install dir to the xlearning-site.xml:  
+
+    <property>
+        <name>xlearning.mpi.install.dir</name>
+        <value>/usr/local/openmpinossh/</value>
+    </property>
+
+
+### 18. How to execute application in the docker?
+1）Set the container type as docker: `--conf xlearning.container.type=docker`；  
+2）Assign the docker image, such as `--conf xlearning.docker.image=tensorflow/tensorflow:devel-gpu`;   
+3）Define the working dir `--conf xlearning.docker.worker.dir=/work`;  
+

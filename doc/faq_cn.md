@@ -136,5 +136,24 @@ XLearning1.1版本中支持作业失败重试，并且重试后作业worker与ps
 ### 13.若存在用户自定义module于其他python文件中，如何处理？
 利用files参数，添加所需要的所有python文件，在调用其他自定义模块前，将python文件所在路径添加至系统路径，如：sys.path.append(os.getcwd())。  
 
-### 14.作业使用 TensorFlow Estimator 高级API中，建议采用直接操作hdfs的数据读取及模型输出模式。  
+### 14.作业使用 TensorFlow Estimator 高级API中，建议采用直接操作hdfs的数据读取及模型输出模式。 
+
+### 15.Yarn 2.6+ 版本中，提供有节点标签表达设置功能，XLearning可以通过指定配置项 `xlearning.am.nodeLabelExpression`、`xlearning.worker.nodeLabelExpression`、`xlearning.ps.nodeLabelExpression` 来对am、worker、ps各角色进行指定类型节点的提交。  
+
+### 16.目前TensorFlow提供有多种分布式策略供用户选择，并不局限于以往的ps架构，但仍旧需要各worker（或ps、estimator）之间的cluster信息。XLearning可通过设置 `--conf xlearning.tf.distribution.strategy=true` 来适配分布式策略高级API使用下的cluster构建。  
+
+### 17.MPI类型作业提交前，需要
+1) 将XLearning提供的openmpi包（在3.1.1版本上的修改，位于examples/mpi/下）解压至`/usr/local`下，则路径为`/usr/local/openmpinossh`;  
+2) 在XLearning客户端配置文件`xlearning-site.xml`中添加如下内容：
+
+    <property>
+        <name>xlearning.mpi.install.dir</name>
+        <value>/usr/local/openmpinossh/</value>
+    </property>
+
+
+### 18.如何以Docker环境运行作业？  
+1）通过`--conf xlearning.container.type=docker`设置执行类型为docker；  
+2）设置执行所用的镜像名称，如使用`tensorflow/tensorflow:devel-gpu`时，可设置为`--conf xlearning.docker.image=tensorflow/tensorflow:devel-gpu` ;    
+3）`--conf xlearning.docker.worker.dir=/work`设置镜像执行的工作路径，默认为`/work`;  
 
