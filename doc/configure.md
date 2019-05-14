@@ -117,6 +117,7 @@ xlearning.mpi.container.update.status.retry | 3 | the retry times for the contai
 
 ### Docker Configuration
 
+Property Name | Default | Meaning   
 ---------------- | --------------- | ---------------  
 xlearning.container.type | yarn | container running type  
 xlearning.docker.registry.host | (none) | docker register host  

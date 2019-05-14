@@ -6,7 +6,7 @@
 </div>
   
 [![license](https://img.shields.io/badge/license-Apache2.0-blue.svg?style=flat)](./LICENSE)
-[![Release Version](https://img.shields.io/badge/release-1.3-red.svg)]()
+[![Release Version](https://img.shields.io/badge/release-1.4-red.svg)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)]()
 
 
