@@ -21,13 +21,13 @@ import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.protocolrecords.*;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.records.*;
+import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.hadoop.yarn.client.api.YarnClient;
-import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
@@ -550,7 +550,21 @@ public class Client {
     GetNewApplicationResponse newAppResponse = newAPP.getNewApplicationResponse();
     applicationId = newAppResponse.getApplicationId();
     LOG.info("Got new Application: " + applicationId.toString());
+    conf.set(HboxConfiguration.HBOX_APP_ID, applicationId.toString());
     maxContainerMem = newAppResponse.getMaximumResourceCapability().getMemory();
+
+    if (clientArguments.appType.equals("VPC") || clientArguments.appType.equals("DIGITS") || clientArguments.appType.equals("MPI") || clientArguments.appType.equals("HOROVOD")) {
+      conf.set(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE);
+    }
+
+    if (conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE).equalsIgnoreCase("docker")) {
+      String imageName = conf.get(HboxConfiguration.HBOX_DOCKER_IMAGE_NAME,
+          HboxConfiguration.DEFALUT_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
+      if (imageName == null || imageName.equals("")) {
+        conf.set(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE);
+      }
+    }
+    LOG.info("Current container type: " + conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE));
 
     dfs = FileSystem.get(conf);
     Path jobConfPath = Utilities
@@ -840,9 +854,12 @@ public class Client {
     int overHeadMem = (int) Math.max(driverMem * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
         conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
     driverMem += overHeadMem;
+    int driverCores = conf.getInt(HboxConfiguration.HBOX_DRIVER_CORES, HboxConfiguration.DEFAULT_HBOX_DRIVER_CORES);
     capability.setMemory(Math.min(driverMem, maxContainerMem));
-    capability.setVirtualCores(conf.getInt(HboxConfiguration.HBOX_DRIVER_CORES, HboxConfiguration.DEFAULT_HBOX_DRIVER_CORES));
+    capability.setVirtualCores(driverCores);
     applicationContext.setResource(capability);
+    appMasterEnv.put("DOCKER_CONTAINER_MEMORY", driverMem + "");
+    appMasterEnv.put("DOCKER_CONTAINER_CPU", driverCores + "");
     ContainerLaunchContext amContainer = ContainerLaunchContext.newInstance(
         localResources, appMasterEnv, appMasterLaunchcommands, null, null, null);
 

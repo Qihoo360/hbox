@@ -43,7 +43,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class ApplicationMaster extends CompositeService {
 
   private static final Log LOG = LogFactory.getLog(ApplicationMaster.class);
-  private final Configuration conf;
+  private final HboxConfiguration conf;
   private Map<String, String> envs;
   private AMRMClientAsync<ContainerRequest> amrmAsync;
   private NMClientAsync nmAsync;
@@ -140,6 +140,9 @@ public class ApplicationMaster extends CompositeService {
   private int reservePortBegin = 0;
   private int reservePortEnd = 0;
 
+  private ILaunch processLaunch;
+  private String containerType;
+
   /**
    * Constructor, connect to Resource Manager
    *
@@ -223,6 +226,34 @@ public class ApplicationMaster extends CompositeService {
         + ", clustertimestamp="
         + applicationAttemptID.getApplicationId().getClusterTimestamp()
         + ", attemptId=" + applicationAttemptID.getAttemptId());
+
+    containerType = this.conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE);
+    LOG.info("Current container type: " + this.containerType);
+    if (containerType.equalsIgnoreCase("docker")) {
+      processLaunch = new DockerLaunch(amContainerId, conf);
+      Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            Runtime rt = Runtime.getRuntime();
+            String dockerPullCommand = "docker kill " + amContainerId;
+            LOG.info("Docker kill command:" + dockerPullCommand);
+            Process process = rt.exec(dockerPullCommand);
+            int i = process.waitFor();
+            LOG.info("Docker Kill Wait:" + (i == 0 ? "Success" : "Failed"));
+            BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = br.readLine()) != null) {
+              LOG.info(line);
+            }
+          } catch (Exception e) {
+            LOG.warn("Docker Kill Error:", e);
+          }
+        }
+      }));
+    } else {
+      processLaunch = new YarnLaunch(amContainerId);
+    }
 
     if (applicationAttemptID.getAttemptId() > 1 && (conf.getInt(HboxConfiguration.HBOX_APP_MAX_ATTEMPTS, HboxConfiguration.DEFAULT_HBOX_APP_MAX_ATTEMPTS) > 1)) {
       workerMemory = workerMemory + (applicationAttemptID.getAttemptId() - 1) * (int) Math.ceil(workerMemory * conf.getDouble(HboxConfiguration.HBOX_WORKER_MEM_AUTO_SCALE, HboxConfiguration.DEFAULT_HBOX_WORKER_MEM_AUTO_SCALE));
@@ -1150,6 +1181,17 @@ public class ApplicationMaster extends CompositeService {
       containerEnv.put(HboxConstants.Environment.HBOX_INPUT_PATH.toString(), this.inputPath.substring(0, inputPath.length() - 1));
     }
 
+    if (role.equalsIgnoreCase(HboxConstants.PS)) {
+      containerEnv.put("DOCKER_CONTAINER_MEMORY", psMemory + "");
+      containerEnv.put("DOCKER_CONTAINER_CPU", psVCores + "");
+    } else if (role.equalsIgnoreCase(HboxConstants.WORKER)) {
+      containerEnv.put("DOCKER_CONTAINER_MEMORY", workerMemory + "");
+      containerEnv.put("DOCKER_CONTAINER_CPU", workerVCores + "");
+    } else if (role.equalsIgnoreCase(HboxConstants.EVALUATOR)) {
+      containerEnv.put("DOCKER_CONTAINER_MEMORY", evaluatorWorkerMemory + "");
+      containerEnv.put("DOCKER_CONTAINER_CPU", workerVCores + "");
+    }
+
     if(hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS") || containerType.toUpperCase().equals("DOCKER")) {
       String imageName = conf.get(HboxConfiguration.DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME,
               HboxConfiguration.DEFALUT_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
@@ -1299,7 +1341,7 @@ public class ApplicationMaster extends CompositeService {
     commandBuilder.deleteCharAt(commandBuilder.length() - 1);
     commandBuilder.append(" ").append(hboxCommand);
 
-    String[] envs = new String[]{
+    String[] env = new String[]{
             "PATH=" + System.getenv("PATH"),
             "PWD=" + mpiExecDir,
             "LD_LIBRARY_PATH=" + ldLibraryPath.toString()
@@ -1307,15 +1349,8 @@ public class ApplicationMaster extends CompositeService {
 
     File mpiExec = new File(mpiExecDir);
     LOG.info("Executing mpi exec command: " + commandBuilder.toString());
-    Runtime rt = Runtime.getRuntime();
-
-    StringTokenizer tokenizer = new StringTokenizer(commandBuilder.toString());
-    String[] commandArray = new String[tokenizer.countTokens()];
-    for (int i = 0; tokenizer.hasMoreTokens(); i++) {
-      commandArray[i] = tokenizer.nextToken();
-    }
     LOG.info("Mpi exec Process run in: " + mpiExec.toString());
-    mpiExecProcess = rt.exec(commandArray, envs, mpiExec);
+    mpiExecProcess = processLaunch.exec(commandBuilder.toString(), env, this.envs, mpiExec);
 
     Thread stdinThread = new Thread(new Runnable() {
       @Override
@@ -1426,43 +1461,36 @@ public class ApplicationMaster extends CompositeService {
     commandBuilder.append("-bind-to none -map-by slot -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH -mca pml ob1 -mca btl ^openib ");
     commandBuilder.append(hboxCommand);
 
-    List<String> envs = new ArrayList<>(20);
+    List<String> env = new ArrayList<>(20);
     Map<String, String> userEnv = new HashMap<>();
     if (conf.get(HboxConfiguration.HBOX_CONTAINER_ENV) != null) {
-      String[] env = StringUtils.split(conf.get(HboxConfiguration.HBOX_CONTAINER_ENV), "|");
-      for (String envPair : env) {
+      String[] containerEnv = StringUtils.split(conf.get(HboxConfiguration.HBOX_CONTAINER_ENV), "|");
+      for (String envPair : containerEnv) {
         String[] userEnvPair = StringUtils.split(envPair, "=");
         if (userEnvPair.length != 2) {
           LOG.error(envPair + " is not correct");
         } else {
-          envs.add(envPair);
+          env.add(envPair);
           userEnv.put(userEnvPair[0], userEnvPair[1]);
         }
       }
     }
-    envs.add("PWD=" + mpiExecDir);
+    env.add("PWD=" + mpiExecDir);
     if (userEnv.containsKey("PATH")) {
-      envs.add("PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
+      env.add("PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
     } else {
-      envs.add("PATH=" + System.getenv("PATH"));
+      env.add("PATH=" + System.getenv("PATH"));
     }
     if (userEnv.containsKey("LD_LIBRARY_PATH")) {
-      envs.add("LD_LIBRARY_PATH=" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + ldLibraryPath.toString());
+      env.add("LD_LIBRARY_PATH=" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + ldLibraryPath.toString());
     } else {
-      envs.add("LD_LIBRARY_PATH=" + ldLibraryPath.toString());
+      env.add("LD_LIBRARY_PATH=" + ldLibraryPath.toString());
     }
 
     File mpiExec = new File(mpiExecDir);
     LOG.info("Executing horovod exec command: " + commandBuilder.toString());
-    Runtime rt = Runtime.getRuntime();
-
-    StringTokenizer tokenizer = new StringTokenizer(commandBuilder.toString());
-    String[] commandArray = new String[tokenizer.countTokens()];
-    for (int i = 0; tokenizer.hasMoreElements(); i++) {
-      commandArray[i] = tokenizer.nextToken();
-    }
     LOG.info("Horovod mpi exec Process run in: " + mpiExec.toString());
-    mpiExecProcess = rt.exec(commandArray, envs.toArray(new String[envs.size()]), mpiExec);
+    mpiExecProcess = processLaunch.exec(commandBuilder.toString(), env.toArray(new String[env.size()]), this.envs, mpiExec);
 
     Thread stdinThread = new Thread(new Runnable() {
       @Override
@@ -1939,9 +1967,8 @@ public class ApplicationMaster extends CompositeService {
       LOG.info(HboxConstants.Environment.HBOX_DMLC_SERVER_NUM.toString() + "=" + psNum);
 
       try {
-        Runtime rt = Runtime.getRuntime();
         schedulerReservedSocket.close();
-        final Process mxnetSchedulerProcess = rt.exec(hboxCommand, schedulerEnv.toArray(new String[schedulerEnv.size()]));
+        final Process mxnetSchedulerProcess = processLaunch.exec(hboxCommand, schedulerEnv.toArray(new String[schedulerEnv.size()]), this.envs, null);
         LOG.info("Starting thread to redirect stdout of mxnet scheduler process");
         Thread mxnetSchedulerRedirectThread = new Thread(new Runnable() {
           @Override
@@ -2047,9 +2074,8 @@ public class ApplicationMaster extends CompositeService {
       LOG.info("DMLC_NUM_WORKER=" + workerNum);
 
       try {
-        Runtime rt = Runtime.getRuntime();
         schedulerReservedSocket.close();
-        final Process xgboostSchedulerProcess = rt.exec(distXgboostSchedulerCmd, schedulerEnv.toArray(new String[schedulerEnv.size()]));
+        final Process xgboostSchedulerProcess = processLaunch.exec(distXgboostSchedulerCmd, schedulerEnv.toArray(new String[schedulerEnv.size()]), this.envs, null);
         LOG.info("Starting thread to redirect stdout of xgboost scheduler process");
         Thread xgboostSchedulerRedirectThread = new Thread(new Runnable() {
           @Override
@@ -2168,9 +2194,8 @@ public class ApplicationMaster extends CompositeService {
       LOG.info(HboxConstants.Environment.HBOX_DMLC_SERVER_NUM.toString() + "=" + psNum);
 
       try {
-        Runtime rt = Runtime.getRuntime();
         schedulerReservedSocket.close();
-        final Process xflowSchedulerProcess = rt.exec(hboxCommand, schedulerEnv.toArray(new String[schedulerEnv.size()]));
+        final Process xflowSchedulerProcess = processLaunch.exec(hboxCommand, schedulerEnv.toArray(new String[schedulerEnv.size()]), this.envs, null);
         LOG.info("Starting thread to redirect stdout of xflow scheduler process");
         Thread xflowSchedulerRedirectThread = new Thread(new Runnable() {
           @Override

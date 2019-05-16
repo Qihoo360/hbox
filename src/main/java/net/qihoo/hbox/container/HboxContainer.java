@@ -5,10 +5,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import net.qihoo.hbox.api.ApplicationContainerProtocol;
 import net.qihoo.hbox.api.HboxConstants;
-import net.qihoo.hbox.common.InputInfo;
-import net.qihoo.hbox.common.OutputInfo;
-import net.qihoo.hbox.common.HboxContainerStatus;
-import net.qihoo.hbox.common.UploadTask;
+import net.qihoo.hbox.common.*;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.util.Utilities;
 import org.apache.commons.lang.StringUtils;
@@ -104,6 +101,10 @@ public class HboxContainer {
 
   private String localHost;
 
+  private ILaunch containerLaunch;
+
+  private String containerType;
+
   private HboxContainer() {
     this.conf = new HboxConfiguration();
     conf.addResource(new Path(HboxConstants.HBOX_JOB_CONFIGURATION));
@@ -182,6 +183,36 @@ public class HboxContainer {
     heartbeatInterval = this.conf.getInt(HboxConfiguration.HBOX_CONTAINER_HEARTBEAT_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_HEARTBEAT_INTERVAL);
     reservedSocket = new Socket();
 
+    this.inputFileList = "";
+    this.containerType = conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE);
+    LOG.info("Current container type: " + this.containerType);
+    if (containerType.equalsIgnoreCase("docker")) {
+      containerLaunch = new DockerLaunch(containerId.getContainerId().toString(), conf);
+      Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            String containerIdStr = containerId.getContainerId().toString();
+            Runtime rt = Runtime.getRuntime();
+            String dockerPullCommand = "docker kill " + containerIdStr;
+            LOG.info("Docker kill command:" + dockerPullCommand);
+            Process process = rt.exec(dockerPullCommand);
+            int i = process.waitFor();
+            LOG.info("Docker Kill Wait:" + (i == 0 ? "Success" : "Failed"));
+            BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = br.readLine()) != null) {
+              LOG.info(line);
+            }
+          } catch (Exception e) {
+            LOG.warn("Docker Kill Error:", e);
+          }
+        }
+      }));
+    } else {
+      containerLaunch = new YarnLaunch(containerId.getContainerId().toString());
+    }
+
     this.signalID = -1;
   }
 
@@ -205,9 +236,10 @@ public class HboxContainer {
     heartbeatThread.setContainerStatus(HboxContainerStatus.INITIALIZING);
     containerReporter = null;
 
-    if (("TENSORFLOW".equals(hboxAppType) && !single) || hboxAppType.equals("DIGITS") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || (hboxAppType.equals("DISTTORCH") && this.index == 0)) {
+    if (("TENSORFLOW".equals(hboxAppType) && !single) || hboxAppType.equals("DIGITS") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || (hboxAppType.equals("DISTTORCH") && this.index == 0) || containerType.equalsIgnoreCase("docker")) {
       try {
         Utilities.getReservePort(reservedSocket, InetAddress.getByName(localHost).getHostAddress(), reservePortBegin, reservePortEnd);
+        conf.set("RESERVED_PORT", reservedSocket.getLocalPort() + "");
       } catch (IOException e) {
         LOG.error("Can not get available port");
         reportFailedAndExit();
@@ -527,7 +559,7 @@ public class HboxContainer {
 
         if (boardUpload && boardLocalFs.exists(localLogPath) && boardEnable && boardIndex == this.index && !this.role.equals(HboxConstants.EVALUATOR)) {
           if (boardDfs.exists(remoteLogPath)) {
-            LOG.info("Container remote board log output path " + remoteLogPath + "exists, so we has to delete is first.");
+            LOG.info("Container remote board log output path " + remoteLogPath + " exists, so we has to delete is first.");
             boardDfs.delete(remoteLogPath);
           }
           boardDfs.copyFromLocalFile(false, false, localLogPath, remoteLogPath);
@@ -933,14 +965,16 @@ public class HboxContainer {
     }
 
     if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("PLACEHOLDER")) {
-      envList.add(HboxConstants.Environment.HBOX_INPUT_FILE_LIST.toString() + "=" + this.inputFileList);
-      if (envList.toString().length() > conf.getInt(HboxConfiguration.HBOX_ENV_MAXLENGTH, HboxConfiguration.DEFAULT_HBOX_ENV_MAXLENGTH)) {
-        LOG.warn("Current container environments length " + envList.toString().length() + " exceed the configuration " + HboxConfiguration.HBOX_ENV_MAXLENGTH + " " + conf.getInt(HboxConfiguration.HBOX_ENV_MAXLENGTH, HboxConfiguration.DEFAULT_HBOX_ENV_MAXLENGTH));
-        envList.remove(envList.size() - 1);
-        LOG.warn("InputFile list had written to local file: inputFileList.txt !!");
-        PrintWriter writer = new PrintWriter("inputFileList.txt", "UTF-8");
-        writer.println(this.inputFileList);
-        writer.close();
+      if (this.inputFileList != null && this.inputFileList.trim() != "") {
+        envList.add(HboxConstants.Environment.HBOX_INPUT_FILE_LIST.toString() + "=" + this.inputFileList);
+        if (envList.toString().length() > conf.getInt(HboxConfiguration.HBOX_ENV_MAXLENGTH, HboxConfiguration.DEFAULT_HBOX_ENV_MAXLENGTH)) {
+          LOG.warn("Current container environments length " + envList.toString().length() + " exceed the configuration " + HboxConfiguration.HBOX_ENV_MAXLENGTH + " " + conf.getInt(HboxConfiguration.HBOX_ENV_MAXLENGTH, HboxConfiguration.DEFAULT_HBOX_ENV_MAXLENGTH));
+          envList.remove(envList.size() - 1);
+          LOG.warn("InputFile list had written to local file: inputFileList.txt !!");
+          PrintWriter writer = new PrintWriter("inputFileList.txt", "UTF-8");
+          writer.println(this.inputFileList);
+          writer.close();
+        }
       }
     }
 
@@ -995,12 +1029,13 @@ public class HboxContainer {
     //close reserved socket as tf will bind this port later
     this.reservedSocket.close();
     String[] env = envList.toArray(new String[envList.size()]);
-    final Process hboxProcess;
+    File dir = null;
     if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
-      hboxProcess = rt.exec(command, env, new File(this.mpiAppDir));
-    } else {
-      hboxProcess = rt.exec(command, env);
+      dir = new File(this.mpiAppDir);
     }
+    final Process hboxProcess;
+    hboxProcess = containerLaunch.exec(command, env, envs, dir);
+
     Date now = new Date();
     heartbeatThread.setContainersStartTime(now.toString());
 

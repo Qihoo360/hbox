@@ -28,6 +28,12 @@ public class HboxConfiguration extends YarnConfiguration {
   /**
    * Configuration used in Client
    */
+  public static final String HBOX_CONTAINER_TYPE = "hbox.container.type";
+
+  public static final String DEFAULT_HBOX_CONTAINER_TYPE = "yarn";
+
+  public static final String HBOX_APP_ID = "hbox.app.id";
+
   public static final String DEFAULT_HBOX_APP_TYPE = "HBOX";
 
   public static final String HBOX_CLUSTER_NAME = "hbox.cluster.name";
@@ -487,6 +493,13 @@ public class HboxConfiguration extends YarnConfiguration {
 
   public static final String CONTAINER_EXECUTOR_TYPE = "yarn.nodemanager.container-executor.type";
   public static final String DEFAULT_CONTAINER_EXECUTOR_TYPE = "";
+
+  public static final String HBOX_DOCKER_IMAGE_NAME = "hbox.docker.image.name";
+
+  public static final String HBOX_DOCKER_WORK_DIR = "hbox.docker.work.dir";
+  public static final String DEFAULT_HBOX_DOCKER_WORK_DIR = "work";
+
+  public static final String HBOX_DOCKER_RUN_ARGS = "hbox.docker.run.args";
 
   /** Configuration for mpi app */
   public static final String HBOX_MPI_EXEC_DIR_ENABLE = "hbox.mpi.exec.dir.enable";
