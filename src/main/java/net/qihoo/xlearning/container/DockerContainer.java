@@ -71,13 +71,13 @@ public class DockerContainer implements IContainerLaunch {
     String javaPath = envs.get("JAVA_HOME");
     if (javaPath != null && javaPath != "")
       mount += " -v " + javaPath + ":" + javaPath + ":ro";
-    String[] localDirs = envs.get("LOCAL_DIRS").split(File.pathSeparator);
+    String[] localDirs = envs.get("LOCAL_DIRS").split(",");
     if (localDirs.length > 0) {
       for (String perPath : localDirs) {
         mount = mount + " -v " + perPath + ":" + perPath;
       }
     }
-    String[] logsDirs = envs.get("LOG_DIRS").split(File.pathSeparator);
+    String[] logsDirs = envs.get("LOG_DIRS").split(",");
     if (localDirs.length > 0) {
       for (String perPath : logsDirs) {
         mount = mount + " -v " + perPath + ":" + perPath;
