@@ -176,6 +176,15 @@ public class Client {
       }
     }
 
+    if ("XDL".equals(clientArguments.appType)) {
+      int psNum = conf.getInt(HboxConfiguration.HBOX_PS_NUM, HboxConfiguration.DEFAULT_HBOX_PS_NUM);
+      if (psNum == 0) {
+        conf.setBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, true);
+      } else {
+        conf.setInt(HboxConfiguration.HBOX_PS_NUM, psNum + 1);
+      }
+    }
+
     if (!("VPC".equals(clientArguments.appType) || "DIGITS".equals(clientArguments.appType))) {
       if (conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM) == 1) {
         conf.setInt(HboxConfiguration.HBOX_TF_BOARD_WORKER_INDEX, 0);
@@ -287,7 +296,7 @@ public class Client {
         FileSystem fs = path.getFileSystem(conf);
         FileStatus[] pathStatus = fs.globStatus(path);
         if (pathStatus == null || pathStatus.length <= 0) {
-          throw new IOException("Input path " + path + "not existed!");
+          throw new IOException("Input path " + path + " not existed!");
         }
         fs.close();
       }
@@ -427,7 +436,7 @@ public class Client {
       }
     }
 
-    if ("TENSORFLOW".equals(clientArguments.appType) || "MXNET".equals(clientArguments.appType) || "DISTLIGHTLDA".equals(clientArguments.appType) || "XFLOW".equals(clientArguments.appType)) {
+    if ("TENSORFLOW".equals(clientArguments.appType) || "MXNET".equals(clientArguments.appType) || "DISTLIGHTLDA".equals(clientArguments.appType) || "XFLOW".equals(clientArguments.appType) || "XDL".equals(clientArguments.appType)) {
       Boolean single;
       if("TENSORFLOW".equals(clientArguments.appType)) {
         single = conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE);
@@ -555,6 +564,14 @@ public class Client {
 
     if (clientArguments.appType.equals("VPC") || clientArguments.appType.equals("DIGITS") || clientArguments.appType.equals("MPI") || clientArguments.appType.equals("HOROVOD")) {
       conf.set(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE);
+    } else if (clientArguments.appType.equals("XDL")) {
+      conf.set(HboxConfiguration.HBOX_CONTAINER_TYPE, "docker");
+    }
+
+    if (conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE).equalsIgnoreCase("docker")) {
+      conf.set("DOCKER_CONTAINER_NETWORK", "host");
+      conf.set("DOCKER_PORT", "");
+      conf.set("RESERVED_PORT", "");
     }
 
     if (conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE).equalsIgnoreCase("docker")) {
@@ -643,7 +660,8 @@ public class Client {
           appFilesRemotePath.deleteCharAt(appFilesRemotePath.length() - 1).toString());
 
       if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
-          || clientArguments.appType.equals("XFLOW")) {
+          || clientArguments.appType.equals("XFLOW")
+          || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
         String appFilesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_FILES_LOCATION.toString());
         String[] tfFiles = StringUtils.split(appFilesRemoteLocation, ",");
         for (String file : tfFiles) {
@@ -680,7 +698,8 @@ public class Client {
               appLibJarsRemotePath.deleteCharAt(appLibJarsRemotePath.length() - 1).toString());
 
       if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
-          || clientArguments.appType.equals("XFLOW")) {
+          || clientArguments.appType.equals("XFLOW")
+          || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
         String appFilesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_LIBJARS_LOCATION.toString());
         String[] tfFiles = StringUtils.split(appFilesRemoteLocation, ",");
         for (String file : tfFiles) {
@@ -711,8 +730,9 @@ public class Client {
 
     if (clientArguments.hboxCacheFiles != null && !clientArguments.hboxCacheFiles.equals("")) {
       appMasterEnv.put(HboxConstants.Environment.HBOX_CACHE_FILE_LOCATION.toString(), clientArguments.hboxCacheFiles);
-      if((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
-              || clientArguments.appType.equals("DISTXGBOOST") || clientArguments.appType.equals("XFLOW")) {
+      if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
+          || clientArguments.appType.equals("DISTXGBOOST") || clientArguments.appType.equals("XFLOW")
+          || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
         URI defaultUri = new Path(conf.get("fs.defaultFS")).toUri();
         LOG.info("default URI is " + defaultUri.toString());
         String appCacheFilesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_CACHE_FILE_LOCATION.toString());
@@ -748,8 +768,9 @@ public class Client {
 
     if (clientArguments.hboxCacheArchives != null && !clientArguments.hboxCacheArchives.equals("")) {
       appMasterEnv.put(HboxConstants.Environment.HBOX_CACHE_ARCHIVE_LOCATION.toString(), clientArguments.hboxCacheArchives);
-      if((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
-              || clientArguments.appType.equals("DISTXGBOOST") || clientArguments.appType.equals("XFLOW")) {
+      if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
+          || clientArguments.appType.equals("DISTXGBOOST") || clientArguments.appType.equals("XFLOW")
+          || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
         URI defaultUri = new Path(conf.get("fs.defaultFS")).toUri();
         String appCacheArchivesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_CACHE_ARCHIVE_LOCATION.toString());
         String[] cacheArchives = StringUtils.split(appCacheArchivesRemoteLocation, ",");

@@ -143,6 +143,10 @@ public class ApplicationMaster extends CompositeService {
   private ILaunch processLaunch;
   private String containerType;
 
+  private String xdlZkUri;
+  private int xdlZkPort;
+  private String schedulerContainerId;
+
   /**
    * Constructor, connect to Resource Manager
    *
@@ -189,6 +193,7 @@ public class ApplicationMaster extends CompositeService {
     tfEvaluator = conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR);
     tfEvaluatorContainerId = "";
     chiefWorkerContainerId = "";
+    schedulerContainerId = "";
     acquiredWorkerContainers = new ArrayList<>();
     acquiredPsContainers = new ArrayList<>();
     acquiredChiefWorkerContainers = new ArrayList<>();
@@ -197,6 +202,8 @@ public class ApplicationMaster extends CompositeService {
     dmlcPsRootPort = 0;
     dmlcTrackerUri = null;
     dmlcTrackerPort = 0;
+    xdlZkUri = null;
+    xdlZkPort = 0;
     libJarsClassPath = "";
     containerHostnames = null;
     hostLocals = null;
@@ -236,9 +243,9 @@ public class ApplicationMaster extends CompositeService {
         public void run() {
           try {
             Runtime rt = Runtime.getRuntime();
-            String dockerPullCommand = "docker kill " + amContainerId;
-            LOG.info("Docker kill command:" + dockerPullCommand);
-            Process process = rt.exec(dockerPullCommand);
+            String dockerKillCommand = "docker kill " + amContainerId;
+            LOG.info("Docker kill command:" + dockerKillCommand);
+            Process process = rt.exec(dockerKillCommand);
             int i = process.waitFor();
             LOG.info("Docker Kill Wait:" + (i == 0 ? "Success" : "Failed"));
             BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -588,10 +595,16 @@ public class ApplicationMaster extends CompositeService {
             } else {
               containerMessage.add("-");
             }
-            if(hboxAppType.equals("TENSORFLOW")) {
+            if (hboxAppType.equals("TENSORFLOW")) {
               containerMessage.add("ps");
             } else if (hboxAppType.equals("MXNET") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XFLOW")) {
               containerMessage.add("server");
+            } else if (hboxAppType.equals("XDL")) {
+              if (currentContainerID.toString().equals(schedulerContainerId)) {
+                containerMessage.add(HboxConstants.SCHEDULER);
+              } else {
+                containerMessage.add("ps");
+              }
             }
             HboxContainerStatus status = applicationContext.getContainerStatus(currentContainerID);
             if (status != null) {
@@ -1019,7 +1032,7 @@ public class ApplicationMaster extends CompositeService {
       }
     }
 
-    if("TENSORFLOW".equals(hboxAppType) && psNum > 0) {
+    if(psNum > 0) {
       Resource psCapability = Records.newRecord(Resource.class);
       int psOverheadMem = (int) Math.max(psMemory * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
           conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
@@ -1027,33 +1040,6 @@ public class ApplicationMaster extends CompositeService {
       psCapability.setVirtualCores(psVCores);
       psCapability.setGpuCores(psGCores);
       psContainerRequest = new ContainerRequest(psCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
-      LOG.info("Create ps container request: " + psContainerRequest.toString());
-    }
-
-    if("MXNET".equals(hboxAppType) && !singleMx) {
-      Resource psCapability = Records.newRecord(Resource.class);
-      psCapability.setMemory(psMemory);
-      psCapability.setVirtualCores(psVCores);
-      psCapability.setGpuCores(psGCores);
-      psContainerRequest = new ContainerRequest(psCapability, hostLocals, null, priority);
-      LOG.info("Create ps container request: " + psContainerRequest.toString());
-    }
-
-    if ("DISTLIGHTLDA".equals(hboxAppType)) {
-      Resource psCapability = Records.newRecord(Resource.class);
-      psCapability.setMemory(psMemory);
-      psCapability.setVirtualCores(psVCores);
-      psCapability.setGpuCores(psGCores);
-      psContainerRequest = new ContainerRequest(psCapability, hostLocals, null, priority);
-      LOG.info("Create ps container request: " + psContainerRequest.toString());
-    }
-
-    if ("XFLOW".equals(hboxAppType)) {
-      Resource psCapability = Records.newRecord(Resource.class);
-      psCapability.setMemory(psMemory);
-      psCapability.setVirtualCores(psVCores);
-      psCapability.setGpuCores(psGCores);
-      psContainerRequest = new ContainerRequest(psCapability, hostLocals, null, priority);
       LOG.info("Create ps container request: " + psContainerRequest.toString());
     }
   }
@@ -1181,15 +1167,17 @@ public class ApplicationMaster extends CompositeService {
       containerEnv.put(HboxConstants.Environment.HBOX_INPUT_PATH.toString(), this.inputPath.substring(0, inputPath.length() - 1));
     }
 
-    if (role.equalsIgnoreCase(HboxConstants.PS)) {
-      containerEnv.put("DOCKER_CONTAINER_MEMORY", psMemory + "");
-      containerEnv.put("DOCKER_CONTAINER_CPU", psVCores + "");
-    } else if (role.equalsIgnoreCase(HboxConstants.WORKER)) {
-      containerEnv.put("DOCKER_CONTAINER_MEMORY", workerMemory + "");
-      containerEnv.put("DOCKER_CONTAINER_CPU", workerVCores + "");
-    } else if (role.equalsIgnoreCase(HboxConstants.EVALUATOR)) {
-      containerEnv.put("DOCKER_CONTAINER_MEMORY", evaluatorWorkerMemory + "");
-      containerEnv.put("DOCKER_CONTAINER_CPU", workerVCores + "");
+    if (conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE).equalsIgnoreCase("docker")) {
+      if (role.equalsIgnoreCase(HboxConstants.PS) || role.equalsIgnoreCase(HboxConstants.SCHEDULER)) {
+        containerEnv.put("DOCKER_CONTAINER_MEMORY", psMemory + "");
+        containerEnv.put("DOCKER_CONTAINER_CPU", psVCores + "");
+      } else if (role.equalsIgnoreCase(HboxConstants.WORKER)) {
+        containerEnv.put("DOCKER_CONTAINER_MEMORY", workerMemory + "");
+        containerEnv.put("DOCKER_CONTAINER_CPU", workerVCores + "");
+      } else if (role.equalsIgnoreCase(HboxConstants.EVALUATOR)) {
+        containerEnv.put("DOCKER_CONTAINER_MEMORY", evaluatorWorkerMemory + "");
+        containerEnv.put("DOCKER_CONTAINER_CPU", workerVCores + "");
+      }
     }
 
     if(hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS") || containerType.toUpperCase().equals("DOCKER")) {
@@ -1240,6 +1228,18 @@ public class ApplicationMaster extends CompositeService {
 
     if (hboxAppType.equals("DISTTORCH")) {
       containerEnv.put("WORLD_SIZE", String.valueOf(workerNum));
+    }
+
+    if (hboxAppType.equals("XDL") && psNum > 0) {
+      containerEnv.put("ZK_ADDR", "zfs://" + xdlZkUri + ":" + xdlZkPort + "/" + applicationAttemptID.toString());
+      if (role.equalsIgnoreCase(HboxConstants.WORKER)) {
+        containerEnv.put("TASK_NUM", String.valueOf(workerNum));
+      }
+      if (role.equalsIgnoreCase(HboxConstants.SCHEDULER)) {
+        containerEnv.put("PS_NUM", String.valueOf(psNum - 1));
+        containerEnv.put("PS_CPU_CORES", String.valueOf(psVCores));
+        containerEnv.put("PS_MEMORY_M", String.valueOf(psMemory));
+      }
     }
 
     if(conf.getBoolean(HboxConfiguration.HBOX_USER_CLASSPATH_FIRST, HboxConfiguration.DEFAULT_HBOX_USER_CLASSPATH_FIRST)) {
@@ -1648,19 +1648,7 @@ public class ApplicationMaster extends CompositeService {
       amrmAsync.addContainerRequest(psContainerRequest);
     }
 
-    if("TENSORFLOW".equals(hboxAppType) && psNum > 0) {
-      LOG.info("Try to allocate " + psNum + " ps containers");
-    }
-
-    if("MXNET".equals(hboxAppType) && !singleMx) {
-      LOG.info("Try to allocate " + psNum + " ps containers");
-    }
-
-    if("DISTLIGHTLDA".equals(hboxAppType)) {
-      LOG.info("Try to allocate " + psNum + " ps containers");
-    }
-
-    if("XFLOW".equals(hboxAppType)) {
+    if(psNum > 0) {
       LOG.info("Try to allocate " + psNum + " ps containers");
     }
 
@@ -2145,7 +2133,6 @@ public class ApplicationMaster extends CompositeService {
       }
       dmlcPsRootPort = schedulerReservedSocket.getLocalPort();
 
-
       List<String> schedulerEnv = new ArrayList<>(20);
       Map<String, String> userEnv = new HashMap<>();
       if (conf.get(HboxConfiguration.HBOX_CONTAINER_ENV) != null) {
@@ -2265,6 +2252,114 @@ public class ApplicationMaster extends CompositeService {
       }
     }
 
+    // launch xdl zk and scheduler process
+    if (hboxAppType.equals("XDL")) {
+      LOG.info("Setting environments for the xdl scheduler");
+      InetAddress address = null;
+      try {
+        address = InetAddress.getByName(applicationMasterHostname);
+        xdlZkUri = address.getHostAddress();
+      } catch (UnknownHostException e) {
+        LOG.info("acquire host ip failed " + e);
+      }
+      Socket schedulerReservedSocket = new Socket();
+      try {
+        Utilities.getReservePort(schedulerReservedSocket, InetAddress.getByName(applicationMasterHostname).getHostAddress(), reservePortBegin, reservePortEnd);
+      } catch (IOException e) {
+        LOG.error("Can not get available port");
+      }
+      xdlZkPort = schedulerReservedSocket.getLocalPort();
+      String xdlZKAddr = "zfs://" + xdlZkUri + ":" + xdlZkPort + "/" + applicationAttemptID.toString();
+      List<String> schedulerEnv = new ArrayList<>(20);
+      Map<String, String> userEnv = new HashMap<>();
+      if (conf.get(HboxConfiguration.HBOX_CONTAINER_ENV) != null) {
+        String[] env = StringUtils.split(conf.get(HboxConfiguration.HBOX_CONTAINER_ENV), "|");
+        for (String envPair : env) {
+          String[] userEnvPair = StringUtils.split(envPair, "=");
+          if (userEnvPair.length != 2) {
+            LOG.error(envPair + " is not correct");
+          } else {
+            schedulerEnv.add(envPair);
+            userEnv.put(userEnvPair[0], userEnvPair[1]);
+          }
+        }
+      }
+      if (userEnv.containsKey("PATH")) {
+        schedulerEnv.add("PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
+      } else {
+        schedulerEnv.add("PATH=" + System.getenv("PATH"));
+      }
+      schedulerEnv.add("JAVA_HOME=" + System.getenv("JAVA_HOME"));
+      schedulerEnv.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
+      schedulerEnv.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
+      if (userEnv.containsKey("LD_LIBRARY_PATH")) {
+        schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+            "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+      } else {
+        schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
+            "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+      }
+      if (userEnv.containsKey("CLASSPATH")) {
+        schedulerEnv.add("CLASSPATH=" + "./:" + userEnv.get("CLASSPATH") + System.getProperty("path.separator") + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+      } else {
+        schedulerEnv.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+      }
+      //xdl zk
+      conf.set("DOCKER_CONTAINER_NETWORK", "");
+      conf.set("DOCKER_PORT", "2181");
+      conf.set("RESERVED_PORT", String.valueOf(xdlZkPort));
+      conf.set("DOCKER_CONTAINER_USER", "root");
+      try {
+        schedulerReservedSocket.close();
+        final Process xdlZKProcess = processLaunch.exec("sh /usr/share/zookeeper/bin/start.sh " + "/" + applicationAttemptID.toString(), schedulerEnv.toArray(new String[schedulerEnv.size()]), this.envs, null);
+        LOG.info("Starting thread to redirect stdout of xdl zk process");
+        Thread xdlZKRedirectThread = new Thread(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              BufferedReader reader;
+              reader = new BufferedReader(new InputStreamReader(xdlZKProcess.getInputStream()));
+              String xdlZKStdoutLog;
+              while ((xdlZKStdoutLog = reader.readLine()) != null) {
+                LOG.info(xdlZKStdoutLog);
+                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                  amContainerStdOut.append(xdlZKStdoutLog);
+                }
+              }
+            } catch (Exception e) {
+              LOG.warn("Exception in thread xdlZKRedirectThread");
+              e.printStackTrace();
+            }
+          }
+        });
+        xdlZKRedirectThread.start();
+
+        LOG.info("Starting thread to redirect stderr of xdl zk process");
+        Thread xdlZKStderrRedirectThread = new Thread(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              BufferedReader reader;
+              reader = new BufferedReader(new InputStreamReader(xdlZKProcess.getErrorStream()));
+              String xdlZKStderrLog;
+              while ((xdlZKStderrLog = reader.readLine()) != null) {
+                LOG.info(xdlZKStderrLog);
+                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                  amContainerStdErr.append(xdlZKStderrLog);
+                }
+              }
+            } catch (Exception e) {
+              LOG.warn("Error in thread xdlZKStderrRedirectThread");
+              e.printStackTrace();
+            }
+          }
+        });
+        xdlZKStderrRedirectThread.start();
+      } catch (Exception e) {
+        throw new HboxExecException("start xdl zk error " + e);
+      }
+    }
+
     if(conf.getBoolean(HboxConfiguration.HBOX_INPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM) ||
          conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("STREAM")) {
       if (inputFileSplits != null) {
@@ -2288,18 +2383,27 @@ public class ApplicationMaster extends CompositeService {
     buildContainerLocalResource();
     Map<String, String> workerContainerEnv = buildContainerEnv(HboxConstants.WORKER);
     Map<String, String> psContainerEnv = buildContainerEnv(HboxConstants.PS);
+    Map<String, String> schedulerContainerEnv = buildContainerEnv(HboxConstants.SCHEDULER);
     List<String> workerContainerLaunchcommands = buildContainerLaunchCommand(workerMemory);
     List<String> psContainerLaunchcommands = buildContainerLaunchCommand(psMemory);
 
     LOG.info("Launching containers");
+    if (hboxAppType.equals("XDL") && psNum > 0) {
+      schedulerContainerId = acquiredPsContainers.get(0).getId().toString();
+    }
     int index = 0;
     for (Container container : acquiredPsContainers) {
       LOG.info("Launching ps container " + container.getId()
           + " on " + container.getNodeId().getHost() + ":" + container.getNodeId().getPort());
 
       //TODO launch container in special thread take with fault-tolerant
-      launchContainer(containerLocalResource, psContainerEnv,
-          psContainerLaunchcommands,container, index ++);
+      if (container.getId().toString().equals(schedulerContainerId)) {
+        launchContainer(containerLocalResource, schedulerContainerEnv,
+            psContainerLaunchcommands, container, 0);
+      } else {
+        launchContainer(containerLocalResource, psContainerEnv,
+            psContainerLaunchcommands, container, index++);
+      }
       containerListener.registerContainer(new HboxContainerId(container.getId()), HboxConstants.PS);
     }
     if(hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
@@ -2531,31 +2635,9 @@ public class ApplicationMaster extends CompositeService {
         LOG.info("Train completed");
         containerListener.setTrainFinished();
 
-        if("TENSORFLOW".equals(hboxAppType) && psNum > 0) {
-          LOG.info("Waiting all ps contianers completed");
-          while (!containerListener.isAllPsContainersFinished()) {
-            Utilities.sleep(statusUpdateInterval);
-          }
-          LOG.info("All ps containers completed");
-        }
-
-        if("MXNET".equals(hboxAppType) && !singleMx) {
-          LOG.info("Waiting all server contianers completed");
-          while (!containerListener.isAllPsContainersFinished()) {
-            Utilities.sleep(statusUpdateInterval);
-          }
-          LOG.info("All server containers completed");
-        }
-
-        if("DISTLIGHTLDA".equals(hboxAppType)) {
-          LOG.info("Waiting all ps contianers completed");
-          while (!containerListener.isAllPsContainersFinished()) {
-            Utilities.sleep(statusUpdateInterval);
-          }
-          LOG.info("All ps containers completed");
-        }
-
-        if("XFLOW".equals(hboxAppType)) {
+        if ((("TENSORFLOW".equals(hboxAppType) || "MXNET".equals(hboxAppType) || "XDL".equals(hboxAppType)) && psNum > 0)
+            || "DISTLIGHTLDA".equals(hboxAppType)
+            || "XFLOW".equals(hboxAppType)) {
           LOG.info("Waiting all ps containers completed");
           while (!containerListener.isAllPsContainersFinished()) {
             Utilities.sleep(statusUpdateInterval);
@@ -2610,7 +2692,7 @@ public class ApplicationMaster extends CompositeService {
                 fs.rename(tmpResultPath, finalResultPath);
               }
             }
-            if(psNum > 0 && (hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("TENSORFLOW"))) {
+            if (psNum > 0 && (hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("TENSORFLOW") || hboxAppType.equals("XDL"))) {
               for (Container finishedContainer : acquiredPsContainers) {
                 Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString());
                 if (fs.exists(tmpResultPath)) {
@@ -2894,13 +2976,18 @@ public class ApplicationMaster extends CompositeService {
     }
 
     @Override
-    public String getTfEvaluatorId(){
+    public String getTfEvaluatorId() {
       return tfEvaluatorContainerId;
     }
 
     @Override
     public String getChiefWorkerId() {
       return chiefWorkerContainerId;
+    }
+
+    @Override
+    public String getSchedulerId() {
+      return schedulerContainerId;
     }
 
     @Override

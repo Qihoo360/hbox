@@ -126,48 +126,18 @@ public class HboxContainer {
     this.role = envs.get(HboxConstants.Environment.HBOX_TF_ROLE.toString());
     this.index = Integer.valueOf(envs.get(HboxConstants.Environment.HBOX_TF_INDEX.toString()));
     this.hboxCmdProcessId = "";
-    if ("TENSORFLOW".equals(hboxAppType)) {
-      LOG.info("TensorFlow role is:" + this.role);
+    if ("TENSORFLOW".equals(hboxAppType) || hboxAppType.equals("DISTXGBOOST") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XDL")) {
+      LOG.info("Current role is:" + this.role);
     }
-    if (hboxAppType.equals("MXNET")) {
+    if (hboxAppType.equals("MXNET") || hboxAppType.equals("XFLOW")) {
       if (this.role.equals("ps")) {
         this.role = "server";
       }
-      LOG.info("mxnet role is:" + this.role);
-    }
-    if (hboxAppType.equals("DISTXGBOOST")) {
-      LOG.info("Dist Xgboost role is:" + this.role);
-    }
-    if (hboxAppType.equals("DISTLIGHTGBM")) {
-      LOG.info("Dist lightGBM role is:" + this.role);
-    }
-    if (hboxAppType.equals("DISTLIGHTLDA")) {
-      LOG.info("Dist lightLDA role is:" + this.role);
-    }
-    if (hboxAppType.equals("XFLOW")) {
-      if (this.role.equals("ps")) {
-        this.role = "server";
-      }
-      LOG.info("xflow role is:" + this.role);
+      LOG.info("Current role is:" + this.role);
     }
 
-    if ("TENSORFLOW".equals(hboxAppType)) {
-      LOG.info("TensorFlow index is:" + this.index);
-    }
-    if (hboxAppType.equals("MXNET")) {
-      LOG.info("mxnet index is:" + this.index);
-    }
-    if (hboxAppType.equals("DISTXGBOOST")) {
-      LOG.info("Dist Xgboost index is:" + this.index);
-    }
-    if (hboxAppType.equals("DISTLIGHTGBM")) {
-      LOG.info("Dist lightGBM index is:" + this.index);
-    }
-    if (hboxAppType.equals("DISTLIGHTLDA")) {
-      LOG.info("Dist lightLDA index is:" + this.index);
-    }
-    if (hboxAppType.equals("XFLOW")) {
-      LOG.info("xflow index is:" + this.index);
+    if ("TENSORFLOW".equals(hboxAppType) || hboxAppType.equals("MXNET") || hboxAppType.equals("DISTXGBOOST") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XFLOW") || hboxAppType.equals("XDL")) {
+      LOG.info("Current index is:" + this.index);
     }
     if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
       if (this.envs.containsKey(HboxConstants.Environment.MPI_EXEC_DIR.toString())) {
@@ -194,9 +164,9 @@ public class HboxContainer {
           try {
             String containerIdStr = containerId.getContainerId().toString();
             Runtime rt = Runtime.getRuntime();
-            String dockerPullCommand = "docker kill " + containerIdStr;
-            LOG.info("Docker kill command:" + dockerPullCommand);
-            Process process = rt.exec(dockerPullCommand);
+            String dockerKillCommand = "docker kill " + containerIdStr;
+            LOG.info("Docker kill command:" + dockerKillCommand);
+            Process process = rt.exec(dockerKillCommand);
             int i = process.waitFor();
             LOG.info("Docker Kill Wait:" + (i == 0 ? "Success" : "Failed"));
             BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -239,7 +209,6 @@ public class HboxContainer {
     if (("TENSORFLOW".equals(hboxAppType) && !single) || hboxAppType.equals("DIGITS") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || (hboxAppType.equals("DISTTORCH") && this.index == 0) || containerType.equalsIgnoreCase("docker")) {
       try {
         Utilities.getReservePort(reservedSocket, InetAddress.getByName(localHost).getHostAddress(), reservePortBegin, reservePortEnd);
-        conf.set("RESERVED_PORT", reservedSocket.getLocalPort() + "");
       } catch (IOException e) {
         LOG.error("Can not get available port");
         reportFailedAndExit();
@@ -956,6 +925,19 @@ public class HboxContainer {
       envList.add("INIT_METHOD=tcp://" + this.torchRank0IP);
       envList.add("RANK=" + this.index);
       envList.add("WORLD_SIZE=" + System.getenv("WORLD_SIZE"));
+    } else if (hboxAppType.equals("XDL")) {
+      if (!conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
+        envList.add("TASK_NAME=" + this.role);
+        envList.add("TASK_INDEX=" + this.index);
+        envList.add("ZK_ADDR=" + envs.get("ZK_ADDR"));
+        if (role.equalsIgnoreCase(HboxConstants.SCHEDULER)) {
+          envList.add("PS_NUM=" + envs.get("PS_NUM"));
+          envList.add("PS_CPU_CORES=" + envs.get("PS_CPU_CORES"));
+          envList.add("PS_MEMORY_M=" + envs.get("PS_MEMORY_M"));
+        } else if (role.equalsIgnoreCase(HboxConstants.WORKER)) {
+          envList.add("TASK_NUM=" + envs.get("TASK_NUM"));
+        }
+      }
     } else {
       if (containerType.equals("DOCKER")) {
         cudaVisibleDevicesEnv = "";
@@ -1425,7 +1407,8 @@ public class HboxContainer {
         }
       }
 
-      if (this.role.equals(HboxConstants.PS) && !this.hboxAppType.equals("DISTLIGHTLDA")) {
+      if ((this.role.equals(HboxConstants.PS) || this.role.equals(HboxConstants.SCHEDULER)) &&
+          !this.hboxAppType.equals("DISTLIGHTLDA")) {
         if (code == -1) {
           this.uploadOutputFiles();
           hboxProcess.destroy();

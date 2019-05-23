@@ -34,7 +34,8 @@ public class DockerLaunch implements ILaunch {
   public Process exec(String command, String[] envp, Map<String, String> envs, File dir) throws IOException {
     LOG.info("docker command:" + command + ",envs:" + envs);
     Runtime rt = Runtime.getRuntime();
-    String port = conf.get("RESERVED_PORT");
+    String port = conf.get("RESERVED_PORT", "");
+    String containerPort = conf.get("DOCKER_PORT", "");
     String workDir = "/" + conf.get(HboxConfiguration.HBOX_DOCKER_WORK_DIR, HboxConfiguration.DEFAULT_HBOX_DOCKER_WORK_DIR);
     String path = new File("").getAbsolutePath();
     StringBuilder envsParam = new StringBuilder();
@@ -52,25 +53,27 @@ public class DockerLaunch implements ILaunch {
         envsParam.append(" --env " + keyValue + "");
       }
     }
-    if (port.equals("-1")) {
-      port = "";
-    } else {
-      port = " -p " + port;
+    if (port != null && !port.trim().equals("")) {
+      if (containerPort != null && !containerPort.trim().equals(""))
+        port = " -p " + port + ":" + containerPort;
+      else
+        port = " -p " + port;
     }
     String containerMemory = envs.get("DOCKER_CONTAINER_MEMORY");
     String containerCpu = envs.get("DOCKER_CONTAINER_CPU");
+    String network = conf.get("DOCKER_CONTAINER_NETWORK", "");
     String userName = conf.get("hadoop.job.ugi");
     String[] userNameArr = userName.split(",");
     if (userNameArr.length > 1) {
       userName = userNameArr[0];
     }
     LOG.info("Container launch userName:" + userName);
+    String user = conf.get("DOCKER_CONTAINER_USER", userName);
     String mount = " -v " + path + ":" + workDir;
     mount = mount + " -v /etc/passwd:/etc/passwd:ro";
     String homePath = envs.get("HADOOP_HDFS_HOME");
     if (homePath != null && homePath != "")
       mount += " -v " + homePath + ":" + homePath + ":ro";
-    mount += " -v " + homePath + ":" + homePath;
     String javaPath = envs.get("JAVA_HOME");
     if (javaPath != null && javaPath != "")
       mount += " -v " + javaPath + ":" + javaPath + ":ro";
@@ -110,30 +113,35 @@ public class DockerLaunch implements ILaunch {
       LOG.warn("Docker pull Error:", e);
     }
 
-    String userId = "";
-    try {
-      String userIDCommand = "id -u";
-      LOG.info("Get the user id :" + userIDCommand);
-      Process process = rt.exec(userIDCommand, envp);
-      int i = process.waitFor();
-      LOG.info("Get the user id Wait:" + (i == 0 ? "Success" : "Failed"));
-      BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
-      String line;
-      while ((line = br.readLine()) != null) {
-        LOG.info(line);
-        userId = line;
+    String dockerCommand = dockerType + " run";
+
+    if (!user.equalsIgnoreCase("root")) {
+      String userId = "";
+      try {
+        String userIDCommand = "id -u";
+        LOG.info("Get the user id :" + userIDCommand);
+        Process process = rt.exec(userIDCommand, envp);
+        int i = process.waitFor();
+        LOG.info("Get the user id Wait:" + (i == 0 ? "Success" : "Failed"));
+        BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        String line;
+        while ((line = br.readLine()) != null) {
+          LOG.info(line);
+          userId = line;
+        }
+      } catch (InterruptedException e) {
+        LOG.warn("Get the user id error:", e);
       }
-    } catch (InterruptedException e) {
-      LOG.warn("Get the user id error:", e);
+      if (userId.trim() != "") {
+        dockerCommand += " -u " + userId;
+      }
     }
 
-    String dockerCommand = dockerType + " run";
-    if (userId.trim() != "") {
-      dockerCommand += " -u " + userId;
+    if (network != null && network.equalsIgnoreCase("host")) {
+      dockerCommand += " --network host";
     }
     dockerCommand +=
-        " --network host " +
-            " --rm " +
+        " --rm " +
             " --cpus " + containerCpu +
             " -m " + containerMemory + "m " +
             port +

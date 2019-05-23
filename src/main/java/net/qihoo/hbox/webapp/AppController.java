@@ -199,10 +199,16 @@ public class AppController extends Controller implements AMParams {
       set(CONTAINER_HTTP_ADDRESS + i, container.getNodeHttpAddress());
       set(CONTAINER_ID + i, container.getId().toString());
       set(CONTAINER_STATUS + i, app.context.getContainerStatus(new HboxContainerId(container.getId())).toString());
-      if($(APP_TYPE).equals("Tensorflow")) {
+      if ($(APP_TYPE).equals("Tensorflow")) {
         set(CONTAINER_ROLE + i, "ps");
       } else if ($(APP_TYPE).equals("Mxnet") || $(APP_TYPE).equals("Distlightlda") || $(APP_TYPE).equals("Xflow")) {
         set(CONTAINER_ROLE + i, "server");
+      } else if ($(APP_TYPE).equals("Xdl")) {
+        if (container.getId().toString().equals(app.context.getSchedulerId())) {
+          set(CONTAINER_ROLE + i, HboxConstants.SCHEDULER);
+        } else {
+          set(CONTAINER_ROLE + i, HboxConstants.PS);
+        }
       }
 
       if (app.context.getContainerGPUDevice(new HboxContainerId(container.getId())) != null) {

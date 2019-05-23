@@ -366,7 +366,7 @@ public class ApplicationContainerListener extends AbstractService implements App
     containersGpuMemStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
     containersGpuUtilStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
     containersCpuStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
-    if(role.equals(HboxConstants.WORKER) || (role.equals(HboxConstants.PS) && (hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("TENSORFLOW")))) {
+    if (role.equals(HboxConstants.WORKER) || (role.equals(HboxConstants.PS) && (hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("TENSORFLOW") || hboxAppType.equals("XDL")))) {
       containerId2InnerModel.put(containerId, new InnerModelSavedPair());
     }
     runningContainers.put(containerId, new LastTime(clock.getTime()));
@@ -441,7 +441,11 @@ public class ApplicationContainerListener extends AbstractService implements App
         return true;
       }
     } else if(hboxAppType.equals("XFLOW")) {
-      if(failedNum > 0){
+      if (failedNum > 0) {
+        return true;
+      }
+    } else if (hboxAppType.equals("XDL") && !this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
+      if (failedNum > 0) {
         return true;
       }
     } else {
@@ -500,10 +504,14 @@ public class ApplicationContainerListener extends AbstractService implements App
         return false;
       }
     } else if (hboxAppType.equals("DISTLIGHTLDA")) {
-      if(failedNum > 0){
+      if (failedNum > 0) {
         return false;
       }
-    } else{
+    } else if ("XDL".equals(hboxAppType) && !this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
+      if (failedNum > 0) {
+        return false;
+      }
+    } else {
       Double jobFailedNum = containerId2Status.size() * this.getConfig().getDouble(HboxConfiguration.HBOX_CONTAINER_MAX_FAILURES_RATE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_FAILURES_RATE);
       if(failedNum >= jobFailedNum){
         return false;

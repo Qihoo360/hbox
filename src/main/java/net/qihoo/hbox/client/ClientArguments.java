@@ -276,13 +276,13 @@ class ClientArguments {
       appType = cliParser.getOptionValue("app-type").trim().toUpperCase();
     }
 
-    if(!appType.equals("TENSORFLOW") && !appType.equals("MXNET") && !appType.equals("DISTLIGHTLDA") && !appType.equals("XFLOW")) {
+    if(!appType.equals("TENSORFLOW") && !appType.equals("MXNET") && !appType.equals("DISTLIGHTLDA") && !appType.equals("XFLOW") && !appType.equals("XDL")) {
       psNum = 0;
     }
 
     if(cliParser.hasOption("conf")){
       confs = cliParser.getOptionProperties("conf");
-      if (!"TENSORFLOW".equals(appType) && !"MXNET".equals(appType) && !appType.equals("DISTLIGHTLDA") && !appType.equals("XFLOW")) {
+      if (!"TENSORFLOW".equals(appType) && !"MXNET".equals(appType) && !appType.equals("DISTLIGHTLDA") && !appType.equals("XFLOW") && !appType.equals("XDL")) {
         if(confs.containsKey("hbox.ps.num")) {
           confs.setProperty("hbox.ps.num", "0");
         }
@@ -322,7 +322,7 @@ class ClientArguments {
       duration = cliParser.getOptionValue("duration");
     }
 
-    if("TENSORFLOW".equals(appType) || "MXNET".equals(appType) || appType.equals("DISTLIGHTLDA") || appType.equals("XFLOW")) {
+    if("TENSORFLOW".equals(appType) || "MXNET".equals(appType) || appType.equals("DISTLIGHTLDA") || appType.equals("XFLOW") || appType.equals("XDL")) {
       if (cliParser.hasOption("ps-memory")) {
         psMemory = getNormalizedMem(cliParser.getOptionValue("ps-memory"));
       }

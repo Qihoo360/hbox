@@ -178,7 +178,7 @@ public class HsController extends Controller implements AMParams {
                   }
                 }
               }
-              if ((readLog.get(info).get(2).equals("ps") || readLog.get(info).get(2).equals("server")) && !readLog.get(info).get(1).equals("-") && readLog.get(info).size() > 8) {
+              if ((readLog.get(info).get(2).equals("ps") || readLog.get(info).get(2).equals("server") || readLog.get(info).get(2).equals("scheduler")) && !readLog.get(info).get(1).equals("-") && readLog.get(info).size() > 8) {
                 String containersGpuMemMetrics = readLog.get(info).get(5);
                 String containersGpuUtilMetrics = readLog.get(info).get(6);
                 if (containersGpuMemMetrics != null && containersGpuMemMetrics != "-") {
@@ -273,7 +273,7 @@ public class HsController extends Controller implements AMParams {
                 set("USAGED_INFO", "true");
               }
             }
-            if ((readLog.get(info).get(2).equals("ps") || readLog.get(info).get(2).equals("server")) && readLog.get(info).size() > 8) {
+            if ((readLog.get(info).get(2).equals("ps") || readLog.get(info).get(2).equals("server") || readLog.get(info).get(2).equals("scheduler")) && readLog.get(info).size() > 8) {
               String cpuMetrics = readLog.get(info).get(4);
               if(cpuMetrics != null && cpuMetrics != "-") {
                 Gson gson2 = new GsonBuilder()
@@ -346,7 +346,7 @@ public class HsController extends Controller implements AMParams {
               set("WORKER_CONTAINER_ID" + workeri, info);
               workeri++;
             }
-            if (readLog.get(info).get(2).equals("ps") || readLog.get(info).get(2).equals("server")) {
+            if (readLog.get(info).get(2).equals("ps") || readLog.get(info).get(2).equals("server") || readLog.get(info).get(2).equals("scheduler")) {
               set("PS_CONTAINER_ID" + psi, info);
               psi++;
             }

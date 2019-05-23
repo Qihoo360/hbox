@@ -107,6 +107,8 @@ public interface ApplicationContext {
 
   String getChiefWorkerId();
 
+  String getSchedulerId();
+
   Boolean getChiefWorker();
 
   String getAMContainerID();

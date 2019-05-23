@@ -14,7 +14,7 @@ public class InfoPage extends TwoColumnLayout implements AMParams{
 
   @Override
   protected Class<? extends SubView> content() {
-    if ($(APP_TYPE).equals("Tensorflow") || $(APP_TYPE).equals("Mxnet") || $(APP_TYPE).equals("Distlightlda") || $(APP_TYPE).equals("Xflow")) {
+    if ($(APP_TYPE).equals("Tensorflow") || $(APP_TYPE).equals("Mxnet") || $(APP_TYPE).equals("Distlightlda") || $(APP_TYPE).equals("Xflow") || $(APP_TYPE).equals("Xdl")) {
       return InfoBlock.class;
     } else {
       return SingleInfoBlock.class;
