@@ -1611,7 +1611,7 @@ public class ApplicationMaster extends CompositeService {
 
     if ("TENSORFLOW".equals(hboxAppType) || "MXNET".equals(hboxAppType) || "DISTLIGHTLDA".equals(hboxAppType) || "XFLOW".equals(hboxAppType)) {
       this.appendMessage("Hbox application needs " + workerNum + " worker and "
-          + psNum + " ps  containers in fact", true);
+          + psNum + " ps containers in fact", true);
     } else {
       this.appendMessage("Hbox application needs " + workerNum + " worker container in fact", true);
     }
