@@ -73,7 +73,15 @@ def main(_):
       saver = tf.train.Saver()
       print("Variables initialized ...")
     sv = tf.train.Supervisor(is_chief = (FLAGS.task_index == 0), global_step = global_step, init_op = init_op)
-    with sv.prepare_or_wait_for_session(server.target, config = tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement = True, log_device_placement = True)) as sess:
+
+    # Filter all connections except that between ps and this worker to avoid hanging issues when
+    # one worker finishes. We are using asynchronous training so there is no need for the workers to communicate.
+    config_proto = tf.ConfigProto(device_filters = ['/job:ps', '/job:worker/task:%d' % FLAGS.task_index],
+        gpu_options = gpu_options,
+        allow_soft_placement = True,
+        log_device_placement = True)
+
+    with sv.prepare_or_wait_for_session(server.target, config = config_proto) as sess:
       # perform training cycles
       start_time = time.time()
       if(FLAGS.task_index == 0):
