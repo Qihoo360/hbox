@@ -803,14 +803,12 @@ public class HboxContainer {
     envList.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
     envList.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
     envList.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-            "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+        "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
     envList.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
     envList.add("PYTHONUNBUFFERED=1");
-
-    if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).toUpperCase().equals("PLACEHOLDER")) {
-      envList.add("HADOOP_VERSION=2.7.2");
-      envList.add("HADOOP_CONF_DIR=./:" + System.getenv("HADOOP_CONF_DIR"));
-    }
+    envList.add("INDEX=" + this.index);
+    envList.add("HADOOP_VERSION=2.7.2");
+    envList.add("HADOOP_CONF_DIR=./:" + System.getenv("HADOOP_CONF_DIR"));
 
     if ("TENSORFLOW".equals(hboxAppType)) {
       if (containerType.equals("DOCKER")) {
