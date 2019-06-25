@@ -133,4 +133,15 @@ public class AMWebServices {
     return "SUCCEED";
   }
 
+  @GET
+  @Path("/app/boardUrl")
+  @Produces(MediaType.TEXT_PLAIN)
+  public String getBoardUrl() {
+    init();
+    String boardUrl = appCtx.getTensorBoardUrl();
+    if (boardUrl != null)
+      return boardUrl;
+    return "";
+  }
+
 }
