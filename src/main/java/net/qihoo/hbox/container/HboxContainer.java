@@ -892,6 +892,8 @@ public class HboxContainer {
       envList.add("PATH=" + System.getenv("PATH"));
       envList.add("PWD=" + this.mpiAppDir);
       envList.add("LD_LIBRARY_PATH=" + ldLibraryPath.toString());
+      envList.add(cudaVisibleDevicesEnv);
+      envList.add(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES_NUM.toString() + "=" + cudaNum);
     } else if (hboxAppType.equals("XFLOW")) {
       if (containerType.equals("DOCKER")) {
         cudaVisibleDevicesEnv = "";

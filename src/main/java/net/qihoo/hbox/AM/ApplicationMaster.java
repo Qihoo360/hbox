@@ -1458,7 +1458,7 @@ public class ApplicationMaster extends CompositeService {
       commandBuilder.append(" ");
     else
       commandBuilder.append(" ").append(readHorovodConfig()).append(" ");
-    commandBuilder.append("-bind-to none -map-by slot -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH -mca pml ob1 -mca btl ^openib ");
+    commandBuilder.append("-bind-to none -map-by slot -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH -mca pml ob1 -mca btl ^openib -mca btl_tcp_if_include \"10.0.0.0/8\" ");
     commandBuilder.append(hboxCommand);
 
     List<String> env = new ArrayList<>(20);
