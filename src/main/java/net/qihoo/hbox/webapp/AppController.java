@@ -145,17 +145,21 @@ public class AppController extends Controller implements AMParams {
       } else {
         set(CONTAINER_GPU_DEVICE + i, "-");
       }
-      ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = app.context.getContainersCpuMetrics().get(new HboxContainerId(container.getId()));
-      if(cpuMetrics.size() != 0) {
-        set("cpuMemMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUMEM")));
-        set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
+      if (app.context.getContainersCpuMetrics().get(new HboxContainerId(container.getId())) != null) {
+        ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = app.context.getContainersCpuMetrics().get(new HboxContainerId(container.getId()));
+        if (cpuMetrics.size() != 0) {
+          set("cpuMemMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUMEM")));
+          set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
+        }
       }
-      ConcurrentHashMap<String, List<Double>> cpuStatistics = app.context.getContainersCpuStatistics().get(new HboxContainerId(container.getId()));
-      if (cpuStatistics.size() != 0) {
-        set(CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(0)));
-        set(CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(1)));
-        set(CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(0)));
-        set(CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(1)));
+      if (app.context.getContainersCpuStatistics().get(new HboxContainerId(container.getId())) != null) {
+        ConcurrentHashMap<String, List<Double>> cpuStatistics = app.context.getContainersCpuStatistics().get(new HboxContainerId(container.getId()));
+        if (cpuStatistics.size() != 0) {
+          set(CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(0)));
+          set(CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(1)));
+          set(CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(0)));
+          set(CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(1)));
+        }
       }
 
       if(reporterProgress.get(new HboxContainerId(container.getId())) != null && !reporterProgress.get(new HboxContainerId(container.getId())).equals("")) {
@@ -198,7 +202,11 @@ public class AppController extends Controller implements AMParams {
     for (Container container : psContainers) {
       set(CONTAINER_HTTP_ADDRESS + i, container.getNodeHttpAddress());
       set(CONTAINER_ID + i, container.getId().toString());
-      set(CONTAINER_STATUS + i, app.context.getContainerStatus(new HboxContainerId(container.getId())).toString());
+      if (app.context.getContainerStatus(new HboxContainerId(container.getId())) != null) {
+        set(CONTAINER_STATUS + i, app.context.getContainerStatus(new HboxContainerId(container.getId())).toString());
+      } else {
+        set(CONTAINER_STATUS + i, "-");
+      }
       if ($(APP_TYPE).equals("Tensorflow")) {
         set(CONTAINER_ROLE + i, "ps");
       } else if ($(APP_TYPE).equals("Mxnet") || $(APP_TYPE).equals("Distlightlda") || $(APP_TYPE).equals("Xflow")) {
@@ -248,17 +256,21 @@ public class AppController extends Controller implements AMParams {
       } else {
         set(CONTAINER_GPU_DEVICE + i, "-");
       }
-      ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = app.context.getContainersCpuMetrics().get(new HboxContainerId(container.getId()));
-      if(cpuMetrics.size() != 0) {
-        set("cpuMemMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUMEM")));
-        set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
+      if (app.context.getContainersCpuMetrics().get(new HboxContainerId(container.getId())) != null) {
+        ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = app.context.getContainersCpuMetrics().get(new HboxContainerId(container.getId()));
+        if (cpuMetrics.size() != 0) {
+          set("cpuMemMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUMEM")));
+          set("cpuUtilMetrics" + i, new Gson().toJson(cpuMetrics.get("CPUUTIL")));
+        }
       }
-      ConcurrentHashMap<String, List<Double>> cpuStatistics = app.context.getContainersCpuStatistics().get(new HboxContainerId(container.getId()));
-      if (cpuStatistics.size() != 0) {
-        set(CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(0)));
-        set(CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(1)));
-        set(CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(0)));
-        set(CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(1)));
+      if (app.context.getContainersCpuStatistics().get(new HboxContainerId(container.getId())) != null) {
+        ConcurrentHashMap<String, List<Double>> cpuStatistics = app.context.getContainersCpuStatistics().get(new HboxContainerId(container.getId()));
+        if (cpuStatistics.size() != 0) {
+          set(CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(0)));
+          set(CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUMEM").get(1)));
+          set(CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(0)));
+          set(CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX + i, String.format("%.2f", cpuStatistics.get("CPUUTIL").get(1)));
+        }
       }
       set(CONTAINER_REPORTER_PROGRESS + i, "0.00%");
       if(containersAppStartTime.get(new HboxContainerId(container.getId())) != null && !containersAppStartTime.get(new HboxContainerId(container.getId())).equals("")) {
