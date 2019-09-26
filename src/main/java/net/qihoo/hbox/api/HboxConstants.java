@@ -19,7 +19,7 @@ public interface HboxConstants {
 
   String EVALUATOR = "evaluator";
 
-  String Chief = "chief";
+  String CHIEF = "chief";
 
   String SCHEDULER = "scheduler";
 

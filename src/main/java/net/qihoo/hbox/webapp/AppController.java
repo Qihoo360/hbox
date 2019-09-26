@@ -103,7 +103,7 @@ public class AppController extends Controller implements AMParams {
       if (conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR) && container.getId().toString().equals(app.context.getTfEvaluatorId())) {
         set(CONTAINER_ROLE + i, HboxConstants.WORKER + "/" + HboxConstants.EVALUATOR);
       } else if (app.context.getChiefWorker() && container.getId().toString().equals(app.context.getChiefWorkerId())) {
-        set(CONTAINER_ROLE + i, HboxConstants.WORKER + "/" + HboxConstants.Chief);
+        set(CONTAINER_ROLE + i, HboxConstants.WORKER + "/" + HboxConstants.CHIEF);
       } else {
         set(CONTAINER_ROLE + i, HboxConstants.WORKER);
       }
