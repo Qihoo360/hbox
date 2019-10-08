@@ -183,10 +183,30 @@ public class HboxContainer {
         } else if(containerMode.equalsIgnoreCase("docker")){
             containerLaunch = new DockerExecutor(containerId.getContainerId().toString(), conf);
             LOG.info("HBox app mode: " + containerMode);
+            Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        String containerIdStr = containerId.getContainerId().toString();
+                        Runtime rt = Runtime.getRuntime();
+                        String dockerKillCommand = "docker kill " + containerIdStr;
+                        LOG.info("Docker kill command:" + dockerKillCommand);
+                        Process process = rt.exec(dockerKillCommand);
+                        int i = process.waitFor();
+                        LOG.info("Docker Kill Wait:" + (i == 0 ? "Success" : "Failed"));
+                        BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            LOG.info(line);
+                        }
+                    } catch (Exception e) {
+                        LOG.warn("Docker Kill Error:", e);
+                    }
+                }
+            }));
         } else {
             containerLaunch = new YarnLaunch(containerId.getContainerId().toString());
         }
-
         this.signalID = -1;
     }
 
