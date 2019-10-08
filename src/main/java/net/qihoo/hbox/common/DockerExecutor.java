@@ -102,7 +102,6 @@ public class DockerExecutor implements ILaunch {
         dockerCommand += " " + command;
         LOG.info("Docker command:" + dockerCommand);
         hboxProcess = rt.exec(dockerCommand, envp);
-
         return hboxProcess;
     }
 }

@@ -155,10 +155,8 @@ public class HboxContainer {
 
         this.inputFileList = "";
         this.containerType = conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE);
-        this.containerType = conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);
         String containerMode = conf.get("hbox.container.mode", "default");
         LOG.info("Current container type: " + this.containerType);
-        LOG.info("HBOX_CONTAINER_TYPE: " + conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, "default"));
         if (containerType.equalsIgnoreCase("docker")) {
             containerLaunch = new DockerLaunch(containerId.getContainerId().toString(), conf);
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -182,7 +180,7 @@ public class HboxContainer {
                     }
                 }
             }));
-        } else if(!containerMode.equals("docker")){
+        } else if(containerMode.equalsIgnoreCase("docker")){
             containerLaunch = new DockerExecutor(containerId.getContainerId().toString(), conf);
             LOG.info("HBox app mode: " + containerMode);
         } else {
