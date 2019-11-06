@@ -594,7 +594,7 @@ public class ApplicationMaster extends CompositeService {
                         } else {
                             containerMessage.add("-");
                         }
-                        if (hboxAppType.equals("TENSORFLOW")) {
+                        if (hboxAppType.equals("TENSORFLOW")  || "TENSOR2TENSOR".equals(hboxAppType)) {
                             containerMessage.add("ps");
                         } else if (hboxAppType.equals("MXNET") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XFLOW")) {
                             containerMessage.add("server");
@@ -1032,7 +1032,7 @@ public class ApplicationMaster extends CompositeService {
         workerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
         LOG.info("Create worker container request: " + workerContainerRequest.toString());
 
-        if ("TENSORFLOW".equals(hboxAppType) && workerNum > 1) {
+        if (("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) && workerNum > 1) {
             if (chiefWorker) {
                 Resource chiefWorkerCapability = Records.newRecord(Resource.class);
                 int chiefWorkerOverheadMem = (int) Math.max(chiefWorkerMemory * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
@@ -1635,7 +1635,7 @@ public class ApplicationMaster extends CompositeService {
             buildInputFileStatus();
         }
 
-        if ("TENSORFLOW".equals(hboxAppType) || "MXNET".equals(hboxAppType) || "DISTLIGHTLDA".equals(hboxAppType) || "XFLOW".equals(hboxAppType)) {
+        if ("TENSORFLOW".equals(hboxAppType)  || "TENSOR2TENSOR".equals(hboxAppType) || "MXNET".equals(hboxAppType) || "DISTLIGHTLDA".equals(hboxAppType) || "XFLOW".equals(hboxAppType)) {
             this.appendMessage("Hbox application needs " + workerNum + " worker and "
                     + psNum + " ps containers in fact", true);
         } else {
@@ -1645,7 +1645,7 @@ public class ApplicationMaster extends CompositeService {
         buildContainerRequest(hostLocals);
 
         int requestWorkerNum = workerNum;
-        if ("TENSORFLOW".equals(hboxAppType)) {
+        if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) {
             if (chiefWorker)
                 requestWorkerNum--;
             if (tfEvaluator)
@@ -2660,7 +2660,7 @@ public class ApplicationMaster extends CompositeService {
                 LOG.info("Train completed");
                 containerListener.setTrainFinished();
 
-                if ((("TENSORFLOW".equals(hboxAppType) || "MXNET".equals(hboxAppType) || "XDL".equals(hboxAppType)) && psNum > 0)
+                if ((("TENSORFLOW".equals(hboxAppType)  || "TENSOR2TENSOR".equals(hboxAppType) || "MXNET".equals(hboxAppType) || "XDL".equals(hboxAppType)) && psNum > 0)
                         || "DISTLIGHTLDA".equals(hboxAppType)
                         || "XFLOW".equals(hboxAppType)) {
                     LOG.info("Waiting all ps containers completed");
@@ -2717,7 +2717,7 @@ public class ApplicationMaster extends CompositeService {
                                 fs.rename(tmpResultPath, finalResultPath);
                             }
                         }
-                        if (psNum > 0 && (hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("TENSORFLOW") || hboxAppType.equals("XDL"))) {
+                        if (psNum > 0 && (hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("TENSORFLOW")  || "TENSOR2TENSOR".equals(hboxAppType) || hboxAppType.equals("XDL"))) {
                             for (Container finishedContainer : acquiredPsContainers) {
                                 Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString());
                                 if (fs.exists(tmpResultPath)) {

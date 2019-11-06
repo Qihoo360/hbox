@@ -138,7 +138,7 @@ public class Client {
         }
         readClusterConf();
 
-        if ("TENSORFLOW".equals(clientArguments.appType)) {
+        if ("TENSORFLOW".equals(clientArguments.appType) || "TENSOR2TENSOR".equals(clientArguments.appType)) {
             if (conf.getBoolean(HboxConfiguration.HBOX_TF_DISTRIBUTION_STRATEGY, HboxConfiguration.DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY)) {
                 if ((conf.getInt(HboxConfiguration.HBOX_PS_NUM, HboxConfiguration.DEFAULT_HBOX_PS_NUM) + conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM)) == 1) {
                     conf.setBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, true);
@@ -181,7 +181,7 @@ public class Client {
                 Path tf_board_log_dir = new Path(conf.get("fs.defaultFS"), conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR));
                 conf.set(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, tf_board_log_dir.toString());
             }
-            if ((conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR).indexOf("hdfs") == 0) && (!"TENSORFLOW".equals(clientArguments.appType))) {
+            if ((conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR).indexOf("hdfs") == 0) && (!("TENSORFLOW".equals(clientArguments.appType) || "TENSOR2TENSOR".equals(clientArguments.appType)))) {
                 LOG.warn("VisualDL not support the hdfs path for logdir. Please ensure the logdir setting is right.");
             }
         }
@@ -439,9 +439,9 @@ public class Client {
             }
         }
 
-        if ("TENSORFLOW".equals(clientArguments.appType) || "MXNET".equals(clientArguments.appType) || "DISTLIGHTLDA".equals(clientArguments.appType) || "XFLOW".equals(clientArguments.appType) || "XDL".equals(clientArguments.appType)) {
+        if ("TENSORFLOW".equals(clientArguments.appType)  || "TENSOR2TENSOR".equals(clientArguments.appType) || "MXNET".equals(clientArguments.appType) || "DISTLIGHTLDA".equals(clientArguments.appType) || "XFLOW".equals(clientArguments.appType) || "XDL".equals(clientArguments.appType)) {
             Boolean single;
-            if ("TENSORFLOW".equals(clientArguments.appType)) {
+            if ("TENSORFLOW".equals(clientArguments.appType) || "TENSOR2TENSOR".equals(clientArguments.appType)) {
                 single = conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE);
             } else {
                 single = conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE);

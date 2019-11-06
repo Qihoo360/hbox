@@ -366,7 +366,7 @@ public class ApplicationContainerListener extends AbstractService implements App
     containersGpuMemStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
     containersGpuUtilStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
     containersCpuStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
-    if (role.equals(HboxConstants.WORKER) || (role.equals(HboxConstants.PS) && (hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("TENSORFLOW") || hboxAppType.equals("XDL")))) {
+    if (role.equals(HboxConstants.WORKER) || (role.equals(HboxConstants.PS) && (hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("TENSORFLOW")  || hboxAppType.equals("TENSOR2TENSOR") || hboxAppType.equals("XDL")))) {
       containerId2InnerModel.put(containerId, new InnerModelSavedPair());
     }
     runningContainers.put(containerId, new LastTime(clock.getTime()));
@@ -416,7 +416,7 @@ public class ApplicationContainerListener extends AbstractService implements App
       }
     }
 
-    if ("TENSORFLOW".equals(hboxAppType) && !this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)){
+    if (("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType) )&& !this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)){
       if(failedNum > 0){
         return true;
       }
@@ -495,7 +495,7 @@ public class ApplicationContainerListener extends AbstractService implements App
         }
       }
     }
-    if ("TENSORFLOW".equals(hboxAppType) && !this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)){
+    if (("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) && !this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)){
       if(failedNum > 0){
         return false;
       }
@@ -762,34 +762,37 @@ public class ApplicationContainerListener extends AbstractService implements App
 
   @Override
   public synchronized String getClusterDef() {
-    if (this.clusterDef.get(HboxConstants.WORKER.toString()).size() == applicationContext.getWorkerNum()
-        && ((!tfDistributionStrategy && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum())
-        || (tfDistributionStrategy
-        && (applicationContext.getPsNum() == 0 || (applicationContext.getPsNum() > 0 && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum()))
-        && (!tfEvaluator || (tfEvaluator && this.clusterDef.get(HboxConstants.EVALUATOR.toString()).size() == 1))))) {
-      if (this.clusterDefStr == null) {
-        Collections.sort(this.clusterDef.get(HboxConstants.PS.toString()), new compairIndex());
-        Collections.sort(this.clusterDef.get(HboxConstants.WORKER.toString()), new compairIndex());
-        List workerList = new ArrayList<String>();
-        for (int i = 0; i < applicationContext.getWorkerNum(); i++) {
-          workerList.add(this.clusterDef.get(HboxConstants.WORKER.toString()).get(i).getHost());
-        }
-        Map<String, List<String>> clusterMessage = new HashMap<>();
-        clusterMessage.put(HboxConstants.WORKER, workerList);
-        if (applicationContext.getPsNum() > 0) {
-          List psList = new ArrayList<String>();
-          for (int i = 0; i < applicationContext.getPsNum(); i++) {
-            psList.add(this.clusterDef.get(HboxConstants.PS.toString()).get(i).getHost());
+    boolean correctWorker = this.clusterDef.get(HboxConstants.WORKER.toString()).size() == applicationContext.getWorkerNum();
+    boolean notDistModeButHavePs = !tfDistributionStrategy && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum();
+    boolean correctPs = applicationContext.getPsNum() == 0 || (applicationContext.getPsNum() > 0 && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum());
+    boolean correctEvaluator = !tfEvaluator || this.clusterDef.get(HboxConstants.EVALUATOR.toString()).size() == 1;
+    boolean validDistMode = tfDistributionStrategy && correctPs && correctEvaluator;
+    if (correctWorker) {
+      if(notDistModeButHavePs || validDistMode) {
+        if (this.clusterDefStr == null) {
+          Collections.sort(this.clusterDef.get(HboxConstants.PS.toString()), new compairIndex());
+          Collections.sort(this.clusterDef.get(HboxConstants.WORKER.toString()), new compairIndex());
+          List workerList = new ArrayList<String>();
+          for (int i = 0; i < applicationContext.getWorkerNum(); i++) {
+            workerList.add(this.clusterDef.get(HboxConstants.WORKER.toString()).get(i).getHost());
           }
-          clusterMessage.put(HboxConstants.PS, psList);
+          Map<String, List<String>> clusterMessage = new HashMap<>();
+          clusterMessage.put(HboxConstants.WORKER, workerList);
+          if (applicationContext.getPsNum() > 0) {
+            List psList = new ArrayList<String>();
+            for (int i = 0; i < applicationContext.getPsNum(); i++) {
+              psList.add(this.clusterDef.get(HboxConstants.PS.toString()).get(i).getHost());
+            }
+            clusterMessage.put(HboxConstants.PS, psList);
+          }
+          if (tfDistributionStrategy && tfEvaluator) {
+            List evaluatorList = new ArrayList<String>();
+            evaluatorList.add(this.clusterDef.get(HboxConstants.EVALUATOR.toString()).get(0).getHost());
+            clusterMessage.put(HboxConstants.EVALUATOR, evaluatorList);
+          }
+          LOG.info("Sending cluster def \"" + new Gson().toJson(clusterMessage) + "\"to container");
+          this.clusterDefStr = new Gson().toJson(clusterMessage);
         }
-        if (tfDistributionStrategy && tfEvaluator) {
-          List evaluatorList = new ArrayList<String>();
-          evaluatorList.add(this.clusterDef.get(HboxConstants.EVALUATOR.toString()).get(0).getHost());
-          clusterMessage.put(HboxConstants.EVALUATOR, evaluatorList);
-        }
-        LOG.info("Sending cluster def \"" + new Gson().toJson(clusterMessage) + "\"to container");
-        this.clusterDefStr = new Gson().toJson(clusterMessage);
       }
     }
     return this.clusterDefStr;
