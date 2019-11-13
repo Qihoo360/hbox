@@ -126,7 +126,7 @@ public class HboxContainer {
         this.role = envs.get(HboxConstants.Environment.HBOX_TF_ROLE.toString());
         this.index = Integer.valueOf(envs.get(HboxConstants.Environment.HBOX_TF_INDEX.toString()));
         this.hboxCmdProcessId = "";
-        if ("TENSORFLOW".equals(hboxAppType)  || "TENSOR2TENSOR".equals(hboxAppType) || hboxAppType.equals("DISTXGBOOST") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XDL")) {
+        if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType) || hboxAppType.equals("DISTXGBOOST") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XDL")) {
             LOG.info("Current role is:" + this.role);
         }
         if (hboxAppType.equals("MXNET") || hboxAppType.equals("XFLOW")) {
@@ -136,7 +136,7 @@ public class HboxContainer {
             LOG.info("Current role is:" + this.role);
         }
 
-        if ("TENSORFLOW".equals(hboxAppType)  || "TENSOR2TENSOR".equals(hboxAppType)|| hboxAppType.equals("MXNET") || hboxAppType.equals("DISTXGBOOST") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XFLOW") || hboxAppType.equals("XDL")) {
+        if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType) || hboxAppType.equals("MXNET") || hboxAppType.equals("DISTXGBOOST") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XFLOW") || hboxAppType.equals("XDL")) {
             LOG.info("Current index is:" + this.index);
         }
         if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
@@ -180,7 +180,7 @@ public class HboxContainer {
                     }
                 }
             }));
-        } else if(containerMode.equalsIgnoreCase("docker")){
+        } else if (containerMode.equalsIgnoreCase("docker")) {
             containerLaunch = new DockerExecutor(containerId.getContainerId().toString(), conf);
             LOG.info("HBox app mode: " + containerMode);
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -230,7 +230,7 @@ public class HboxContainer {
         heartbeatThread.setContainerStatus(HboxContainerStatus.INITIALIZING);
         containerReporter = null;
 
-        if ((("TENSORFLOW".equals(hboxAppType)  || "TENSOR2TENSOR".equals(hboxAppType))&& !single) || hboxAppType.equals("DIGITS") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || (hboxAppType.equals("DISTTORCH") && this.index == 0) || containerType.equalsIgnoreCase("docker")) {
+        if ((("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) && !single) || hboxAppType.equals("DIGITS") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || (hboxAppType.equals("DISTTORCH") && this.index == 0) || containerType.equalsIgnoreCase("docker")) {
             try {
                 Utilities.getReservePort(reservedSocket, InetAddress.getByName(localHost).getHostAddress(), reservePortBegin, reservePortEnd);
             } catch (IOException e) {
@@ -562,7 +562,7 @@ public class HboxContainer {
                 boardDfs.close();
             } else {
                 LOG.info("User appoint the board log dir : " + this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR));
-                if (!(hboxAppType.equals("TENSORFLOW")  || "TENSOR2TENSOR".equals(hboxAppType)) ) {
+                if (!(hboxAppType.equals("TENSORFLOW") || "TENSOR2TENSOR".equals(hboxAppType))) {
                     LOG.error("Note that VisualDL not support the hdfs path of logdir.");
                 }
             }
@@ -666,8 +666,8 @@ public class HboxContainer {
             Map<String, Object> clusterInfo = new HashMap<>();
             Map<String, Object> taskInfo = new HashMap<>();
             Map<String, Object> tfConfigInfo = new HashMap<>();
-            switch (hboxAppType){
-                case "TENSORFLOW":{
+            switch (hboxAppType) {
+                case "TENSORFLOW": {
                     //cluster info
                     clusterInfo = (Map) gson.fromJson(this.clusterDef, clusterInfo.getClass());
                     //task info
@@ -676,8 +676,9 @@ public class HboxContainer {
                     tfConfigInfo.put("cluster", clusterInfo);
                     tfConfigInfo.put("task", taskInfo);
                     LOG.info("Tensorflow distribute mode needs the TF_CONFIG: " + new Gson().toJson(tfConfigInfo));
-                }break;
-                case "TENSOR2TENSOR":{
+                }
+                break;
+                case "TENSOR2TENSOR": {
                     if (this.role.equals("ps")) {
                         taskInfo.put("type", this.role);
                     } else {
@@ -689,7 +690,8 @@ public class HboxContainer {
                     tfConfigInfo.put("task", taskInfo);
                     tfConfigInfo.put("environment", "cloud");
                     LOG.info("Tensor2Tensor distribute mode needs the TF_CONFIG: " + new Gson().toJson(tfConfigInfo));
-                }break;
+                }
+                break;
             }
             this.tfConfig = new Gson().toJson(tfConfigInfo);
         }
@@ -1251,7 +1253,7 @@ public class HboxContainer {
                         String boardLogDir = this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR);
                         int boardPort = boardReservedSocket.getLocalPort();
                         String boardCommand;
-                        if ("TENSORFLOW".equals(hboxAppType)  || "TENSOR2TENSOR".equals(hboxAppType)) {
+                        if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) {
                             int boardReloadInterval = this.conf.getInt(HboxConfiguration.HBOX_TF_BOARD_RELOAD_INTERVAL, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_RELOAD_INTERVAL);
                             boardCommand = "tensorboard --host=" + boardHost + " --port=" + boardPort + " --reload_interval=" + boardReloadInterval + " --logdir=" + boardLogDir;
                         } else {
@@ -1323,7 +1325,7 @@ public class HboxContainer {
                         String boardLogDir = this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR);
                         int boardPort = boardReservedSocket.getLocalPort();
                         String boardCommand;
-                        if ("TENSORFLOW".equals(hboxAppType)  || "TENSOR2TENSOR".equals(hboxAppType)) {
+                        if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) {
                             int boardReloadInterval = this.conf.getInt(HboxConfiguration.HBOX_TF_BOARD_RELOAD_INTERVAL, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_RELOAD_INTERVAL);
                             boardCommand = "tensorboard --host=" + boardHost + " --port=" + boardPort + " --reload_interval=" + boardReloadInterval + " --logdir=" + boardLogDir;
                         } else {

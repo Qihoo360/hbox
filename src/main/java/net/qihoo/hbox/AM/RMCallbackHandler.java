@@ -68,7 +68,7 @@ public class RMCallbackHandler implements CallbackHandler {
         blackHosts = Collections.synchronizedSet(new HashSet<String>());
         acquiredWorkerContainersCount = new AtomicInteger(0);
         acquiredPsContainersCount = new AtomicInteger(0);
-         workerContainersAllocating = new AtomicBoolean(false);
+        workerContainersAllocating = new AtomicBoolean(false);
         chiefWorkerContainersAllocating = new AtomicBoolean(false);
         evaluatorWorkerContainersAllocating = new AtomicBoolean(false);
         progress = 0.0f;
@@ -133,11 +133,11 @@ public class RMCallbackHandler implements CallbackHandler {
         workerContainersAllocating.set(true);
     }
 
-    public void setChiefWorkerContainersAllocating(){
+    public void setChiefWorkerContainersAllocating() {
         chiefWorkerContainersAllocating.set(true);
     }
 
-    public void setEvaluatorWorkerContainersAllocating(){
+    public void setEvaluatorWorkerContainersAllocating() {
         evaluatorWorkerContainersAllocating.set(true);
     }
 
@@ -154,9 +154,9 @@ public class RMCallbackHandler implements CallbackHandler {
         HboxConfiguration configuration = new HboxConfiguration();
         containerType = configuration.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);
         //add blackHosts addition and limit number per host
-        if(this.hboxAppType.equals("MPI") || this.hboxAppType.equals("HOROVOD")){
+        if (this.hboxAppType.equals("MPI") || this.hboxAppType.equals("HOROVOD")) {
             blackHostsLimit = 1;
-        }else if(containerType.equalsIgnoreCase("DOCKER")){
+        } else if (containerType.equalsIgnoreCase("DOCKER")) {
             blackHostsLimit = configuration.getInt(HboxConfiguration.HBOX_DOCKER_NUM_PER_WORKER, HboxConfiguration.DEDAULT_HBOX_DOCKER_NUM_PER_WORKER);
         }
         for (Container acquiredContainer : containers) {
@@ -164,9 +164,9 @@ public class RMCallbackHandler implements CallbackHandler {
             LOG.info("Acquired container " + acquiredContainer.getId() + " on host " + host);
             if (!blackHosts.contains(host)) {
                 //count and process blackHosts
-                int countContainerNum = countMap.get(host) == null? 1 : countMap.get(host) + 1;
+                int countContainerNum = countMap.get(host) == null ? 1 : countMap.get(host) + 1;
                 countMap.put(host, countContainerNum);
-                if(countMap.get(host) >= blackHostsLimit)
+                if (countMap.get(host) >= blackHostsLimit)
                     blackHosts.add(host);
                 //add worker or ps
                 if (evaluatorWorkerContainersAllocating.get()) {

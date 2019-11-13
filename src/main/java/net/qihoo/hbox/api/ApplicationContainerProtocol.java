@@ -10,62 +10,62 @@ import java.util.Map;
 
 public interface ApplicationContainerProtocol extends VersionedProtocol {
 
-  public static final long versionID = 1L;
+    public static final long versionID = 1L;
 
-  void reportReservedPort(String host, int port, String role, int index);
+    void reportReservedPort(String host, int port, String role, int index);
 
-  void reportLightGbmIpPort(HboxContainerId containerId, String lightGbmIpPort);
+    void reportLightGbmIpPort(HboxContainerId containerId, String lightGbmIpPort);
 
-  void reportLightLdaIpPort(HboxContainerId containerId, String lightLdaIpPort);
+    void reportLightLdaIpPort(HboxContainerId containerId, String lightLdaIpPort);
 
-  void reportTorchRank0IP(String ip);
+    void reportTorchRank0IP(String ip);
 
-  String getTorchRank0IP();
+    String getTorchRank0IP();
 
-  String getClusterDef();
+    String getClusterDef();
 
-  String getLightGbmIpPortStr();
+    String getLightGbmIpPortStr();
 
-  String getLightLdaIpPortStr();
+    String getLightLdaIpPortStr();
 
-  void reportStatus(HboxContainerId containerId, HboxContainerStatus containerStatus);
+    void reportStatus(HboxContainerId containerId, HboxContainerStatus containerStatus);
 
-  void reportGPUDevice(HboxContainerId containerId, String containerGPUDevice);
+    void reportGPUDevice(HboxContainerId containerId, String containerGPUDevice);
 
-  HeartbeatResponse heartbeat(HboxContainerId containerId, HeartbeatRequest heartbeatRequest);
+    HeartbeatResponse heartbeat(HboxContainerId containerId, HeartbeatRequest heartbeatRequest);
 
-  boolean isHboxTrainCompleted();
+    boolean isHboxTrainCompleted();
 
-  InputInfo[] getInputSplit(HboxContainerId containerId);
+    InputInfo[] getInputSplit(HboxContainerId containerId);
 
-  InputInfo[] getInputWholeSplit();
+    InputInfo[] getInputWholeSplit();
 
-  InputSplit[] getStreamInputSplit(HboxContainerId containerId);
+    InputSplit[] getStreamInputSplit(HboxContainerId containerId);
 
-  OutputInfo[] getOutputLocation();
+    OutputInfo[] getOutputLocation();
 
-  void reportTensorBoardURL(String url);
+    void reportTensorBoardURL(String url);
 
-  void reportMapedTaskID(HboxContainerId containerId, String taskId);
+    void reportMapedTaskID(HboxContainerId containerId, String taskId);
 
-  void reportVPCCommandAndPasswd(HboxContainerId containerId, String commandAndPasswd);
+    void reportVPCCommandAndPasswd(HboxContainerId containerId, String commandAndPasswd);
 
-  void reportDigitsUrl(HboxContainerId containerId, String url);
+    void reportDigitsUrl(HboxContainerId containerId, String url);
 
-  void reportGpuMemeoryUsed(HboxContainerId containerId, String gpuMemeoryUsed);
+    void reportGpuMemeoryUsed(HboxContainerId containerId, String gpuMemeoryUsed);
 
-  void reportGpuUtilization(HboxContainerId containerId, String gpuUtilization);
+    void reportGpuUtilization(HboxContainerId containerId, String gpuUtilization);
 
-  void reportCpuMetrics(HboxContainerId containerId, String cpuMetrics);
+    void reportCpuMetrics(HboxContainerId containerId, String cpuMetrics);
 
-  Long interResultTimeStamp();
+    Long interResultTimeStamp();
 
-  boolean isApplicationCompleted();
+    boolean isApplicationCompleted();
 
-  Long allContainerStartTime();
+    Long allContainerStartTime();
 
-  int getSignal();
+    int getSignal();
 
-  void sendSignal(int sid);
+    void sendSignal(int sid);
 
 }

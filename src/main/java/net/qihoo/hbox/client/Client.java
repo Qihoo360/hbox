@@ -217,7 +217,7 @@ public class Client {
         }
     }
 
-    private void readClusterConf(){
+    private void readClusterConf() {
         String cluster = conf.get(HboxConfiguration.HBOX_CLUSTER_NAME, HboxConfiguration.DEFAULT_HBOX_CLUSTER_NAME);
         if (!cluster.equals("")) {
             String[] clusterConfPath = conf.getStrings(HboxConfiguration.HBOX_CLUSTER_CONF_PATH.replace("cluster.name", cluster));
@@ -439,7 +439,7 @@ public class Client {
             }
         }
 
-        if ("TENSORFLOW".equals(clientArguments.appType)  || "TENSOR2TENSOR".equals(clientArguments.appType) || "MXNET".equals(clientArguments.appType) || "DISTLIGHTLDA".equals(clientArguments.appType) || "XFLOW".equals(clientArguments.appType) || "XDL".equals(clientArguments.appType)) {
+        if ("TENSORFLOW".equals(clientArguments.appType) || "TENSOR2TENSOR".equals(clientArguments.appType) || "MXNET".equals(clientArguments.appType) || "DISTLIGHTLDA".equals(clientArguments.appType) || "XFLOW".equals(clientArguments.appType) || "XDL".equals(clientArguments.appType)) {
             Boolean single;
             if ("TENSORFLOW".equals(clientArguments.appType) || "TENSOR2TENSOR".equals(clientArguments.appType)) {
                 single = conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE);
@@ -508,7 +508,7 @@ public class Client {
         }
     }
 
-    private void configXDLAmContainer(){
+    private void configXDLAmContainer() {
         conf.set(HboxConfiguration.HBOX_CONTAINER_TYPE, "docker");
         conf.set("DOCKER_CONTAINER_NETWORK", "host");
         conf.set("DOCKER_PORT", "");
@@ -522,7 +522,7 @@ public class Client {
         }
     }
 
-    private void assignCacheFiles() throws IOException{
+    private void assignCacheFiles() throws IOException {
         String[] cacheFiles = StringUtils.split(clientArguments.hboxCacheFiles, ",");
         for (String path : cacheFiles) {
             Path pathRemote;
@@ -543,7 +543,7 @@ public class Client {
         }
     }
 
-    private void assignCacheArchives() throws IOException{
+    private void assignCacheArchives() throws IOException {
         String[] cacheArchives = StringUtils.split(clientArguments.hboxCacheArchives, ",");
         for (String path : cacheArchives) {
             Path pathRemote;
@@ -564,7 +564,7 @@ public class Client {
         }
     }
 
-    private void prepareFilesForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException{
+    private void prepareFilesForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
         Path[] tfFilesDst = new Path[clientArguments.hboxFiles.length];
         LOG.info("Copy hbox files from local filesystem to remote.");
         for (int i = 0; i < clientArguments.hboxFiles.length; i++) {
@@ -594,7 +594,7 @@ public class Client {
         }
     }
 
-    private void prepareJarsForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException{
+    private void prepareJarsForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
         Path[] tfFilesDst = new Path[clientArguments.libJars.length];
         LOG.info("Copy hbox lib jars from local filesystem to remote.");
         for (int i = 0; i < clientArguments.libJars.length; i++) {
@@ -647,7 +647,7 @@ public class Client {
         appMasterEnv.put(HboxConstants.Environment.HBOX_JOB_CONF_LOCATION.toString(), jobConfPath.toString());
     }
 
-    private void prepareCacheFiles(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException{
+    private void prepareCacheFiles(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
         appMasterEnv.put(HboxConstants.Environment.HBOX_CACHE_FILE_LOCATION.toString(), clientArguments.hboxCacheFiles);
         if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
                 || clientArguments.appType.equals("DISTXGBOOST") || clientArguments.appType.equals("XFLOW")
@@ -685,7 +685,7 @@ public class Client {
         }
     }
 
-    private void prepareCacheArchives(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException{
+    private void prepareCacheArchives(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
         appMasterEnv.put(HboxConstants.Environment.HBOX_CACHE_ARCHIVE_LOCATION.toString(), clientArguments.hboxCacheArchives);
         if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
                 || clientArguments.appType.equals("DISTXGBOOST") || clientArguments.appType.equals("XFLOW")
@@ -722,7 +722,7 @@ public class Client {
         }
     }
 
-    private void prepareAppMasterJar(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException{
+    private void prepareAppMasterJar(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
         Path appJarSrc = new Path(clientArguments.appMasterJar);
         Path appJarDst = Utilities
                 .getRemotePath(conf, applicationId, HboxConstants.HBOX_APPLICATION_JAR);
@@ -734,7 +734,7 @@ public class Client {
         appMasterEnv.put(HboxConstants.Environment.APP_JAR_LOCATION.toString(), appJarDst.toUri().toString());
     }
 
-    private void prepareInputOutputClassPathEnvForAM(Map<String, String> appMasterEnv) throws IOException{
+    private void prepareInputOutputClassPathEnvForAM(Map<String, String> appMasterEnv) throws IOException {
         Set<String> inputPathKeys = inputPaths.keySet();
         StringBuilder inputLocation = new StringBuilder(1000);
         if (inputPathKeys.size() > 0) {
@@ -776,7 +776,7 @@ public class Client {
         }
     }
 
-    private List<String> prepareLaunchCommandForAM(Map<String, String> appMasterEnv, ApplicationSubmissionContext applicationContext){
+    private List<String> prepareLaunchCommandForAM(Map<String, String> appMasterEnv, ApplicationSubmissionContext applicationContext) {
         LOG.info("Building application master launch command");
         int driverMem = conf.getInt(HboxConfiguration.HBOX_DRIVER_MEMORY, HboxConfiguration.DEFAULT_HBOX_DRIVER_MEMORY);
         List<String> appMasterArgs = new ArrayList<>(20);
@@ -810,7 +810,7 @@ public class Client {
         return appMasterLaunchcommands;
     }
 
-    private void prepareOtherEnvsForAM(Map<String, String> appMasterEnv,  Map<String, LocalResource> localResources) throws IOException{
+    private void prepareOtherEnvsForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
         LOG.info("Building environments for the application master");
         String containerType = conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE,
                 HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);

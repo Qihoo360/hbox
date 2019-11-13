@@ -17,106 +17,106 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public interface ApplicationContext {
 
-  ApplicationId getApplicationID();
+    ApplicationId getApplicationID();
 
-  String getAppType();
+    String getAppType();
 
-  String getAppUser();
+    String getAppUser();
 
-  int getWorkerNum();
+    int getWorkerNum();
 
-  int getPsNum();
+    int getPsNum();
 
-  int getWorkerGcores();
+    int getWorkerGcores();
 
-  int getPsGcores();
+    int getPsGcores();
 
-  int getWorkerMemory();
+    int getWorkerMemory();
 
-  int getPsMemory();
+    int getPsMemory();
 
-  int getWorkerVCores();
+    int getWorkerVCores();
 
-  int getPsVCores();
+    int getPsVCores();
 
-  int getChiefWorkerMemory();
+    int getChiefWorkerMemory();
 
-  int getEvaluatorWorkerMemory();
+    int getEvaluatorWorkerMemory();
 
-  List<Container> getWorkerContainers();
+    List<Container> getWorkerContainers();
 
-  List<Container> getPsContainers();
+    List<Container> getPsContainers();
 
-  HboxContainerStatus getContainerStatus(HboxContainerId containerId);
+    HboxContainerStatus getContainerStatus(HboxContainerId containerId);
 
-  String getContainerGPUDevice(HboxContainerId containerId);
+    String getContainerGPUDevice(HboxContainerId containerId);
 
-  List<InputInfo> getInputs(HboxContainerId containerId);
+    List<InputInfo> getInputs(HboxContainerId containerId);
 
-  Map<String, InputInfo> getWholeInputs();
+    Map<String, InputInfo> getWholeInputs();
 
-  List<InputSplit> getStreamInputs(HboxContainerId containerId);
+    List<InputSplit> getStreamInputs(HboxContainerId containerId);
 
-  List<OutputInfo> getOutputs();
+    List<OutputInfo> getOutputs();
 
-  LinkedBlockingQueue<Message> getMessageQueue();
+    LinkedBlockingQueue<Message> getMessageQueue();
 
-  String getTensorBoardUrl();
+    String getTensorBoardUrl();
 
-  Map<HboxContainerId, String> getVPCCommandAndPasswdMap();
+    Map<HboxContainerId, String> getVPCCommandAndPasswdMap();
 
-  Map<HboxContainerId, String> getDigitsUrlMap();
+    Map<HboxContainerId, String> getDigitsUrlMap();
 
-  Map<HboxContainerId, String> getReporterProgress();
+    Map<HboxContainerId, String> getReporterProgress();
 
-  Map<HboxContainerId, String> getContainersAppStartTime();
+    Map<HboxContainerId, String> getContainersAppStartTime();
 
-  Map<HboxContainerId, String> getContainersAppFinishTime();
+    Map<HboxContainerId, String> getContainersAppFinishTime();
 
-  Map<HboxContainerId, String> getMapedTaskID();
+    Map<HboxContainerId, String> getMapedTaskID();
 
-  Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuMemMetrics();
+    Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuMemMetrics();
 
-  Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuUtilMetrics();
+    Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuUtilMetrics();
 
-  Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics();
+    Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics();
 
-  Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> getContainersGpuMemStatistics();
+    Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> getContainersGpuMemStatistics();
 
-  Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> getContainersGpuUtilStatistics();
+    Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> getContainersGpuUtilStatistics();
 
-  Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> getContainersCpuStatistics();
+    Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> getContainersCpuStatistics();
 
-  int getSavingModelStatus();
+    int getSavingModelStatus();
 
-  int getSavingModelTotalNum();
+    int getSavingModelTotalNum();
 
-  Boolean getStartSavingStatus();
+    Boolean getStartSavingStatus();
 
-  void startSavingModelStatus(Boolean flag);
+    void startSavingModelStatus(Boolean flag);
 
-  Boolean getLastSavingStatus();
+    Boolean getLastSavingStatus();
 
-  String getLastInterSavingPath();
+    String getLastInterSavingPath();
 
-  List<Long> getModelSavingList();
+    List<Long> getModelSavingList();
 
-  Boolean getContainerStarted();
+    Boolean getContainerStarted();
 
-  String getTfEvaluatorId();
+    String getTfEvaluatorId();
 
-  String getChiefWorkerId();
+    String getChiefWorkerId();
 
-  String getSchedulerId();
+    String getSchedulerId();
 
-  Boolean getChiefWorker();
+    Boolean getChiefWorker();
 
-  String getAMContainerID();
+    String getAMContainerID();
 
-  String getContainerStdOut(HboxContainerId cid);
+    String getContainerStdOut(HboxContainerId cid);
 
-  String getContainerStdErr(HboxContainerId cid);
+    String getContainerStdErr(HboxContainerId cid);
 
-  void sendSignal(int sid);
+    void sendSignal(int sid);
 
 }

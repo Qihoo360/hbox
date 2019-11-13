@@ -1,4 +1,5 @@
 package net.qihoo.hbox.container;
+
 import com.google.gson.Gson;
 import net.qihoo.hbox.api.ApplicationContainerProtocol;
 import net.qihoo.hbox.util.Utilities;
@@ -24,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Created by ouyangwen-it on 2017/11/30.
  */
-
 
 
 public class ContainerReporter extends Thread {
@@ -54,7 +54,7 @@ public class ContainerReporter extends Thread {
 
 
     public ContainerReporter(ApplicationContainerProtocol protocol, Configuration conf,
-                     HboxContainerId hboxContainerId, String gpuStr, String hboxCmdProcessId, Boolean dockerFlag) {
+                             HboxContainerId hboxContainerId, String gpuStr, String hboxCmdProcessId, Boolean dockerFlag) {
         this.protocol = protocol;
         this.conf = conf;
         this.containerId = hboxContainerId;
@@ -70,7 +70,7 @@ public class ContainerReporter extends Thread {
     }
 
     public void run() {
-        if(!this.gpuStr.equals("")) {
+        if (!this.gpuStr.equals("")) {
             try {
                 produceGpuMetrics(this.gpuStr, this.dockerFlag);
             } catch (IOException e) {
@@ -89,7 +89,7 @@ public class ContainerReporter extends Thread {
 
         while (true) {
             Utilities.sleep(3000);
-            if(!this.gpuStr.equals("")){
+            if (!this.gpuStr.equals("")) {
                 try {
                     protocol.reportGpuMemeoryUsed(containerId, new Gson().toJson(gpuMemoryUsed));
                     protocol.reportGpuUtilization(containerId, new Gson().toJson(gpuUtilization));
@@ -159,6 +159,7 @@ public class ContainerReporter extends Thread {
 
         /**
          * Return the number of cpu vcores assigned
+         *
          * @return
          */
         public int getCpuVcores() {
@@ -185,14 +186,14 @@ public class ContainerReporter extends Thread {
                     int i;
                     Boolean flag;
                     while ((line = reader.readLine()) != null) {
-                        Long time =  (new Date()).getTime();
+                        Long time = (new Date()).getTime();
                         String[] gpusIndex = StringUtils.split(line, ',');
                         for (i = 0; i < gpuList.length; i++) {
-                          if ((dockerFlag && i == Integer.parseInt(gpusIndex[0])) || (!dockerFlag && gpuList[i].equals(gpusIndex[0])))
-                            flag = true;
-                          else
-                            flag = false;
-                          if (flag) {
+                            if ((dockerFlag && i == Integer.parseInt(gpusIndex[0])) || (!dockerFlag && gpuList[i].equals(gpusIndex[0])))
+                                flag = true;
+                            else
+                                flag = false;
+                            if (flag) {
                                 List<Long> memPoint = new ArrayList<>();
                                 memPoint.add(time);
                                 memPoint.add(Long.parseLong(gpusIndex[1].trim()));
@@ -249,11 +250,11 @@ public class ContainerReporter extends Thread {
                         pTree.updateProcessTree();
                         Long time = (new Date()).getTime();
                         double currentPmemUsage = Double.parseDouble(df.format(pTree.getRssMemorySize() / 1024.0 / 1024.0 / 1024.0));
-                        int cpuUsagePercentPerCore = (int)pTree.getCpuUsagePercent();
-                        if(cpuUsagePercentPerCore < 0) {
+                        int cpuUsagePercentPerCore = (int) pTree.getCpuUsagePercent();
+                        if (cpuUsagePercentPerCore < 0) {
                             cpuUsagePercentPerCore = 0;
                         }
-                        if(currentPmemUsage < 0.0) {
+                        if (currentPmemUsage < 0.0) {
                             currentPmemUsage = 0.0;
                         }
                         List memPoint = new ArrayList();

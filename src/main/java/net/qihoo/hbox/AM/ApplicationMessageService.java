@@ -21,84 +21,84 @@ import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
 
 public class ApplicationMessageService extends AbstractService implements
-    ApplicationMessageProtocol {
+        ApplicationMessageProtocol {
 
-  private static final Log LOG = LogFactory.getLog(ApplicationMessageService.class);
+    private static final Log LOG = LogFactory.getLog(ApplicationMessageService.class);
 
-  private final ApplicationContext applicationContext;
+    private final ApplicationContext applicationContext;
 
-  private InetSocketAddress serverAddress;
+    private InetSocketAddress serverAddress;
 
-  public ApplicationMessageService(ApplicationContext applicationContext, Configuration conf) {
-    super(ApplicationMessageService.class.getSimpleName());
-    this.setConfig(conf);
-    this.applicationContext = applicationContext;
-  }
-
-  @Override
-  public void start() {
-    LOG.info("Starting application message server");
-    RPC.Builder builder = new RPC.Builder(getConfig());
-    builder.setProtocol(ApplicationMessageProtocol.class);
-    builder.setInstance(this);
-    builder.setBindAddress("0.0.0.0");
-    builder.setPort(0);
-    Server server;
-    try {
-      server = builder.build();
-    } catch (Exception e) {
-      LOG.error("Error starting message server!", e);
-      e.printStackTrace();
-      return;
-    }
-    server.start();
-
-    serverAddress = NetUtils.getConnectAddress(server);
-    LOG.info("Started application message server at " + serverAddress);
-  }
-
-  @Override
-  public Message[] fetchApplicationMessages() {
-    int defaultMaxBatch = 100;
-    return fetchApplicationMessages(defaultMaxBatch);
-  }
-
-  @Override
-  public Message[] fetchApplicationMessages(int maxBatch) {
-    BlockingQueue<Message> msgs = applicationContext.getMessageQueue();
-    ArrayList<Message> result = new ArrayList<>();
-    int count = 0;
-    while (count < maxBatch) {
-      Message line = msgs.poll();
-      if (null == line) {
-        break;
-      }
-      result.add(line);
-      count++;
+    public ApplicationMessageService(ApplicationContext applicationContext, Configuration conf) {
+        super(ApplicationMessageService.class.getSimpleName());
+        this.setConfig(conf);
+        this.applicationContext = applicationContext;
     }
 
-    if (result.size() == 0) {
-      return null;
+    @Override
+    public void start() {
+        LOG.info("Starting application message server");
+        RPC.Builder builder = new RPC.Builder(getConfig());
+        builder.setProtocol(ApplicationMessageProtocol.class);
+        builder.setInstance(this);
+        builder.setBindAddress("0.0.0.0");
+        builder.setPort(0);
+        Server server;
+        try {
+            server = builder.build();
+        } catch (Exception e) {
+            LOG.error("Error starting message server!", e);
+            e.printStackTrace();
+            return;
+        }
+        server.start();
+
+        serverAddress = NetUtils.getConnectAddress(server);
+        LOG.info("Started application message server at " + serverAddress);
     }
-    Message[] resultArray = new Message[result.size()];
-    result.toArray(resultArray);
-    return resultArray;
-  }
 
-  public InetSocketAddress getServerAddress() {
-    return serverAddress;
-  }
+    @Override
+    public Message[] fetchApplicationMessages() {
+        int defaultMaxBatch = 100;
+        return fetchApplicationMessages(defaultMaxBatch);
+    }
 
-  @Override
-  public long getProtocolVersion(String protocol, long clientVersion) throws IOException {
-    return ApplicationMessageProtocol.versionID;
-  }
+    @Override
+    public Message[] fetchApplicationMessages(int maxBatch) {
+        BlockingQueue<Message> msgs = applicationContext.getMessageQueue();
+        ArrayList<Message> result = new ArrayList<>();
+        int count = 0;
+        while (count < maxBatch) {
+            Message line = msgs.poll();
+            if (null == line) {
+                break;
+            }
+            result.add(line);
+            count++;
+        }
 
-  @Override
-  public ProtocolSignature getProtocolSignature(String protocol,
-                                                long clientVersion, int clientMethodsHash) throws IOException {
-    return ProtocolSignature.getProtocolSignature(this, protocol,
-        clientVersion, clientMethodsHash);
-  }
+        if (result.size() == 0) {
+            return null;
+        }
+        Message[] resultArray = new Message[result.size()];
+        result.toArray(resultArray);
+        return resultArray;
+    }
+
+    public InetSocketAddress getServerAddress() {
+        return serverAddress;
+    }
+
+    @Override
+    public long getProtocolVersion(String protocol, long clientVersion) throws IOException {
+        return ApplicationMessageProtocol.versionID;
+    }
+
+    @Override
+    public ProtocolSignature getProtocolSignature(String protocol,
+                                                  long clientVersion, int clientMethodsHash) throws IOException {
+        return ProtocolSignature.getProtocolSignature(this, protocol,
+                clientVersion, clientMethodsHash);
+    }
 
 }

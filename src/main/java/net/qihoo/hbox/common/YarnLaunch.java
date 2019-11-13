@@ -10,19 +10,19 @@ import org.apache.commons.logging.LogFactory;
 
 public class YarnLaunch implements ILaunch {
 
-  private static final Log LOG = LogFactory.getLog(YarnLaunch.class);
-  private String containerId;
-  private Process hboxProcess;
+    private static final Log LOG = LogFactory.getLog(YarnLaunch.class);
+    private String containerId;
+    private Process hboxProcess;
 
-  public YarnLaunch(String containerId) {
-    this.containerId = containerId;
+    public YarnLaunch(String containerId) {
+        this.containerId = containerId;
 
-  }
+    }
 
-  @Override
-  public Process exec(String command, String[] envp, Map<String, String> envs, File dir) throws IOException {
-    Runtime rt = Runtime.getRuntime();
-    hboxProcess = rt.exec(command, envp, dir);
-    return hboxProcess;
-  }
+    @Override
+    public Process exec(String command, String[] envp, Map<String, String> envs, File dir) throws IOException {
+        Runtime rt = Runtime.getRuntime();
+        hboxProcess = rt.exec(command, envp, dir);
+        return hboxProcess;
+    }
 }
