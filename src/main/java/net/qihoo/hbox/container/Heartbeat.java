@@ -161,6 +161,7 @@ public class Heartbeat extends Thread {
                                 + conf.get(HboxConfiguration.HBOX_INTERRESULT_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
                                 + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date(lastInnerModelTimeStamp))
                                 + "/" + containerId.toString());
+
                         LOG.info("InnerModel path:" + remotePath);
                         FileSystem dfs = remotePath.getFileSystem(conf);
                         if (dfs.exists(remotePath)) {

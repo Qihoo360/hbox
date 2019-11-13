@@ -118,6 +118,7 @@ public class Client {
         conf.set(HboxConfiguration.HBOX_STREAM_EPOCH, String.valueOf(clientArguments.streamEpoch));
         conf.setBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, clientArguments.tfEvaluator);
 
+
         if (clientArguments.queue == null || clientArguments.queue.equals("")) {
             clientArguments.queue = appSubmitterUserName;
         }
@@ -867,7 +868,10 @@ public class Client {
                 throw new IllegalArgumentException("Invalid hbox cmd for the application");
             }
         }
-
+        //HBOX specific one worker to upload output dir
+        if (clientArguments.outputIndex >= 0) {
+            appMasterEnv.put(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString(), String.valueOf(clientArguments.outputIndex));
+        }
     }
 
     private boolean submitAndMonitor() throws IOException, YarnException {

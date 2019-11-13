@@ -146,6 +146,7 @@ public class ApplicationMaster extends CompositeService {
     private String xdlZkUri;
     private int xdlZkPort;
     private String schedulerContainerId;
+    private int outputIndex;
 
     /**
      * Constructor, connect to Resource Manager
@@ -213,6 +214,7 @@ public class ApplicationMaster extends CompositeService {
         amContainerStdOut = new StringBuilder();
         amContainerStdErr = new StringBuilder();
         containerStarted = false;
+        outputIndex = -1;
 
         reservePortBegin = this.conf.getInt(HboxConfiguration.HBOX_RESERVE_PORT_BEGIN, HboxConfiguration.DEFAULT_HBOX_RESERVE_PORT_BEGIN);
         reservePortEnd = this.conf.getInt(HboxConfiguration.HBOX_RESERVE_PORT_END, HboxConfiguration.DEFAULT_HBOX_RESERVE_PORT_END);
@@ -1188,6 +1190,17 @@ public class ApplicationMaster extends CompositeService {
         containerEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), containerExecType);
         if (this.inputPath.length() > 0) {
             containerEnv.put(HboxConstants.Environment.HBOX_INPUT_PATH.toString(), this.inputPath.substring(0, inputPath.length() - 1));
+        }
+        if (envs.containsKey(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString())) {
+            this.outputIndex = Integer.parseInt(envs.get(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString()));
+            if(this.outputIndex >= workerNum){
+                LOG.info("Note that user set the worker index " + outputIndex + " which to upload the output exceed the worker num " + workerNum + ". " +
+                        "Job will upload the output of all workers after completed successfully!");
+            }
+            if(workerNum == 1){
+                this.outputIndex = 0;
+            }
+            containerEnv.put(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString(), String.valueOf(this.outputIndex));
         }
 
 //        if (conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE).equalsIgnoreCase("docker")) {
@@ -2707,25 +2720,34 @@ public class ApplicationMaster extends CompositeService {
                     for (OutputInfo outputInfo : outputInfos) {
                         FileSystem fs = new Path(outputInfo.getDfsLocation()).getFileSystem(conf);
                         Path finalResultPath = new Path(outputInfo.getDfsLocation());
-                        for (Container finishedContainer : acquiredWorkerContainers) {
-                            Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString());
-                            if (workerNum == 1 && !conf.getBoolean(HboxConfiguration.HBOX_CREATE_CONTAINERID_DIR, HboxConfiguration.DEFAULT_HBOX_CREATE_CONTAINERID_DIR)) {
-                                tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + outputInfo.getLocalLocation());
-                            }
+                        if (outputIndex >= 0) {
+                            Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + outputInfo.getLocalLocation());
                             if (fs.exists(tmpResultPath)) {
                                 LOG.info("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
                                 fs.rename(tmpResultPath, finalResultPath);
                             }
-                        }
-                        if (psNum > 0 && (hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("TENSORFLOW") || "TENSOR2TENSOR".equals(hboxAppType) || hboxAppType.equals("XDL"))) {
-                            for (Container finishedContainer : acquiredPsContainers) {
+                        }else {
+                            for (Container finishedContainer : acquiredWorkerContainers) {
                                 Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString());
+                                if (workerNum == 1 && !conf.getBoolean(HboxConfiguration.HBOX_CREATE_CONTAINERID_DIR, HboxConfiguration.DEFAULT_HBOX_CREATE_CONTAINERID_DIR)) {
+                                    tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + outputInfo.getLocalLocation());
+                                }
                                 if (fs.exists(tmpResultPath)) {
                                     LOG.info("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
                                     fs.rename(tmpResultPath, finalResultPath);
                                 }
                             }
+                            if (psNum > 0 && (hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("TENSORFLOW") || "TENSOR2TENSOR".equals(hboxAppType) || hboxAppType.equals("XDL"))) {
+                                for (Container finishedContainer : acquiredPsContainers) {
+                                    Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString());
+                                    if (fs.exists(tmpResultPath)) {
+                                        LOG.info("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
+                                        fs.rename(tmpResultPath, finalResultPath);
+                                    }
+                                }
+                            }
                         }
+
                         Path tmpPath = new Path(outputInfo.getDfsLocation() + "/_temporary/");
                         if (fs.exists(tmpPath)) {
                             fs.delete(tmpPath, true);

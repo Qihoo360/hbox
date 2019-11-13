@@ -64,6 +64,7 @@ class ClientArguments {
     public Boolean hostLocalEnable;
     public Boolean tfEvaluator;
     Properties confs;
+    int outputIndex;
 
     public ClientArguments(String[] args) throws IOException, ParseException, ClassNotFoundException {
         this.init();
@@ -117,6 +118,7 @@ class ClientArguments {
         outputStrategy = HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY.toUpperCase();
         createContaineridDir = HboxConfiguration.DEFAULT_HBOX_CREATE_CONTAINERID_DIR;
         tfEvaluator = HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR;
+        outputIndex = -1;
 
         allOptions = new Options();
         allOptions.addOption("appName", "app-name", true,
@@ -211,6 +213,7 @@ class ClientArguments {
                 "The outputformat class, default:org.apache.hadoop.mapred.lib.TextMultiOutputFormat");
         allOptions.addOption("streamEpoch", "stream-epoch", true,
                 "The num of epoch for stream input.");
+
         allOptions.addOption("inputStrategy", "input-strategy", true,
                 "The input strategy for user data input, DOWNLOAD,PLACEHOLDER or STREAM, default:DOWNLOAD");
         allOptions.addOption("outputStrategy", "output-strategy", true,
@@ -219,8 +222,10 @@ class ClientArguments {
         allOptions.addOption("tfEvaluator", "tf-evaluator", true,
                 "Using the evaluator during the tensorflow distribute training.");
 
-        allOptions.addOption("help", "help", false, "Print usage");
+        allOptions.addOption("outputIndex", "output-index", true,
+                "Setting the index of worker which to upload the output, default uploading the output of all the workers.");
 
+        allOptions.addOption("help", "help", false, "Print usage");
 
         OptionBuilder.withArgName("property=value");
         OptionBuilder.hasArgs(Integer.MAX_VALUE);
@@ -480,6 +485,10 @@ class ClientArguments {
         if (cliParser.hasOption("board-cacheTimeout")) {
             String boardCacheTimeoutStr = cliParser.getOptionValue("board-cacheTimeout");
             boardCacheTimeout = Integer.parseInt(boardCacheTimeoutStr);
+        }
+
+        if (cliParser.hasOption("output-index")) {
+            outputIndex = Integer.parseInt(cliParser.getOptionValue("output-index"));
         }
 
         if ("TENSORFLOW".equals(appType) || "TENSOR2TENSOR".equals(appType)) {

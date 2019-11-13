@@ -50,6 +50,8 @@ public interface HboxConstants {
 
         HBOX_TF_INDEX("TF_INDEX"),
 
+        HBOX_OUTPUT_INDEX("HBOX_OUTPUT_INDEX"),
+
         HBOX_TF_CLUSTER_DEF("TF_CLUSTER_DEF"),
 
         HBOX_TF_CONFIG("TF_CONFIG"),

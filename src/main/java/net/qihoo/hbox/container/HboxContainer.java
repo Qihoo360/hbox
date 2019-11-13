@@ -105,6 +105,8 @@ public class HboxContainer {
 
     private String containerType;
 
+    private int outputIndex;
+
     private HboxContainer() {
         this.conf = new HboxConfiguration();
         conf.addResource(new Path(HboxConstants.HBOX_JOB_CONFIGURATION));
@@ -126,6 +128,11 @@ public class HboxContainer {
         this.role = envs.get(HboxConstants.Environment.HBOX_TF_ROLE.toString());
         this.index = Integer.valueOf(envs.get(HboxConstants.Environment.HBOX_TF_INDEX.toString()));
         this.hboxCmdProcessId = "";
+        this.outputIndex = -1;
+        if(envs.containsKey(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString())){
+            this.outputIndex = Integer.parseInt(envs.get(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString()));
+        }
+        LOG.info("Output index is:" + this.outputIndex);
         if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType) || hboxAppType.equals("DISTXGBOOST") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XDL")) {
             LOG.info("Current role is:" + this.role);
         }
@@ -480,6 +487,15 @@ public class HboxContainer {
                     if (workerNum == 1 && !conf.getBoolean(HboxConfiguration.HBOX_CREATE_CONTAINERID_DIR, HboxConfiguration.DEFAULT_HBOX_CREATE_CONTAINERID_DIR)) {
                         remotePath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + localPath.toString());
                     }
+                    if (outputIndex >= 0) {
+                        LOG.info("Appoint worker index " + this.outputIndex + " to upload output to HDFS.");
+                        if (this.role.equals(HboxConstants.WORKER) && this.index == outputIndex){
+                            remotePath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + localPath.toString());
+                            System.out.println("remote path: " + remotePath);
+                        }
+                        else
+                            break;
+                    }
                     FileSystem dfs = remotePath.getFileSystem(conf);
                     if (dfs.exists(remotePath)) {
                         LOG.info("Container remote output path " + remotePath + "exists, so we has to delete is first.");
@@ -496,12 +512,12 @@ public class HboxContainer {
                         FileStatus[] uploadFiles = localFs.listStatus(localPath);
                         for (FileStatus uploadFile : uploadFiles) {
                             Path uploadPath = uploadFile.getPath();
-                            LOG.debug("upload:" + uploadPath + " \tfrom\tlocalPath:" + localPath);
+                            LOG.info("upload:" + uploadPath + " \tfrom\tlocalPath:" + localPath);
                             String[] fileName = StringUtils.splitByWholeSeparator(uploadPath.toString() + "/", splitDir, 2);
                             if (fileName.length == 2) {
                                 Path uploadDstPath = new Path(remotePath.toString() + "/" + fileName[1]);
                                 UploadTask uploadTask = new UploadTask(conf, uploadDstPath, uploadPath);
-                                LOG.debug("upload from " + uploadPath + " to " + uploadDstPath);
+                                LOG.info("upload from " + uploadPath + " to " + uploadDstPath);
                                 executor.submit(uploadTask);
                             } else {
                                 LOG.error("Get the local path error");
@@ -524,7 +540,7 @@ public class HboxContainer {
                 LOG.info("All output files upload finished.");
             }
         }
-
+        //upload tensorboard log
         if (!(hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS"))) {
             if (this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR).indexOf("hdfs://") == -1) {
                 HboxConfiguration tfConf = new HboxConfiguration();
