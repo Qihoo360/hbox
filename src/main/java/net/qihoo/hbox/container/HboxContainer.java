@@ -129,10 +129,7 @@ public class HboxContainer {
         this.index = Integer.valueOf(envs.get(HboxConstants.Environment.HBOX_TF_INDEX.toString()));
         this.hboxCmdProcessId = "";
         this.outputIndex = -1;
-        if(envs.containsKey(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString())){
-            this.outputIndex = Integer.parseInt(envs.get(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString()));
-        }
-        LOG.info("Output index is:" + this.outputIndex);
+
         if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType) || hboxAppType.equals("DISTXGBOOST") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XDL")) {
             LOG.info("Current role is:" + this.role);
         }
@@ -142,7 +139,10 @@ public class HboxContainer {
             }
             LOG.info("Current role is:" + this.role);
         }
-
+        if(envs.containsKey(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString())){
+            this.outputIndex = Integer.parseInt(envs.get(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString()));
+            LOG.info("Output index is:" + this.outputIndex);
+        }
         if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType) || hboxAppType.equals("MXNET") || hboxAppType.equals("DISTXGBOOST") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XFLOW") || hboxAppType.equals("XDL")) {
             LOG.info("Current index is:" + this.index);
         }
@@ -231,7 +231,7 @@ public class HboxContainer {
             System.exit(1);
         }
         //this.amClient.reportStatus(containerId, HboxContainerStatus.INITIALIZING);
-        heartbeatThread = new Heartbeat(amClient, conf, containerId);
+        heartbeatThread = new Heartbeat(amClient, conf, containerId, role, index, outputIndex);
         heartbeatThread.setDaemon(true);
         heartbeatThread.start();
         heartbeatThread.setContainerStatus(HboxContainerStatus.INITIALIZING);

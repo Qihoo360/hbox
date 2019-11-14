@@ -2,6 +2,7 @@ package net.qihoo.hbox.container;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import net.qihoo.hbox.api.ApplicationContainerProtocol;
+import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.*;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.util.Utilities;
@@ -53,8 +54,14 @@ public class Heartbeat extends Thread {
 
     private int uploadTimeOut;
 
+    private String role;
+
+    private int index;
+
+    private int outputIndex;
+
     public Heartbeat(ApplicationContainerProtocol protocol, Configuration conf,
-                     HboxContainerId hboxContainerId) {
+                     HboxContainerId hboxContainerId, String role, int index, int outputIndex) {
         this.protocol = protocol;
         this.conf = conf;
         this.containerId = hboxContainerId;
@@ -69,6 +76,9 @@ public class Heartbeat extends Thread {
         this.containerStdErr = "";
         this.downloadRetry = conf.getInt(HboxConfiguration.HBOX_DOWNLOAD_FILE_RETRY, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_RETRY);
         this.uploadTimeOut = conf.getInt(HboxConfiguration.HBOX_INTERRESULT_UPLOAD_TIMEOUT, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_UPLOAD_TIMEOUT);
+        this.role = role;
+        this.index = index;
+        this.outputIndex = outputIndex;
     }
 
     @SuppressWarnings("static-access")
@@ -161,7 +171,16 @@ public class Heartbeat extends Thread {
                                 + conf.get(HboxConfiguration.HBOX_INTERRESULT_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
                                 + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date(lastInnerModelTimeStamp))
                                 + "/" + containerId.toString());
-
+                        if(this.outputIndex >= 0){
+                            if(this.role.equals(HboxConstants.WORKER) && this.index == this.outputIndex){
+                                remotePath = new Path(outputs.getDfsLocation()
+                                        + conf.get(HboxConfiguration.HBOX_INTERRESULT_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
+                                        + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date(lastInnerModelTimeStamp))
+                                        + "/" + localPath);
+                            }
+                            else
+                                break;
+                        }
                         LOG.info("InnerModel path:" + remotePath);
                         FileSystem dfs = remotePath.getFileSystem(conf);
                         if (dfs.exists(remotePath)) {
