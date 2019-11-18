@@ -227,6 +227,10 @@ public class HboxConfiguration extends YarnConfiguration {
 
     public static final String DEFAULT_HBOX_OUTPUT_STRATEGY = "UPLOAD";
 
+    public static final String HBOX_FAILED_UPLOAD = "hbox.failed.upload";
+
+    public static final Boolean DEFAULT_HBOX_FAILED_UPLOAD = false;
+
     public static final String HBOX_ENV_MAXLENGTH = "hbox.env.maxlength";
 
     public static final Integer DEFAULT_HBOX_ENV_MAXLENGTH = 120240;

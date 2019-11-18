@@ -107,6 +107,8 @@ public class HboxContainer {
 
     private int outputIndex;
 
+    private int exitCode;
+
     private HboxContainer() {
         this.conf = new HboxConfiguration();
         conf.addResource(new Path(HboxConstants.HBOX_JOB_CONFIGURATION));
@@ -129,6 +131,7 @@ public class HboxContainer {
         this.index = Integer.valueOf(envs.get(HboxConstants.Environment.HBOX_TF_INDEX.toString()));
         this.hboxCmdProcessId = "";
         this.outputIndex = -1;
+        this.exitCode = -1;
 
         if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType) || hboxAppType.equals("DISTXGBOOST") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XDL")) {
             LOG.info("Current role is:" + this.role);
@@ -1458,6 +1461,18 @@ public class HboxContainer {
                     }
                 }
             }
+            //code status:
+            /**
+             * code=0: container is successful
+             * code>0: container is failed, for example: python 137 means being kill SIGKILL
+             * code=-1: container is killed by website
+             */
+            this.exitCode = code;
+            boolean uploadWhenFailed = this.conf.getBoolean(HboxConfiguration.HBOX_FAILED_UPLOAD, HboxConfiguration.DEFAULT_HBOX_FAILED_UPLOAD);
+            if(uploadWhenFailed && code > 0){
+                this.uploadOutputFiles();
+                return false;
+            }
 
             if ((this.role.equals(HboxConstants.PS) || this.role.equals(HboxConstants.SCHEDULER)) &&
                     !this.hboxAppType.equals("DISTLIGHTLDA")) {
@@ -1515,7 +1530,7 @@ public class HboxContainer {
                 LOG.info("HboxContainer " + container.getContainerId().toString() + " finish successfully");
                 container.reportSucceededAndExit();
             } else {
-                LOG.error("HboxContainer run failed!");
+                LOG.error("HboxContainer run failed! Exit code is: " + container.exitCode);
                 container.reportFailedAndExit();
             }
         } catch (Exception e) {

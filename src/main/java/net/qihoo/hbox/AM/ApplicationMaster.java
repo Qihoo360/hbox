@@ -2693,7 +2693,10 @@ public class ApplicationMaster extends CompositeService {
                 }
                 LOG.info("All containers completed");
             }
-            if (finalSuccess) {
+            boolean uploadWhenFailed = this.conf.getBoolean(HboxConfiguration.HBOX_FAILED_UPLOAD, HboxConfiguration.DEFAULT_HBOX_FAILED_UPLOAD);
+            if (uploadWhenFailed)
+                LOG.info("This application allow failed container to upload output files!");
+            if (finalSuccess || uploadWhenFailed) {
                 if ((conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STREAM)
                         || conf.get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY).equals("STREAM")) && outputInfos.size() > 0) {
                     LOG.info("HBOX_OUTPUT_STRATEGY is STREAM, AM handling the final result...");
@@ -2723,7 +2726,7 @@ public class ApplicationMaster extends CompositeService {
                         if (outputIndex >= 0) {
                             Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + outputInfo.getLocalLocation());
                             if (fs.exists(tmpResultPath)) {
-                                LOG.info("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
+                                LOG.debug("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
                                 fs.rename(tmpResultPath, finalResultPath);
                             }
                         }else {
@@ -2733,7 +2736,7 @@ public class ApplicationMaster extends CompositeService {
                                     tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + outputInfo.getLocalLocation());
                                 }
                                 if (fs.exists(tmpResultPath)) {
-                                    LOG.info("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
+                                    LOG.debug("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
                                     fs.rename(tmpResultPath, finalResultPath);
                                 }
                             }
@@ -2741,7 +2744,7 @@ public class ApplicationMaster extends CompositeService {
                                 for (Container finishedContainer : acquiredPsContainers) {
                                     Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString());
                                     if (fs.exists(tmpResultPath)) {
-                                        LOG.info("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
+                                        LOG.debug("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
                                         fs.rename(tmpResultPath, finalResultPath);
                                     }
                                 }
