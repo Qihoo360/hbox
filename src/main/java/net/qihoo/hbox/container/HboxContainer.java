@@ -111,6 +111,8 @@ public class HboxContainer {
 
     private int exitCode;
 
+    private boolean enableS3;
+
     private AmazonS3 s3;
 
     private HboxContainer() {
@@ -222,12 +224,16 @@ public class HboxContainer {
             containerLaunch = new YarnLaunch(containerId.getContainerId().toString());
         }
         this.signalID = -1;
-        if(conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_S3_ENABLE, HboxConfiguration.DEFAULT_HBOX_OUTPUT_S3_ENABLE)){
-            String bucketName = conf.get(HboxConfiguration.HBOX_S3_BUCKET, HboxConfiguration.DEFAULT_HBOX_S3_BUCKET);
-            String s3Cluster = conf.get(HboxConfiguration.HBOX_S3_CLUSTER, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER);
-            if(s3Cluster.equals(""))
-                LOG.error("HBox S3 cluster is not defined!");
-            this.s3 = new AmazonS3(s3Cluster, bucketName);
+        String bucketName = conf.get(HboxConfiguration.HBOX_S3_BUCKET, HboxConfiguration.DEFAULT_HBOX_S3_BUCKET);
+        String s3Cluster = conf.get(HboxConfiguration.HBOX_S3_CLUSTER, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER);
+        String accessKey = conf.get(HboxConfiguration.HBOX_S3_ACCESS_KEY, HboxConfiguration.DEFAULT_HBOX_S3_ACCESS_KEY);
+        String secretKey = conf.get(HboxConfiguration.HBOX_S3_SECRET_KEY, HboxConfiguration.DEFAULT_HBOX_S3_SECRET_KEY);
+        this.enableS3 = !bucketName.equals("") && !s3Cluster.equals("") && !accessKey.equals("") && !secretKey.equals("");
+        if(enableS3){
+            this.s3 = new AmazonS3(s3Cluster, bucketName, accessKey, secretKey);
+            LOG.info("Amazon S3 is enabled. Cluster is: " + s3Cluster + " bucket is: " + bucketName);
+        }else{
+            LOG.info("Amazon S3 is not enabled.");
         }
     }
 
@@ -524,19 +530,15 @@ public class HboxContainer {
                             splitDir = "/" + localPath.toString();
                         }
                         FileStatus[] uploadFiles = localFs.listStatus(localPath);
-                        boolean enableS3 = conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_S3_ENABLE, HboxConfiguration.DEFAULT_HBOX_OUTPUT_S3_ENABLE);
-                        boolean enableHDFS = conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_HDFS_ENABLE, HboxConfiguration.DEFAULT_HBOX_OUTPUT_HDFS_ENABLE);
                         for (FileStatus uploadFile : uploadFiles) {
                             Path uploadPath = uploadFile.getPath();
                             LOG.info("upload:" + uploadPath + " \tfrom\tlocalPath:" + localPath);
                             String[] fileName = StringUtils.splitByWholeSeparator(uploadPath.toString() + "/", splitDir, 2);
                             if (fileName.length == 2) {
-                                if(enableHDFS){
-                                    Path uploadDstPath = new Path(remotePath.toString() + "/" + fileName[1]);
-                                    UploadTask uploadTask = new UploadTask(conf, uploadDstPath, uploadPath);
-                                    LOG.info("upload from " + uploadPath + " to " + uploadDstPath);
-                                    executor.submit(uploadTask);
-                                }
+                                Path uploadDstPath = new Path(remotePath.toString() + "/" + fileName[1]);
+                                UploadTask uploadTask = new UploadTask(conf, uploadDstPath, uploadPath);
+                                LOG.info("upload from " + uploadPath + " to " + uploadDstPath);
+                                executor.submit(uploadTask);
                                 if(enableS3){
                                     String[] strs = uploadPath.toString().split("/");
                                     String containerId = this.containerId.getContainerId().toString();

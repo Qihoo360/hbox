@@ -399,10 +399,6 @@ public class HboxConfiguration extends YarnConfiguration {
      */
     public static final String HBOX_S3_CLUSTER = "hbox.s3.cluster";
     public static final String DEFAULT_HBOX_S3_CLUSTER = "";
-//    public static final String HBOX_OUTPUT_S3_ENABLE = "hbox.output.s3.enable";
-//    public static final boolean DEFAULT_HBOX_OUTPUT_S3_ENABLE = false;
-//    public static final String HBOX_OUTPUT_HDFS_ENABLE = "hbox.output.hdfs.enable";
-//    public static final boolean DEFAULT_HBOX_OUTPUT_HDFS_ENABLE = true;
     public static final String HBOX_S3_BUCKET = "hbox.s3.bucket";
     public static final String DEFAULT_HBOX_S3_BUCKET = "hbox";
     public static final String HBOX_S3_ACCESS_KEY = "hbox.s3.key.access";
