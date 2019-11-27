@@ -2,6 +2,7 @@ package net.qihoo.hbox.storage;
 
 import java.io.File;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.List;
 
 import com.amazonaws.AmazonClientException;
@@ -24,8 +25,13 @@ public class AmazonS3 implements Storage {
     private static final Log LOG = LogFactory.getLog(AmazonS3.class);
     private AmazonS3Client s3;
     private String bucketName;
+    private final String accessKey;
+    private final String secretKey;
 
-    public AmazonS3(String bucketName, String cluster) {
+    public AmazonS3(String cluster, String bucketName, String accessKey, String secretKey) {
+        this.accessKey = accessKey;
+        this.secretKey = secretKey;
+        this.bucketName = bucketName;
         AWSCredentialsProvider customProvider = new CustomCredentialProvider();
         S3ClientOptions clientOptions = S3ClientOptions.builder()
                 .setPathStyleAccess(true)
@@ -34,7 +40,6 @@ public class AmazonS3 implements Storage {
         this.s3 = new AmazonS3Client(customProvider);
         this.s3.setEndpoint(cluster);
         this.s3.setS3ClientOptions(clientOptions);
-        this.bucketName = bucketName;
         if (!doesBucketExist()) {
             if (createBucket(bucketName))
                 LOG.info("Bucket is not exist! Create new bucket: " + bucketName);
@@ -52,6 +57,10 @@ public class AmazonS3 implements Storage {
             return getObject(fileName);
         } else
             return null;
+    }
+
+    public String getBucketName() {
+        return bucketName;
     }
 
     private boolean createBucket(String bucketName) {
@@ -151,36 +160,36 @@ public class AmazonS3 implements Storage {
         return s3.doesBucketExist(bucketName);
     }
 
-    public String getUrl(String key) {
-        return s3.getUrl(bucketName, key).toString();
-    }
-}
-
-class CustomCredentials implements AWSCredentials {
-    @Override
-    public String getAWSAccessKeyId() {
-        return "S40a9fCsF1U0suRVJeVG";
+    URL getUrl(String key) {
+        return s3.getUrl(bucketName, key);
     }
 
-    @Override
-    public String getAWSSecretKey() {
-        return "AJrGuPwvs9bUcvbBFDTrYUyPfDqnvQekh76NRNBC";
-    }
-}
+    class CustomCredentials implements AWSCredentials {
+        @Override
+        public String getAWSAccessKeyId() {
+            return accessKey;
+        }
 
-class CustomCredentialProvider implements AWSCredentialsProvider {
-
-    @Override
-    public AWSCredentials getCredentials() {
-        return new CustomCredentials();
-    }
-
-    @Override
-    public void refresh() {
+        @Override
+        public String getAWSSecretKey() {
+            return secretKey;
+        }
     }
 
-    @Override
-    public String toString() {
-        return getClass().getSimpleName();
+    class CustomCredentialProvider implements AWSCredentialsProvider {
+
+        @Override
+        public AWSCredentials getCredentials() {
+            return new CustomCredentials();
+        }
+
+        @Override
+        public void refresh() {
+        }
+
+        @Override
+        public String toString() {
+            return getClass().getSimpleName();
+        }
     }
 }

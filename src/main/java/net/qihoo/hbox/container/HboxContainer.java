@@ -132,7 +132,7 @@ public class HboxContainer {
 
         this.hboxAppType = envs.get(HboxConstants.Environment.HBOX_APP_TYPE.toString()).toUpperCase();
         this.role = envs.get(HboxConstants.Environment.HBOX_TF_ROLE.toString());
-        this.index = Integer.valueOf(envs.get(HboxConstants.Environment.HBOX_TF_INDEX.toString()));
+        this.index = Integer.parseInt(envs.get(HboxConstants.Environment.HBOX_TF_INDEX.toString()));
         this.hboxCmdProcessId = "";
         this.outputIndex = -1;
         this.exitCode = -1;
@@ -227,14 +227,14 @@ public class HboxContainer {
             String s3Cluster = conf.get(HboxConfiguration.HBOX_S3_CLUSTER, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER);
             if(s3Cluster.equals(""))
                 LOG.error("HBox S3 cluster is not defined!");
-            this.s3 = new AmazonS3(bucketName, s3Cluster);
+            this.s3 = new AmazonS3(s3Cluster, bucketName);
         }
     }
 
     private void init() {
         LOG.info("HboxContainer initializing");
         String appMasterHost = System.getenv(HboxConstants.Environment.APPMASTER_HOST.toString());
-        int appMasterPort = Integer.valueOf(System.getenv(HboxConstants.Environment.APPMASTER_PORT.toString()));
+        int appMasterPort = Integer.parseInt(System.getenv(HboxConstants.Environment.APPMASTER_PORT.toString()));
         InetSocketAddress addr = new InetSocketAddress(appMasterHost, appMasterPort);
         try {
             this.amClient = RPC.getProxy(ApplicationContainerProtocol.class,
@@ -549,7 +549,7 @@ public class HboxContainer {
                                         }
                                     }
                                     String objectKey = appId + "-" + containerId + "-" + fName;
-                                    S3UploadTask task = new S3UploadTask(conf, this.s3, new File(uploadFile.toString()), objectKey);
+                                    S3UploadTask task = new S3UploadTask(conf, this.s3, objectKey, uploadFile.toString());
                                     LOG.info("upload file " + uploadPath + " to HBOX S3");
                                     executor.submit(task);
                                 }

@@ -12,13 +12,13 @@ public class S3UploadTask implements Runnable {
     private Configuration conf;
     private final int downloadRetry;
     private final String objectKey;
-    private final File srcFile;
+    private final String uploadSrc;
 
-    public S3UploadTask(Configuration conf, AmazonS3 s3, File file, String objectKey){
+    public S3UploadTask(Configuration conf, AmazonS3 s3, String objectKey, String uploadSrc){
         this.s3 = s3;
         this.downloadRetry = conf.getInt(HboxConfiguration.HBOX_DOWNLOAD_FILE_RETRY, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_RETRY);
         this.objectKey = objectKey;
-        this.srcFile = file;
+        this.uploadSrc = uploadSrc;
     }
 
     @Override
@@ -27,7 +27,7 @@ public class S3UploadTask implements Runnable {
         int retry = 0;
         while (true) {
             try {
-                this.s3.put(srcFile);
+                this.s3.put(new File(uploadSrc));
                 LOG.info("S3URL for upload file " + this.objectKey + ": " + s3.getUrl(objectKey));
                 break;
             } catch (Exception e) {
