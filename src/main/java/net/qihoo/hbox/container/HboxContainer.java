@@ -7,6 +7,8 @@ import net.qihoo.hbox.api.ApplicationContainerProtocol;
 import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.*;
 import net.qihoo.hbox.conf.HboxConfiguration;
+import net.qihoo.hbox.storage.AmazonS3;
+import net.qihoo.hbox.storage.S3UploadTask;
 import net.qihoo.hbox.util.Utilities;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -108,6 +110,8 @@ public class HboxContainer {
     private int outputIndex;
 
     private int exitCode;
+
+    private AmazonS3 s3;
 
     private HboxContainer() {
         this.conf = new HboxConfiguration();
@@ -218,6 +222,13 @@ public class HboxContainer {
             containerLaunch = new YarnLaunch(containerId.getContainerId().toString());
         }
         this.signalID = -1;
+        if(conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_S3_ENABLE, HboxConfiguration.DEFAULT_HBOX_OUTPUT_S3_ENABLE)){
+            String bucketName = conf.get(HboxConfiguration.HBOX_S3_BUCKET, HboxConfiguration.DEFAULT_HBOX_S3_BUCKET);
+            String s3Cluster = conf.get(HboxConfiguration.HBOX_S3_CLUSTER, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER);
+            if(s3Cluster.equals(""))
+                LOG.error("HBox S3 cluster is not defined!");
+            this.s3 = new AmazonS3(bucketName, s3Cluster);
+        }
     }
 
     private void init() {
@@ -513,15 +524,35 @@ public class HboxContainer {
                             splitDir = "/" + localPath.toString();
                         }
                         FileStatus[] uploadFiles = localFs.listStatus(localPath);
+                        boolean enableS3 = conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_S3_ENABLE, HboxConfiguration.DEFAULT_HBOX_OUTPUT_S3_ENABLE);
+                        boolean enableHDFS = conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_HDFS_ENABLE, HboxConfiguration.DEFAULT_HBOX_OUTPUT_HDFS_ENABLE);
                         for (FileStatus uploadFile : uploadFiles) {
                             Path uploadPath = uploadFile.getPath();
                             LOG.info("upload:" + uploadPath + " \tfrom\tlocalPath:" + localPath);
                             String[] fileName = StringUtils.splitByWholeSeparator(uploadPath.toString() + "/", splitDir, 2);
                             if (fileName.length == 2) {
-                                Path uploadDstPath = new Path(remotePath.toString() + "/" + fileName[1]);
-                                UploadTask uploadTask = new UploadTask(conf, uploadDstPath, uploadPath);
-                                LOG.info("upload from " + uploadPath + " to " + uploadDstPath);
-                                executor.submit(uploadTask);
+                                if(enableHDFS){
+                                    Path uploadDstPath = new Path(remotePath.toString() + "/" + fileName[1]);
+                                    UploadTask uploadTask = new UploadTask(conf, uploadDstPath, uploadPath);
+                                    LOG.info("upload from " + uploadPath + " to " + uploadDstPath);
+                                    executor.submit(uploadTask);
+                                }
+                                if(enableS3){
+                                    String[] strs = uploadPath.toString().split("/");
+                                    String containerId = this.containerId.getContainerId().toString();
+                                    String appId = "";
+                                    String fName = uploadPath.getName();
+                                    for(String str: strs){
+                                        if(str.startsWith("application_")){
+                                            appId = str;
+                                            break;
+                                        }
+                                    }
+                                    String objectKey = appId + "-" + containerId + "-" + fName;
+                                    S3UploadTask task = new S3UploadTask(conf, this.s3, new File(uploadFile.toString()), objectKey);
+                                    LOG.info("upload file " + uploadPath + " to HBOX S3");
+                                    executor.submit(task);
+                                }
                             } else {
                                 LOG.error("Get the local path error");
                             }
@@ -1000,7 +1031,7 @@ public class HboxContainer {
             envList.add(cudaVisibleDevicesEnv);
             envList.add(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES_NUM.toString() + "=" + cudaNum);
         }
-
+        //if user's environments too long, write environments to file inputFileList.txt
         if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("PLACEHOLDER")) {
             if (this.inputFileList != null && this.inputFileList.trim() != "") {
                 envList.add(HboxConstants.Environment.HBOX_INPUT_FILE_LIST.toString() + "=" + this.inputFileList);

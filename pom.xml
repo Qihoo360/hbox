@@ -6,17 +6,30 @@
 
     <groupId>net.qihoo</groupId>
     <artifactId>hbox</artifactId>
-    <version>1.3</version>
+    <version>1.5</version>
 
 
     <properties>
         <hadoop2.version>2.7.2U5-gpu-SNAPSHOT</hadoop2.version>
+        <!--hadoop2.version>2.7.2</hadoop2.version-->
         <junit.version>4.11</junit.version>
         <jdk.version>1.7</jdk.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <hbox.jar.basename>hbox-${project.version}-hadoop${hadoop2.version}</hbox.jar.basename>
         <hbox.jar>${hbox.jar.basename}.jar</hbox.jar>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-bom</artifactId>
+                <version>1.11.63</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <!-- hadoop2 -->
@@ -76,6 +89,18 @@
             <artifactId>junit</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-ec2</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-s3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-dynamodb</artifactId>
         </dependency>
     </dependencies>
 
