@@ -47,8 +47,8 @@ public class AmazonS3 implements Storage {
     }
 
     @Override
-    public boolean put(File file) {
-        return putObject(file.getName(), file);
+    public boolean put(String name, File file) {
+        return putObject(name, file);
     }
 
     @Override

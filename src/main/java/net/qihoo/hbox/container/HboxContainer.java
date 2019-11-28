@@ -230,10 +230,9 @@ public class HboxContainer {
         String secretKey = conf.get(HboxConfiguration.HBOX_S3_SECRET_KEY, HboxConfiguration.DEFAULT_HBOX_S3_SECRET_KEY);
         this.enableS3 = !bucketName.equals("") && !s3Cluster.equals("") && !accessKey.equals("") && !secretKey.equals("");
         if(enableS3){
-            System.out.println("s3Cluster:" + s3Cluster);
-            System.out.println("bucketName:" + bucketName);
-            System.out.println("accessKey:" + accessKey);
-            System.out.println("secretKey:" + secretKey);
+            String clusterPrefix = "http://";
+            if(!s3Cluster.startsWith(clusterPrefix))
+                s3Cluster = clusterPrefix + s3Cluster;
             this.s3 = new AmazonS3(s3Cluster, bucketName, accessKey, secretKey);
             LOG.info("Amazon S3 is enabled. Cluster is: " + s3Cluster + " bucket is: " + bucketName);
         }else{
@@ -554,9 +553,9 @@ public class HboxContainer {
                                             break;
                                         }
                                     }
-                                    String objectKey = appId + "-" + containerId + "-" + fName;
-                                    S3UploadTask task = new S3UploadTask(conf, this.s3, objectKey, uploadFile.getPath().toString());
-                                    LOG.info("upload file " + uploadPath + " to HBOX S3");
+                                    String objectKey = appId + "/" + containerId + "/" + fName;
+                                    S3UploadTask task = new S3UploadTask(conf, this.s3, objectKey, uploadPath.toString());
+                                    LOG.info("upload file " + uploadPath + " to Amazon S3 bucket: " + this.s3.getBucketName());
                                     executor.submit(task);
                                 }
                             } else {

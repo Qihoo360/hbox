@@ -4,6 +4,6 @@ import java.io.File;
 import java.io.InputStream;
 
 public interface Storage {
-    boolean put(File file);
+    boolean put(String name, File file);
     InputStream get(String fileName);
 }
