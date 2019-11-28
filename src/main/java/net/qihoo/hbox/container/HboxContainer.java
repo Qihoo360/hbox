@@ -230,6 +230,10 @@ public class HboxContainer {
         String secretKey = conf.get(HboxConfiguration.HBOX_S3_SECRET_KEY, HboxConfiguration.DEFAULT_HBOX_S3_SECRET_KEY);
         this.enableS3 = !bucketName.equals("") && !s3Cluster.equals("") && !accessKey.equals("") && !secretKey.equals("");
         if(enableS3){
+            System.out.println("s3Cluster:" + s3Cluster);
+            System.out.println("bucketName:" + bucketName);
+            System.out.println("accessKey:" + accessKey);
+            System.out.println("secretKey:" + secretKey);
             this.s3 = new AmazonS3(s3Cluster, bucketName, accessKey, secretKey);
             LOG.info("Amazon S3 is enabled. Cluster is: " + s3Cluster + " bucket is: " + bucketName);
         }else{
@@ -482,7 +486,7 @@ public class HboxContainer {
 
     @SuppressWarnings("deprecation")
     private void uploadOutputFiles() throws IOException {
-        Boolean boardUpload = this.conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_UPLOAD, true);
+        boolean boardUpload = this.conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_UPLOAD, true);
         if (this.conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STREAM)
                 || this.conf.get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY).equals("STREAM")) {
             LOG.info("HBOX_OUTPUT_STRATEGY is STREAM, do not need to upload local output files.");
@@ -551,7 +555,7 @@ public class HboxContainer {
                                         }
                                     }
                                     String objectKey = appId + "-" + containerId + "-" + fName;
-                                    S3UploadTask task = new S3UploadTask(conf, this.s3, objectKey, uploadFile.toString());
+                                    S3UploadTask task = new S3UploadTask(conf, this.s3, objectKey, uploadFile.getPath().toString());
                                     LOG.info("upload file " + uploadPath + " to HBOX S3");
                                     executor.submit(task);
                                 }

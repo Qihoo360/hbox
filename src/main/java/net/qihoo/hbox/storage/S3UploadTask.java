@@ -9,7 +9,6 @@ import java.io.File;
 public class S3UploadTask implements Runnable {
     private static final Log LOG = LogFactory.getLog(S3UploadTask.class);
     private AmazonS3 s3;
-    private Configuration conf;
     private final int downloadRetry;
     private final String objectKey;
     private final String uploadSrc;
@@ -27,9 +26,12 @@ public class S3UploadTask implements Runnable {
         int retry = 0;
         while (true) {
             try {
-                this.s3.put(new File(uploadSrc));
-                LOG.info("S3URL for upload file " + this.objectKey + ": " + s3.getUrl(objectKey));
-                break;
+                System.out.println("uploadSrc: " + uploadSrc);
+                if(this.s3.put(new File(uploadSrc))){
+                    LOG.info("S3URL for upload file " + this.objectKey + ": " + s3.getUrl(objectKey));
+                    break;
+                }else
+                    throw new RuntimeException();
             } catch (Exception e) {
                 if (retry < downloadRetry) {
                     LOG.warn("Upload output file " + this.objectKey + " to HBox S3 failed, retry in " + (++retry), e);
