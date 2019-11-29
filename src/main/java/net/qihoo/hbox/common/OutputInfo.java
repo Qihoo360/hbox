@@ -14,7 +14,16 @@ public class OutputInfo implements Writable {
 
     private String dfsLocation;
 
-    public OutputInfo() {
+    private String outputType;
+
+    public OutputInfo() { }
+
+    public String getOutputType() {
+        return outputType;
+    }
+
+    public void setOutputType(String outputType) {
+        this.outputType = outputType;
     }
 
     public String getLocalLocation() {

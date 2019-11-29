@@ -31,6 +31,10 @@ public interface HboxConstants {
 
     String CONTAINER_ENV_PREFIX = "hbox.container.env.";
 
+    String HDFS = "hdfs";
+
+    String S3 = "s3";
+
     enum Environment {
         HADOOP_USER_NAME("HADOOP_USER_NAME"),
 
@@ -96,7 +100,11 @@ public interface HboxConstants {
 
         HBOX_OUTPUTS("HBOX_OUTPUTS"),
 
+        HBOX_S3_OUTPUTS("HBOX_S3_OUTPUTS"),
+
         HBOX_INPUTS("HBOX_INPUTS"),
+
+        HBOX_S3_INPUTS("HBOX_S3_INPUTS"),
 
         CONTAINER_COMMAND("CONTAINER_COMMAND"),
 

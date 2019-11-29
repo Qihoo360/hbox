@@ -16,7 +16,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
@@ -111,9 +110,15 @@ public class HboxContainer {
 
     private int exitCode;
 
-    private boolean enableS3;
+    private boolean correctS3Conf;
 
     private AmazonS3 s3;
+
+    private String s3Cluster;
+
+    private String s3AccessKey;
+
+    private String s3SecretKey;
 
     private HboxContainer() {
         this.conf = new HboxConfiguration();
@@ -224,19 +229,16 @@ public class HboxContainer {
             containerLaunch = new YarnLaunch(containerId.getContainerId().toString());
         }
         this.signalID = -1;
-        String bucketName = conf.get(HboxConfiguration.HBOX_S3_BUCKET, HboxConfiguration.DEFAULT_HBOX_S3_BUCKET);
-        String s3Cluster = conf.get(HboxConfiguration.HBOX_S3_CLUSTER, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER);
-        String accessKey = conf.get(HboxConfiguration.HBOX_S3_ACCESS_KEY, HboxConfiguration.DEFAULT_HBOX_S3_ACCESS_KEY);
-        String secretKey = conf.get(HboxConfiguration.HBOX_S3_SECRET_KEY, HboxConfiguration.DEFAULT_HBOX_S3_SECRET_KEY);
-        this.enableS3 = !bucketName.equals("") && !s3Cluster.equals("") && !accessKey.equals("") && !secretKey.equals("");
-        if(enableS3){
+        this.s3Cluster = conf.get(HboxConfiguration.HBOX_S3_CLUSTER, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER);
+        this.s3AccessKey = conf.get(HboxConfiguration.HBOX_S3_ACCESS_KEY, HboxConfiguration.DEFAULT_HBOX_S3_ACCESS_KEY);
+        this.s3SecretKey = conf.get(HboxConfiguration.HBOX_S3_SECRET_KEY, HboxConfiguration.DEFAULT_HBOX_S3_SECRET_KEY);
+        this.correctS3Conf = !s3Cluster.equals("") && !s3AccessKey.equals("") && !s3SecretKey.equals("");
+        if(correctS3Conf) {
             String clusterPrefix = "http://";
-            if(!s3Cluster.startsWith(clusterPrefix))
+            if (!s3Cluster.startsWith(clusterPrefix))
                 s3Cluster = clusterPrefix + s3Cluster;
-            this.s3 = new AmazonS3(s3Cluster, bucketName, accessKey, secretKey);
-            LOG.info("Amazon S3 is enabled. Cluster is: " + s3Cluster + " bucket is: " + bucketName);
-        }else{
-            LOG.info("Amazon S3 is not enabled.");
+            LOG.info("Amazon S3 is enabled.");
+            LOG.info("S3 Cluster is: " + s3Cluster);
         }
     }
 
@@ -492,7 +494,7 @@ public class HboxContainer {
         } else {
             List<OutputInfo> outputs = Arrays.asList(amClient.getOutputLocation());
             for (OutputInfo s : outputs) {
-                LOG.info("Output path: " + s.getLocalLocation() + "#" + s.getDfsLocation());
+                LOG.info(s.getOutputType().toUpperCase() + " Output path: " + s.getLocalLocation() + "#" + s.getDfsLocation());
             }
             if (outputs.size() > 0) {
                 int workerNum = conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM);
@@ -504,6 +506,12 @@ public class HboxContainer {
                                 .build()
                 );
                 for (OutputInfo outputInfo : outputs) {
+                    String outputType = outputInfo.getOutputType();
+                    String bucketName = outputInfo.getDfsLocation();
+                    if(outputType.equals(HboxConstants.S3)){
+                        this.s3 = new AmazonS3(s3Cluster, bucketName, this.s3AccessKey, this.s3SecretKey);
+                        LOG.info("S3 Output bucket is: " + bucketName);
+                    }
                     FileSystem localFs = FileSystem.getLocal(conf);
                     Path localPath = new Path(outputInfo.getLocalLocation());
                     Path remotePath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + containerId.toString());
@@ -538,25 +546,18 @@ public class HboxContainer {
                             LOG.info("upload:" + uploadPath + " \tfrom\tlocalPath:" + localPath);
                             String[] fileName = StringUtils.splitByWholeSeparator(uploadPath.toString() + "/", splitDir, 2);
                             if (fileName.length == 2) {
-                                Path uploadDstPath = new Path(remotePath.toString() + "/" + fileName[1]);
-                                UploadTask uploadTask = new UploadTask(conf, uploadDstPath, uploadPath);
-                                LOG.info("upload from " + uploadPath + " to " + uploadDstPath);
-                                executor.submit(uploadTask);
-                                if(enableS3){
-                                    String[] strs = uploadPath.toString().split("/");
+                                if(outputType.equals(HboxConstants.S3) && correctS3Conf){
                                     String containerId = this.containerId.getContainerId().toString();
-                                    String appId = "";
-                                    String fName = uploadPath.getName();
-                                    for(String str: strs){
-                                        if(str.startsWith("application_")){
-                                            appId = str;
-                                            break;
-                                        }
-                                    }
-                                    String objectKey = appId + "/" + containerId + "/" + fName;
+                                    String appId = envs.get(HboxConstants.Environment.APP_ID.toString());
+                                    String objectKey = appId + "/" + containerId + "/" + uploadPath.getName();
                                     S3UploadTask task = new S3UploadTask(conf, this.s3, objectKey, uploadPath.toString());
                                     LOG.info("upload file " + uploadPath + " to Amazon S3 bucket: " + this.s3.getBucketName());
                                     executor.submit(task);
+                                }else{
+                                    Path uploadDstPath = new Path(remotePath.toString() + "/" + fileName[1]);
+                                    UploadTask uploadTask = new UploadTask(conf, uploadDstPath, uploadPath);
+                                    LOG.info("upload from " + uploadPath + " to " + uploadDstPath);
+                                    executor.submit(uploadTask);
                                 }
                             } else {
                                 LOG.error("Get the local path error");
@@ -681,7 +682,9 @@ public class HboxContainer {
                     createLocalInputDir();
                 }
             }
+            System.out.println("Container is running");
             if (this.conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_AUTO_CREATE_OUTPUT_DIR, HboxConfiguration.DEFAULT_HBOX_CONTAINER_AUTO_CREATE_OUTPUT_DIR)) {
+                System.out.println("Create local output dir");
                 createLocalOutputDir();
             }
         } catch (InterruptedException e) {

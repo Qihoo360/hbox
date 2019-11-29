@@ -39,6 +39,7 @@ class ClientArguments {
     String outputStrategy;
     Properties inputs;
     Properties outputs;
+    Properties s3outputs;
     String hboxCacheFiles;
     String hboxCacheArchives;
     int priority;
@@ -256,6 +257,15 @@ class ClientArguments {
         Option output = OptionBuilder
                 .create("output");
         allOptions.addOption(output);
+        OptionBuilder.withArgName("property#value");
+        OptionBuilder.hasArgs(Integer.MAX_VALUE);
+        OptionBuilder
+                .withValueSeparator('#');
+        OptionBuilder
+                .withDescription("amazon s3 location,representing the hbox result");
+        Option s3output = OptionBuilder.create("s3output");
+        allOptions.addOption(s3output);
+
     }
 
     private void cliParser(String[] args) throws ParseException, IOException, ClassNotFoundException {
@@ -375,6 +385,10 @@ class ClientArguments {
 
         if (cliParser.hasOption("output")) {
             outputs = cliParser.getOptionProperties("output");
+        }
+
+        if (cliParser.hasOption("s3output")) {
+            s3outputs = cliParser.getOptionProperties("s3output");
         }
 
         if (cliParser.hasOption("user-path")) {

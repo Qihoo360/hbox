@@ -54,6 +54,7 @@ public class Client {
     private FileSystem dfs;
     private final ConcurrentHashMap<String, String> inputPaths;
     private final ConcurrentHashMap<String, String> outputPaths;
+    private final ConcurrentHashMap<String, String> s3OutputPaths;
     private static FsPermission JOB_FILE_PERMISSION;
 
     private final Map<String, String> appMasterUserEnv;
@@ -69,6 +70,7 @@ public class Client {
         this.appLibJarsRemotePath = new StringBuffer(1000);
         this.inputPaths = new ConcurrentHashMap<>();
         this.outputPaths = new ConcurrentHashMap<>();
+        this.s3OutputPaths = new ConcurrentHashMap<>();
         JOB_FILE_PERMISSION = FsPermission.createImmutable((short) 0644);
         this.appMasterUserEnv = new HashMap<>();
         this.containerUserEnv = new HashMap<>();
@@ -234,9 +236,12 @@ public class Client {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private void assignOutput() throws IOException {
-        Enumeration<String> outputs = (Enumeration<String>) clientArguments.outputs.propertyNames();
+    private void addOutputPath(String type, Enumeration<String> outputs) throws IOException {
+        ConcurrentHashMap<String, String> outputMap;
+        if (type.equals(HboxConstants.S3))
+            outputMap = this.outputPaths;
+        else
+            outputMap = this.s3OutputPaths;
         while (outputs.hasMoreElements()) {
             String outputRemote = outputs.nextElement();
             String outputLocal = clientArguments.outputs.getProperty(outputRemote);
@@ -244,17 +249,27 @@ public class Client {
                 outputLocal = conf.get(HboxConfiguration.HBOX_OUTPUT_LOCAL_DIR, HboxConfiguration.DEFAULT_HBOX_OUTPUT_LOCAL_DIR);
                 LOG.info("Remote output path: " + outputRemote + " not defined the local output path. Default path: output.");
             }
-            Path path = new Path(outputRemote);
-            if (path.getFileSystem(conf).exists(path)) {
-                throw new IOException("Output path " + path + " already existed!");
+            if (type.equals(HboxConstants.HDFS)) {
+                Path path = new Path(outputRemote);
+                if (path.getFileSystem(conf).exists(path)) {
+                    throw new IOException("Output path " + path + " already existed!");
+                }
             }
-            if (outputPaths.containsKey(outputLocal)) {
-                outputPaths.put(outputLocal, outputPaths.get(outputLocal) + "," + outputRemote);
+            if (outputMap.containsKey(outputLocal)) {
+                outputMap.put(outputLocal, outputMap.get(outputLocal) + "," + outputRemote);
             } else {
-                outputPaths.put(outputLocal, outputRemote);
+                outputMap.put(outputLocal, outputRemote);
             }
             LOG.info("Local output path: " + outputLocal + " and remote output path: " + outputRemote);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void assignOutput() throws IOException {
+        Enumeration<String> outputs = (Enumeration<String>) clientArguments.outputs.propertyNames();
+        Enumeration<String> s3outputs = (Enumeration<String>) clientArguments.s3outputs.propertyNames();
+        addOutputPath(HboxConstants.HDFS, outputs);
+        addOutputPath(HboxConstants.S3, s3outputs);
         if (conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STREAM)
                 || conf.get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY).equals("STREAM")) {
             boardUpload = false;
@@ -262,7 +277,7 @@ public class Client {
             if (outputPaths.size() > 0) {
                 String boardLogDir = conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR);
                 String outputRefBoardDir = null;
-                if (boardUpload && boardLogDir.indexOf("hdfs://") == -1) {
+                if (boardUpload && !boardLogDir.contains("hdfs://")) {
                     String replaceBoardLogDir = "/" + boardLogDir.replaceAll("\\.", " ").trim().replaceAll(" ", ".").replaceAll("/", " ").trim().replaceAll(" ", "/") + "/";
                     for (String outputInfo : outputPaths.keySet()) {
                         String replaceOutputDir = "/" + outputInfo.replaceAll("\\.", " ").trim().replaceAll(" ", ".").replaceAll("/", " ").trim().replaceAll(" ", "/") + "/";
@@ -735,7 +750,7 @@ public class Client {
         appMasterEnv.put(HboxConstants.Environment.APP_JAR_LOCATION.toString(), appJarDst.toUri().toString());
     }
 
-    private void prepareInputOutputClassPathEnvForAM(Map<String, String> appMasterEnv) throws IOException {
+    private void prepareInputEnvForAM(Map<String, String> appMasterEnv) {
         Set<String> inputPathKeys = inputPaths.keySet();
         StringBuilder inputLocation = new StringBuilder(1000);
         if (inputPathKeys.size() > 0) {
@@ -748,29 +763,46 @@ public class Client {
             appMasterEnv.put(HboxConstants.Environment.HBOX_INPUTS.toString(),
                     inputLocation.deleteCharAt(inputLocation.length() - 1).toString());
         }
+    }
 
-        Set<String> outputPathKeys = outputPaths.keySet();
+    private void prepareOutputEnvForAM(Map<String, String> appMasterEnv) {
+        putOutputEnv(HboxConstants.HDFS, appMasterEnv);
+        putOutputEnv(HboxConstants.S3, appMasterEnv);
+    }
+
+    private void putOutputEnv(String outputType, Map<String, String> appMasterEnv) {
+        ConcurrentHashMap<String, String> outputMap;
+        String envName;
+        if (outputType.equals(HboxConstants.S3)) {
+            outputMap = this.s3OutputPaths;
+            envName = HboxConstants.Environment.HBOX_S3_OUTPUTS.toString();
+        } else {
+            outputMap = this.outputPaths;
+            envName = HboxConstants.Environment.HBOX_OUTPUTS.toString();
+        }
+        Set<String> outputPathKeys = outputMap.keySet();
         StringBuilder outputLocation = new StringBuilder(1000);
         if (outputPathKeys.size() > 0) {
             for (String key : outputPathKeys) {
-                for (String value : StringUtils.split(outputPaths.get(key), ",")) {
+                for (String value : StringUtils.split(outputMap.get(key), ",")) {
                     outputLocation.append(value).
                             append("#").
                             append(key).
                             append("|");
                 }
             }
-            appMasterEnv.put(HboxConstants.Environment.HBOX_OUTPUTS.toString(),
-                    outputLocation.deleteCharAt(outputLocation.length() - 1).toString());
+            appMasterEnv.put(envName, outputLocation.deleteCharAt(outputLocation.length() - 1).toString());
         }
+    }
 
+
+    private void prepareClassPathEnvForAM(Map<String, String> appMasterEnv) {
         StringBuilder classPathEnv = new StringBuilder("${CLASSPATH}:./*");
         for (String cp : conf.getStrings(HboxConfiguration.YARN_APPLICATION_CLASSPATH,
                 HboxConfiguration.DEFAULT_HBOX_APPLICATION_CLASSPATH)) {
             classPathEnv.append(':');
             classPathEnv.append(cp.trim());
         }
-
         appMasterEnv.put("CLASSPATH", classPathEnv.toString());
         if (clientArguments.userPath != null && !clientArguments.userPath.equals("")) {
             appMasterEnv.put(HboxConstants.Environment.USER_PATH.toString(), clientArguments.userPath);
@@ -929,8 +961,9 @@ public class Client {
         if (clientArguments.hboxCacheArchives != null && !clientArguments.hboxCacheArchives.equals("")) {
             prepareCacheArchives(appMasterEnv, localResources);
         }
-
-        prepareInputOutputClassPathEnvForAM(appMasterEnv);
+        prepareInputEnvForAM(appMasterEnv);
+        prepareOutputEnvForAM(appMasterEnv);
+        prepareClassPathEnvForAM(appMasterEnv);
 
         if (appMasterUserEnv.size() > 0) {
             for (String envKey : appMasterUserEnv.keySet()) {

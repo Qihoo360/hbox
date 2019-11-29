@@ -938,7 +938,7 @@ public class ApplicationMaster extends CompositeService {
         if (conf.getBoolean(HboxConfiguration.HBOX_INPUT_STREAM_SHUFFLE, HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM_SHUFFLE)) {
             LOG.info("HBOX_INPUT_STREAM_SHUFFLE is true");
             for (int i = 0, len = inputFileSplits.length; i < len; i++) {
-                Integer index = i % splitWorkerNum;
+                int index = i % splitWorkerNum;
                 HboxContainerId containerId = new HboxContainerId(acquiredWorkerContainers.get(index).getId());
                 containerId2InputSplit.get(containerId).add(inputFileSplits[i]);
                 LOG.info("put split " + (i + 1) + " to " + containerId.toString());
@@ -963,20 +963,17 @@ public class ApplicationMaster extends CompositeService {
         }
     }
 
-    private void buildOutputLocations() {
-        String hboxOutputs = envs.get(HboxConstants.Environment.HBOX_OUTPUTS.toString());
-        if (StringUtils.isBlank(hboxOutputs)) {
-            return;
-        }
-        String[] outputs = StringUtils.split(hboxOutputs, "|");
+    private void addOutputsInfo(String type, String outputStr) throws RuntimeException{
+        String[] outputs = StringUtils.split(outputStr, "|");
         if (outputs != null && outputs.length > 0) {
             for (String output : outputs) {
-                String outputPathTuple[] = StringUtils.split(output, "#");
+                String[] outputPathTuple = StringUtils.split(output, "#");
                 if (outputPathTuple.length < 2) {
-                    throw new RuntimeException("Error input path format " + hboxOutputs);
+                    throw new RuntimeException("Error input path format " + outputStr);
                 }
                 String pathRemote = outputPathTuple[0];
                 OutputInfo outputInfo = new OutputInfo();
+                outputInfo.setOutputType(type);
                 outputInfo.setDfsLocation(pathRemote);
                 String pathLocal;
                 if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
@@ -989,8 +986,17 @@ public class ApplicationMaster extends CompositeService {
                 LOG.info("Application output " + pathRemote + "#" + pathLocal);
             }
         } else {
-            throw new RuntimeException("Error input path format " + hboxOutputs);
+            throw new RuntimeException("Error input path format " + outputStr);
         }
+    }
+
+    private void buildOutputLocations() {
+        String hdfsOutputs = envs.get(HboxConstants.Environment.HBOX_OUTPUTS.toString());
+        String s3Outputs = envs.get(HboxConstants.Environment.HBOX_S3_OUTPUTS.toString());
+        if(!StringUtils.isBlank(hdfsOutputs))
+            addOutputsInfo(HboxConstants.HDFS, hdfsOutputs);
+        if(!StringUtils.isBlank(s3Outputs))
+            addOutputsInfo(HboxConstants.S3, s3Outputs);
     }
 
     private void registerApplicationMaster() {
@@ -2721,8 +2727,12 @@ public class ApplicationMaster extends CompositeService {
                     fs.createNewFile(new Path(outputInfos.get(0).getDfsLocation() + "/_SUCCESS"));
                 } else {
                     for (OutputInfo outputInfo : outputInfos) {
+                        if(outputInfo.getOutputType().equals(HboxConstants.S3)){
+                            continue;
+                        }
                         FileSystem fs = new Path(outputInfo.getDfsLocation()).getFileSystem(conf);
                         Path finalResultPath = new Path(outputInfo.getDfsLocation());
+                        //spec one container to upload
                         if (outputIndex >= 0) {
                             Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + outputInfo.getLocalLocation());
                             if (fs.exists(tmpResultPath)) {
