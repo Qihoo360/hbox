@@ -459,8 +459,8 @@ public class HboxContainer {
 
         if (!(hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS"))) {
             int boardIndex = this.conf.getInt(HboxConfiguration.HBOX_TF_BOARD_WORKER_INDEX, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_WORKER_INDEX);
-            Boolean boardEnable = this.conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_ENABLE);
-            Boolean boardPsEnable = this.conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_PS_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_PS_ENABLE);
+            boolean boardEnable = this.conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_ENABLE);
+            boolean boardPsEnable = this.conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_PS_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_PS_ENABLE);
             if (boardEnable) {
                 if (boardPsEnable) {
                     if (this.role.equals(HboxConstants.PS) && boardIndex == this.index) {
@@ -522,7 +522,6 @@ public class HboxContainer {
                         LOG.info("Appoint worker index " + this.outputIndex + " to upload output to HDFS.");
                         if (this.role.equals(HboxConstants.WORKER) && this.index == outputIndex){
                             remotePath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + localPath.toString());
-                            System.out.println("remote path: " + remotePath);
                         }
                         else
                             break;
@@ -543,7 +542,6 @@ public class HboxContainer {
                         FileStatus[] uploadFiles = localFs.listStatus(localPath);
                         for (FileStatus uploadFile : uploadFiles) {
                             Path uploadPath = uploadFile.getPath();
-                            LOG.info("upload:" + uploadPath + " \tfrom\tlocalPath:" + localPath);
                             String[] fileName = StringUtils.splitByWholeSeparator(uploadPath.toString() + "/", splitDir, 2);
                             if (fileName.length == 2) {
                                 if(outputType.equals(HboxConstants.S3) && correctS3Conf){
@@ -682,9 +680,7 @@ public class HboxContainer {
                     createLocalInputDir();
                 }
             }
-            System.out.println("Container is running");
             if (this.conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_AUTO_CREATE_OUTPUT_DIR, HboxConfiguration.DEFAULT_HBOX_CONTAINER_AUTO_CREATE_OUTPUT_DIR)) {
-                System.out.println("Create local output dir");
                 createLocalOutputDir();
             }
         } catch (InterruptedException e) {

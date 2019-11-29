@@ -28,7 +28,6 @@ public class S3UploadTask implements Runnable {
         int retry = 0;
         while (true) {
             try {
-                System.out.println("uploadSrc: " + uploadSrc);
                 if(this.s3.put(this.objectKey, new File(uploadSrc))){
                     LOG.info("S3URL for upload file " + this.objectKey + ": " + s3.getUrl(objectKey));
                     break;

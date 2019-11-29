@@ -171,7 +171,7 @@ public class ApplicationMaster extends CompositeService {
         applicationContext = new RunningAppContext();
 
         envs = System.getenv();
-        maxContainerMem = Integer.valueOf(envs.get(HboxConstants.Environment.HBOX_CONTAINER_MAX_MEMORY.toString()));
+        maxContainerMem = Integer.parseInt(envs.get(HboxConstants.Environment.HBOX_CONTAINER_MAX_MEMORY.toString()));
         workerMemory = conf.getInt(HboxConfiguration.HBOX_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
         chiefWorkerMemory = conf.getInt(HboxConfiguration.HBOX_CHIEF_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
         evaluatorWorkerMemory = conf.getInt(HboxConfiguration.HBOX_EVALUATOR_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
@@ -963,7 +963,7 @@ public class ApplicationMaster extends CompositeService {
         }
     }
 
-    private void addOutputsInfo(String type, String outputStr) throws RuntimeException{
+    private void addOutputsInfo(String type, String outputStr) throws RuntimeException {
         String[] outputs = StringUtils.split(outputStr, "|");
         if (outputs != null && outputs.length > 0) {
             for (String output : outputs) {
@@ -983,7 +983,8 @@ public class ApplicationMaster extends CompositeService {
                 }
                 outputInfo.setLocalLocation(pathLocal);
                 outputInfos.add(outputInfo);
-                LOG.info("Application output " + pathRemote + "#" + pathLocal);
+                LOG.info("Application output: " + pathRemote + "#" + pathLocal + "  Output type is: "
+                        + outputInfo.getOutputType().toUpperCase());
             }
         } else {
             throw new RuntimeException("Error input path format " + outputStr);
@@ -993,10 +994,12 @@ public class ApplicationMaster extends CompositeService {
     private void buildOutputLocations() {
         String hdfsOutputs = envs.get(HboxConstants.Environment.HBOX_OUTPUTS.toString());
         String s3Outputs = envs.get(HboxConstants.Environment.HBOX_S3_OUTPUTS.toString());
-        if(!StringUtils.isBlank(hdfsOutputs))
+        if (!StringUtils.isBlank(hdfsOutputs)) {
             addOutputsInfo(HboxConstants.HDFS, hdfsOutputs);
-        if(!StringUtils.isBlank(s3Outputs))
+        }
+        if (!StringUtils.isBlank(s3Outputs)) {
             addOutputsInfo(HboxConstants.S3, s3Outputs);
+        }
     }
 
     private void registerApplicationMaster() {
@@ -1199,11 +1202,11 @@ public class ApplicationMaster extends CompositeService {
         }
         if (envs.containsKey(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString())) {
             this.outputIndex = Integer.parseInt(envs.get(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString()));
-            if(this.outputIndex >= workerNum){
+            if (this.outputIndex >= workerNum) {
                 LOG.info("Note that user set the worker index " + outputIndex + " which to upload the output exceed the worker num " + workerNum + ". " +
                         "Job will upload the output of all workers after completed successfully!");
             }
-            if(workerNum == 1){
+            if (workerNum == 1) {
                 this.outputIndex = 0;
             }
             containerEnv.put(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString(), String.valueOf(this.outputIndex));
@@ -2688,7 +2691,6 @@ public class ApplicationMaster extends CompositeService {
                     }
                     LOG.info("All ps containers completed");
                 }
-
                 finalSuccess = containerListener.isAllWorkerContainersSucceeded();
             } else {
                 containerListener.setAMFinished();
@@ -2727,7 +2729,7 @@ public class ApplicationMaster extends CompositeService {
                     fs.createNewFile(new Path(outputInfos.get(0).getDfsLocation() + "/_SUCCESS"));
                 } else {
                     for (OutputInfo outputInfo : outputInfos) {
-                        if(outputInfo.getOutputType().equals(HboxConstants.S3)){
+                        if (outputInfo.getOutputType().equals(HboxConstants.S3)) {
                             continue;
                         }
                         FileSystem fs = new Path(outputInfo.getDfsLocation()).getFileSystem(conf);
@@ -2739,7 +2741,7 @@ public class ApplicationMaster extends CompositeService {
                                 LOG.debug("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
                                 fs.rename(tmpResultPath, finalResultPath);
                             }
-                        }else {
+                        } else {
                             for (Container finishedContainer : acquiredWorkerContainers) {
                                 Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString());
                                 if (workerNum == 1 && !conf.getBoolean(HboxConfiguration.HBOX_CREATE_CONTAINERID_DIR, HboxConfiguration.DEFAULT_HBOX_CREATE_CONTAINERID_DIR)) {

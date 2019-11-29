@@ -236,15 +236,17 @@ public class Client {
         }
     }
 
-    private void addOutputPath(String type, Enumeration<String> outputs) throws IOException {
+    @SuppressWarnings("unchecked")
+    private void addOutputPath(String type, Properties outputProperty) throws IOException {
         ConcurrentHashMap<String, String> outputMap;
         if (type.equals(HboxConstants.S3))
-            outputMap = this.outputPaths;
-        else
             outputMap = this.s3OutputPaths;
+        else
+            outputMap = this.outputPaths;
+        Enumeration<String> outputs = (Enumeration<String>) outputProperty.propertyNames();
         while (outputs.hasMoreElements()) {
             String outputRemote = outputs.nextElement();
-            String outputLocal = clientArguments.outputs.getProperty(outputRemote);
+            String outputLocal = outputProperty.getProperty(outputRemote);
             if (outputLocal.equals("true")) {
                 outputLocal = conf.get(HboxConfiguration.HBOX_OUTPUT_LOCAL_DIR, HboxConfiguration.DEFAULT_HBOX_OUTPUT_LOCAL_DIR);
                 LOG.info("Remote output path: " + outputRemote + " not defined the local output path. Default path: output.");
@@ -264,12 +266,13 @@ public class Client {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private void assignOutput() throws IOException {
-        Enumeration<String> outputs = (Enumeration<String>) clientArguments.outputs.propertyNames();
-        Enumeration<String> s3outputs = (Enumeration<String>) clientArguments.s3outputs.propertyNames();
-        addOutputPath(HboxConstants.HDFS, outputs);
-        addOutputPath(HboxConstants.S3, s3outputs);
+        if(clientArguments.outputs != null){
+            addOutputPath(HboxConstants.HDFS, clientArguments.outputs);
+        }
+        if(clientArguments.s3outputs != null){
+            addOutputPath(HboxConstants.S3, clientArguments.s3outputs);
+        }
         if (conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STREAM)
                 || conf.get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY).equals("STREAM")) {
             boardUpload = false;
@@ -766,8 +769,8 @@ public class Client {
     }
 
     private void prepareOutputEnvForAM(Map<String, String> appMasterEnv) {
-        putOutputEnv(HboxConstants.HDFS, appMasterEnv);
         putOutputEnv(HboxConstants.S3, appMasterEnv);
+        putOutputEnv(HboxConstants.HDFS, appMasterEnv);
     }
 
     private void putOutputEnv(String outputType, Map<String, String> appMasterEnv) {
@@ -911,7 +914,7 @@ public class Client {
             assignInput();
         }
 
-        if (clientArguments.outputs != null) {
+        if (clientArguments.outputs != null || clientArguments.s3outputs != null) {
             assignOutput();
         }
 
