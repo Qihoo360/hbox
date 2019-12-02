@@ -549,12 +549,10 @@ public class HboxContainer {
                                     String appId = envs.get(HboxConstants.Environment.APP_ID.toString());
                                     String objectKey = appId + "/" + containerId + "/" + uploadPath.getName();
                                     S3UploadTask task = new S3UploadTask(conf, this.s3, objectKey, uploadPath.toString());
-                                    LOG.info("upload file " + uploadPath + " to Amazon S3 bucket: " + this.s3.getBucketName());
                                     executor.submit(task);
                                 }else{
                                     Path uploadDstPath = new Path(remotePath.toString() + "/" + fileName[1]);
                                     UploadTask uploadTask = new UploadTask(conf, uploadDstPath, uploadPath);
-                                    LOG.info("upload from " + uploadPath + " to " + uploadDstPath);
                                     executor.submit(uploadTask);
                                 }
                             } else {

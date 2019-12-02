@@ -24,12 +24,13 @@ public class S3UploadTask implements Runnable {
 
     @Override
     public void run() {
-        LOG.info("Upload output file " + this.objectKey + " to HBox S3");
+        LOG.info("Upload output file " + this.objectKey + " to Amazon S3 bucket " + this.s3.getBucketName());
         int retry = 0;
         while (true) {
             try {
-                if(this.s3.put(this.objectKey, new File(uploadSrc))){
-                    LOG.info("S3URL for upload file " + this.objectKey + ": " + s3.getUrl(objectKey));
+                File uploadFile = new File(uploadSrc);
+                if(this.s3.put(this.objectKey, uploadFile)){
+                    LOG.info("S3URL for upload file [" + uploadFile.getName() + "] is : " + s3.getUrl(objectKey));
                     break;
                 }else
                     throw new RuntimeException();
