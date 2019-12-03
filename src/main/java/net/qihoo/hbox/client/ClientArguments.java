@@ -38,8 +38,9 @@ class ClientArguments {
     String inputStrategy;
     String outputStrategy;
     Properties inputs;
+    Properties s3Inputs;
     Properties outputs;
-    Properties s3outputs;
+    Properties s3Outputs;
     String hboxCacheFiles;
     String hboxCacheArchives;
     int priority;
@@ -244,9 +245,19 @@ class ClientArguments {
                 .withValueSeparator('#');
         OptionBuilder
                 .withDescription("dfs location,representing the source data of hbox");
-        Option property = OptionBuilder
+        Option input = OptionBuilder
                 .create("input");
-        allOptions.addOption(property);
+        allOptions.addOption(input);
+
+        OptionBuilder.withArgName("property#value");
+        OptionBuilder.hasArgs(Integer.MAX_VALUE);
+        OptionBuilder
+                .withValueSeparator('#');
+        OptionBuilder
+                .withDescription("amazon s3 location,representing the source data of hbox");
+        Option s3input = OptionBuilder
+                .create("s3input");
+        allOptions.addOption(s3input);
 
         OptionBuilder.withArgName("property#value");
         OptionBuilder.hasArgs(Integer.MAX_VALUE);
@@ -375,6 +386,10 @@ class ClientArguments {
             inputs = cliParser.getOptionProperties("input");
         }
 
+        if (cliParser.hasOption("s3input")) {
+            s3Inputs = cliParser.getOptionProperties("s3input");
+        }
+
         if (cliParser.hasOption("input-strategy")) {
             inputStrategy = cliParser.getOptionValue("input-strategy").trim().toUpperCase();
         }
@@ -388,7 +403,7 @@ class ClientArguments {
         }
 
         if (cliParser.hasOption("s3output")) {
-            s3outputs = cliParser.getOptionProperties("s3output");
+            s3Outputs = cliParser.getOptionProperties("s3output");
         }
 
         if (cliParser.hasOption("user-path")) {

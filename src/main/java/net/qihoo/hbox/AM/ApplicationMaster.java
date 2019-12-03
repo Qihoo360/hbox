@@ -1,5 +1,6 @@
 package net.qihoo.hbox.AM;
 
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.gson.Gson;
 import net.qihoo.hbox.api.ApplicationContext;
 import net.qihoo.hbox.api.HboxConstants;
@@ -7,6 +8,8 @@ import net.qihoo.hbox.common.*;
 import net.qihoo.hbox.common.exceptions.HboxExecException;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.container.HboxContainerId;
+import net.qihoo.hbox.storage.AmazonS3;
+import net.qihoo.hbox.storage.S3File;
 import net.qihoo.hbox.util.Utilities;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -32,6 +35,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.RoundingMode;
 import java.net.*;
+import java.net.URL;
 import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -92,6 +96,7 @@ public class ApplicationMaster extends CompositeService {
     private final LinkedBlockingQueue<Message> applicationMessageQueue;
     private final List<OutputInfo> outputInfos;
     private ConcurrentHashMap<String, List<FileStatus>> input2FileStatus;
+    private ConcurrentHashMap<String, InputInfo> s3Input2InputInfo;
     private ConcurrentHashMap<HboxContainerId, List<InputInfo>> containerId2InputInfo;
     private ConcurrentHashMap<String, InputInfo> wholeFiles;
     private InputSplit[] inputFileSplits;
@@ -128,6 +133,7 @@ public class ApplicationMaster extends CompositeService {
     private Boolean tfEvaluator;
     private String chiefWorkerContainerId;
     private String tfEvaluatorContainerId;
+    //input local dir
     private StringBuilder inputPath;
     private List<String> inputList;
 
@@ -159,6 +165,7 @@ public class ApplicationMaster extends CompositeService {
         conf.addResource(new Path(HboxConstants.HBOX_JOB_CONFIGURATION));
         outputInfos = new ArrayList<>();
         input2FileStatus = new ConcurrentHashMap<>();
+        s3Input2InputInfo = new ConcurrentHashMap<>();
         containerId2InputInfo = new ConcurrentHashMap<>();
         wholeFiles = new ConcurrentHashMap<>();
         inputFileSplits = null;
@@ -716,13 +723,68 @@ public class ApplicationMaster extends CompositeService {
         Runtime.getRuntime().addShutdownHook(cleanApplication);
     }
 
+    private void buildS3InputFileInfo() {
+        String hboxS3Inputs = envs.get(HboxConstants.Environment.HBOX_S3_INPUTS.toString());
+        if (StringUtils.isBlank(hboxS3Inputs)) {
+            LOG.info("Application has no amazon s3 inputs");
+            return;
+        }
+        /**
+         * input1#local1
+         * input2,input3#local2
+         */
+
+        String[] inputs = StringUtils.split(hboxS3Inputs, "|");
+        if (inputs != null && inputs.length > 0) {
+            for (String input : inputs) {
+                //input: input2,input3#local2
+                String[] s3InputPathTuple = StringUtils.split(input, "#");
+                if (s3InputPathTuple.length < 2) {
+                    throw new RuntimeException("Error input path format " + hboxS3Inputs);
+                }
+
+                InputInfo info = new InputInfo();
+                List<S3File> s3FileList = new ArrayList<>();
+                String inputBuckets = s3InputPathTuple[0];
+                String inputLocalDir = s3InputPathTuple[1];
+                info.setAliasName(inputLocalDir);
+                String s3Cluster = conf.get(HboxConfiguration.HBOX_S3_CLUSTER, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER);
+                String s3AccessKey = conf.get(HboxConfiguration.HBOX_S3_ACCESS_KEY, HboxConfiguration.DEFAULT_HBOX_S3_ACCESS_KEY);
+                String s3SecretKey = conf.get(HboxConfiguration.HBOX_S3_SECRET_KEY, HboxConfiguration.DEFAULT_HBOX_S3_SECRET_KEY);
+                boolean correctS3Conf = !s3Cluster.equals("") && !s3AccessKey.equals("") && !s3SecretKey.equals("");
+                for (String bucket : StringUtils.split(inputBuckets, ",")) {
+                    AmazonS3 s3 = new AmazonS3(s3Cluster, bucket, s3AccessKey, s3SecretKey);
+                    if (s3.doesBucketExist() && correctS3Conf) {
+                        for (S3ObjectSummary obj : s3.listObjects()) {
+                            String objKey = obj.getKey();
+                            S3File s3File = new S3File(bucket, objKey, s3.getUrl(objKey).toString());
+                            s3FileList.add(s3File);
+                        }
+                    } else {
+                        throw new RuntimeException("Error input bucket format " + hboxS3Inputs + "or submit shell doesn't have correct config.");
+                    }
+                }
+                info.setS3Files(s3FileList);
+                info.setInputType(HboxConstants.S3);
+                s3Input2InputInfo.put(inputLocalDir, info);
+                //append local dir path in inputPath
+                this.inputPath.append(inputLocalDir).append(",");
+                if (s3FileList.size() > 0) {
+                    if (s3FileList.size() < workerNum) {
+                        LOG.warn("File count in  bucket " + inputBuckets + "  " + s3FileList.size() +
+                                " less than the worker count " + workerNum);
+                    }
+                }
+            }
+        }
+    }
+
     private void buildInputFileStatus() {
         String hboxInputs = envs.get(HboxConstants.Environment.HBOX_INPUTS.toString());
         if (StringUtils.isBlank(hboxInputs)) {
             LOG.info("Application has no inputs");
             return;
         }
-
         String[] inputs = StringUtils.split(hboxInputs, "|");
         if (inputs != null && inputs.length > 0) {
             for (String input : inputs) {
@@ -751,6 +813,7 @@ public class ApplicationMaster extends CompositeService {
                         e.printStackTrace();
                     }
                     input2FileStatus.put(inputPathTuple[1], fileStatus);
+                    //append local dir path in inputPath
                     this.inputPath.append(inputPathTuple[1]).append(",");
                     if (fileStatus.size() > 0) {
                         if (fileStatus.size() < workerNum) {
@@ -788,9 +851,73 @@ public class ApplicationMaster extends CompositeService {
         }
     }
 
+    private void allocateS3InputSplits(){
+        for (Container container : acquiredWorkerContainers) {
+            LOG.info("Initializing " + container.getId().toString() + " s3 input splits");
+            containerId2InputInfo.putIfAbsent(new HboxContainerId(container.getId()), new ArrayList<InputInfo>());
+        }
+        Set<String> fileKeys = s3Input2InputInfo.keySet();
+        int splitWorkerNum = workerNum;
+        if (tfEvaluator) {
+            --splitWorkerNum;
+            LOG.info("Note that current tensorflow job has the evaluator type. Not allocate the input to the last container.");
+        }
+        for (String localDir : fileKeys) {
+            InputInfo filesInfo = s3Input2InputInfo.get(localDir);
+            ConcurrentHashMap<HboxContainerId, ConcurrentHashMap<String, InputInfo>> containersFiles = new ConcurrentHashMap<>();
+            boolean chiefWorkerMinData = conf.getBoolean(HboxConfiguration.HBOX_CHIEF_WORKER_MINIMUM_DATA, HboxConfiguration.DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_DATA);
+            int remainFilesIndex = 0;
+            if (chiefWorkerMinData) {
+                splitWorkerNum--;
+                //at least have 1 file
+                int fileNumForChiefWorker = conf.getInt(HboxConfiguration.HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM, HboxConfiguration.DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM);
+                remainFilesIndex = fileNumForChiefWorker;
+                HboxContainerId containerId = new HboxContainerId(acquiredWorkerContainers.get(0).getId());
+                ConcurrentHashMap<String, InputInfo> mapSplit = new ConcurrentHashMap<>();
+                InputInfo inputInfo = new InputInfo();
+                inputInfo.setAliasName(localDir);
+                inputInfo.setInputType(HboxConstants.S3);
+                List<S3File> urls = new ArrayList<>(filesInfo.getS3Files().subList(0, remainFilesIndex));
+                inputInfo.setS3Files(urls);
+                mapSplit.put(localDir, inputInfo);
+                containersFiles.put(containerId, mapSplit);
+                LOG.info("Enable chief worker minimum data! " + "Chief worker data files num is: " + fileNumForChiefWorker);
+            }
+            for (int i = remainFilesIndex, len = filesInfo.getS3Files().size(); i < len; i++) {
+                int index = i % splitWorkerNum;
+                if(chiefWorkerMinData)
+                    index++;
+                ConcurrentHashMap<String, InputInfo> mapSplit;
+                HboxContainerId containerId = new HboxContainerId(acquiredWorkerContainers.get(index).getId());
+                if (containersFiles.containsKey(containerId)) {
+                    mapSplit = containersFiles.get(containerId);
+                } else {
+                    mapSplit = new ConcurrentHashMap<>();
+                    containersFiles.put(containerId, mapSplit);
+                }
+                if (mapSplit.containsKey(localDir)) {
+                    mapSplit.get(localDir).addS3File(filesInfo.getS3Files().get(index));
+                } else {
+                    InputInfo inputInfo = new InputInfo();
+                    inputInfo.setAliasName(localDir);
+                    inputInfo.setInputType(HboxConstants.S3);
+                    List<S3File> urls = new ArrayList<>();
+                    urls.add(filesInfo.getS3Files().get(index));
+                    inputInfo.setS3Files(urls);
+                    mapSplit.put(localDir, inputInfo);
+                }
+            }
+            Set<HboxContainerId> containerIdSet = containersFiles.keySet();
+            for (HboxContainerId containerId : containerIdSet) {
+                containerId2InputInfo.get(containerId).add(containersFiles.get(containerId).get(localDir));
+                LOG.info("put " + localDir + " to " + containerId.toString());
+            }
+        }
+        LOG.info("inputinfos " + new Gson().toJson(containerId2InputInfo));
+    }
+
     @SuppressWarnings("deprecation")
     private void allocateInputSplits() {
-
         for (Container container : acquiredWorkerContainers) {
             LOG.info("Initializing " + container.getId().toString() + " input splits");
             containerId2InputInfo.putIfAbsent(new HboxContainerId(container.getId()), new ArrayList<InputInfo>());
@@ -801,24 +928,22 @@ public class ApplicationMaster extends CompositeService {
             --splitWorkerNum;
             LOG.info("Note that current tensorflow job has the evaluator type. Not allocate the input to the last container.");
         }
+        //fileName: local dir name
         for (String fileName : fileKeys) {
             List<FileStatus> files = input2FileStatus.get(fileName);
             List<Path> paths = Utilities.convertStatusToPath(files);
             ConcurrentHashMap<HboxContainerId, ConcurrentHashMap<String, InputInfo>> containersFiles = new ConcurrentHashMap<>();
-            Double chiefWorkerDataRatio = conf.getDouble(HboxConfiguration.HBOX_CHIEF_WORKER_DATA_RATIO, HboxConfiguration.DEFAULT_HBOX_CHIEF_WORKER_DATA_RATIO);
-            boolean chiefWorkerLimited = !(chiefWorkerDataRatio == 1.0);
-            int remainFilesInidex = 0;
-            int chiefWorkerNum = 0;
-            if (chiefWorkerLimited) {
+            boolean chiefWorkerMinData = conf.getBoolean(HboxConfiguration.HBOX_CHIEF_WORKER_MINIMUM_DATA, HboxConfiguration.DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_DATA);
+            int remainFilesIndex = 0;
+            if (chiefWorkerMinData) {
                 splitWorkerNum--;
-                chiefWorkerNum = 1;
                 //at least have 1 file
-                int fileNumForChiefWorker = Math.max((int) (paths.size() * chiefWorkerDataRatio), 2);
-                fileNumForChiefWorker = Math.min(fileNumForChiefWorker, paths.size());
-                remainFilesInidex = fileNumForChiefWorker;
+                int fileNumForChiefWorker = conf.getInt(HboxConfiguration.HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM, HboxConfiguration.DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM);
+                remainFilesIndex = fileNumForChiefWorker;
                 HboxContainerId containerId = new HboxContainerId(acquiredWorkerContainers.get(0).getId());
                 ConcurrentHashMap<String, InputInfo> mapSplit = new ConcurrentHashMap<>();
                 InputInfo inputInfo = new InputInfo();
+                inputInfo.setInputType(HboxConstants.HDFS);
                 inputInfo.setAliasName(fileName);
                 List<Path> ps = new ArrayList<>();
                 for (int i = 0; i < fileNumForChiefWorker; i++) {
@@ -827,10 +952,12 @@ public class ApplicationMaster extends CompositeService {
                 inputInfo.setPaths(ps);
                 mapSplit.put(fileName, inputInfo);
                 containersFiles.put(containerId, mapSplit);
-                LOG.info("chief worker data ratio: " + chiefWorkerDataRatio + "chief worker files num is: " + fileNumForChiefWorker);
+                LOG.info("Enable chief worker minimum data! " + "Chief worker data files num is: " + fileNumForChiefWorker);
             }
-            for (int i = remainFilesInidex, len = paths.size(); i < len; i++) {
-                Integer index = i % splitWorkerNum + chiefWorkerNum;
+            for (int i = remainFilesIndex, len = paths.size(); i < len; i++) {
+                int index = i % splitWorkerNum;
+                if(chiefWorkerMinData)
+                    index++;
                 ConcurrentHashMap<String, InputInfo> mapSplit;
                 HboxContainerId containerId = new HboxContainerId(acquiredWorkerContainers.get(index).getId());
                 if (containersFiles.containsKey(containerId)) {
@@ -843,6 +970,7 @@ public class ApplicationMaster extends CompositeService {
                     mapSplit.get(fileName).addPath(paths.get(i));
                 } else {
                     InputInfo inputInfo = new InputInfo();
+                    inputInfo.setInputType(HboxConstants.HDFS);
                     inputInfo.setAliasName(fileName);
                     List<Path> ps = new ArrayList<>();
                     ps.add(paths.get(i));
@@ -869,12 +997,26 @@ public class ApplicationMaster extends CompositeService {
                     wholeFiles.get(fileName).addPath(paths.get(i));
                 } else {
                     InputInfo inputInfo = new InputInfo();
+                    inputInfo.setInputType(HboxConstants.HDFS);
                     inputInfo.setAliasName(fileName);
                     List<Path> ps = new ArrayList<>();
                     ps.add(paths.get(i));
                     inputInfo.setPaths(ps);
                     wholeFiles.put(fileName, inputInfo);
                 }
+            }
+        }
+        LOG.info("inputinfos " + new Gson().toJson(wholeFiles));
+    }
+
+    private void allocateWholeS3Input() {
+        Set<String> fileKeys = s3Input2InputInfo.keySet();
+        for (String localDir : fileKeys) {
+            InputInfo filesInfo = s3Input2InputInfo.get(localDir);
+            if (wholeFiles.containsKey(localDir)) {
+                wholeFiles.get(localDir).getS3Files().addAll(filesInfo.getS3Files());
+            } else {
+                wholeFiles.put(localDir, filesInfo);
             }
         }
         LOG.info("inputinfos " + new Gson().toJson(wholeFiles));
@@ -894,7 +1036,7 @@ public class ApplicationMaster extends CompositeService {
             List<Path> paths = Utilities.convertStatusToPath(files);
             ConcurrentHashMap<HboxContainerId, ConcurrentHashMap<String, InputInfo>> containersFiles = new ConcurrentHashMap<>();
             for (int i = 0, len = paths.size(); i < len; i++) {
-                Integer index = i % (workerNum + psNum);
+                int index = i % (workerNum + psNum);
                 ConcurrentHashMap<String, InputInfo> mapSplit;
                 HboxContainerId containerId = new HboxContainerId(acquiredContainers.get(index).getId());
                 if (containersFiles.containsKey(containerId)) {
@@ -907,6 +1049,7 @@ public class ApplicationMaster extends CompositeService {
                     mapSplit.get(fileName).addPath(paths.get(i));
                 } else {
                     InputInfo inputInfo = new InputInfo();
+                    inputInfo.setInputType(HboxConstants.HDFS);
                     inputInfo.setAliasName(fileName);
                     List<Path> ps = new ArrayList<>();
                     ps.add(paths.get(i));
@@ -1655,6 +1798,7 @@ public class ApplicationMaster extends CompositeService {
             buildInputStreamFileStatus();
         } else {
             buildInputFileStatus();
+            buildS3InputFileInfo();
         }
 
         if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType) || "MXNET".equals(hboxAppType) || "DISTLIGHTLDA".equals(hboxAppType) || "XFLOW".equals(hboxAppType)) {
@@ -2418,11 +2562,13 @@ public class ApplicationMaster extends CompositeService {
             if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("PLACEHOLDER")
                     && conf.getBoolean(HboxConfiguration.HBOX_PLACEHOLDER_WHOLE_ENABLE, HboxConfiguration.DEFAULT_HBOX_PLACEHOLDER_WHOLE_ENABLE)) {
                 allocateWholeInput();
+                allocateWholeS3Input();
             } else {
                 if (conf.getBoolean(HboxConfiguration.HBOX_TF_INPUT_PS_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_INPUT_PS_ENABLE)) {
                     allocateInputSplitsInlcudePs();
                 } else {
                     allocateInputSplits();
+                    allocateS3InputSplits();
                 }
             }
         }

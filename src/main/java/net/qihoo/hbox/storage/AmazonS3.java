@@ -63,6 +63,10 @@ public class AmazonS3 implements Storage {
         return bucketName;
     }
 
+    public void setBucketName(String bucketName) {
+        this.bucketName = bucketName;
+    }
+
     private boolean createBucket(String bucketName) {
         boolean success = false;
         try {
@@ -113,7 +117,7 @@ public class AmazonS3 implements Storage {
         return is;
     }
 
-    private List<S3ObjectSummary> listObjects() {
+    public List<S3ObjectSummary> listObjects() {
         List<S3ObjectSummary> list = null;
         try {
             ObjectListing objectListing = s3.listObjects(new ListObjectsRequest().withBucketName(bucketName));
@@ -152,15 +156,15 @@ public class AmazonS3 implements Storage {
         return success;
     }
 
-    private boolean doesObjectExist(String key) {
+    public boolean doesObjectExist(String key) {
         return s3.doesObjectExist(bucketName, key);
     }
 
-    private boolean doesBucketExist() {
+    public boolean doesBucketExist() {
         return s3.doesBucketExist(bucketName);
     }
 
-    URL getUrl(String key) {
+    public URL getUrl(String key) {
         return s3.getUrl(bucketName, key);
     }
 

@@ -8,6 +8,8 @@ import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.*;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.storage.AmazonS3;
+import net.qihoo.hbox.storage.S3DownloadTask;
+import net.qihoo.hbox.storage.S3File;
 import net.qihoo.hbox.storage.S3UploadTask;
 import net.qihoo.hbox.util.Utilities;
 import org.apache.commons.lang.StringUtils;
@@ -29,10 +31,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -55,6 +54,8 @@ public class HboxContainer {
     private String localAddress;
 
     private String inputFileList;
+
+    private String s3InputUrlList;
 
     private HboxContainerId containerId;
 
@@ -111,8 +112,6 @@ public class HboxContainer {
     private int exitCode;
 
     private boolean correctS3Conf;
-
-    private AmazonS3 s3;
 
     private String s3Cluster;
 
@@ -346,6 +345,7 @@ public class HboxContainer {
             LOG.info("HBOX_INPUT_STRATEGY is STREAM, use the stream way to read data from hdfs.");
         } else if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("PLACEHOLDER")) {
             if (conf.getBoolean(HboxConfiguration.HBOX_PLACEHOLDER_WHOLE_ENABLE, HboxConfiguration.DEFAULT_HBOX_PLACEHOLDER_WHOLE_ENABLE)) {
+                //PLACEHOLDER WHOLE mode
                 InputInfo[] wholeFiles = amClient.getInputWholeSplit();
                 if (wholeFiles.length == 0) {
                     LOG.info("Current container has no input.");
@@ -362,23 +362,36 @@ public class HboxContainer {
                 this.inputFileList = new Gson().toJson(phInputInfo);
                 LOG.info("Input path is:" + this.inputFileList);
             } else {
+                //PLACEHOLDER mode
                 List<InputInfo> inputs = Arrays.asList(amClient.getInputSplit(containerId));
                 if (inputs.size() == 0) {
                     LOG.info("Current container has no input.");
                     return;
                 }
                 Map<String, List<String>> phInputInfo = new HashMap<>();
+                Map<String, List<String>> s3InputInfo = new HashMap<>();
                 for (InputInfo inputInfo : inputs) {
-                    List<String> stringPaths = new ArrayList<>();
-                    for (Path path : inputInfo.getPaths()) {
-                        stringPaths.add(path.toString());
+                    if(inputInfo.getInputType().equals(HboxConstants.S3)){
+                        List<String> stringUrls = new ArrayList<>();
+                        for(S3File s3File : inputInfo.getS3Files()) {
+                            stringUrls.add(s3File.toString());
+                        }
+                        s3InputInfo.put(inputInfo.getAliasName(), stringUrls);
+                    }else{
+                        List<String> stringPaths = new ArrayList<>();
+                        for (Path path : inputInfo.getPaths()) {
+                            stringPaths.add(path.toString());
+                        }
+                        phInputInfo.put(inputInfo.getAliasName(), stringPaths);
                     }
-                    phInputInfo.put(inputInfo.getAliasName(), stringPaths);
                 }
                 this.inputFileList = new Gson().toJson(phInputInfo);
+                this.s3InputUrlList = new Gson().toJson(s3InputInfo);
                 LOG.info("Input path is:" + this.inputFileList);
+                LOG.info("Amazon S3 Input path is:" + this.s3InputUrlList);
             }
         } else {
+            //DOWNLOAD mode
             List<InputInfo> inputs = Arrays.asList(amClient.getInputSplit(containerId));
             if (inputs.size() == 0) {
                 LOG.info("Current container has no input.");
@@ -406,17 +419,25 @@ public class HboxContainer {
                     Utilities.mkdirs(downloadDir);
                 }
                 int index = 0;
-                for (Path path : inputInfo.getPaths()) {
-                    String downloadDst;
-                    if (conf.getBoolean(HboxConfiguration.HBOX_INPUTFILE_RENAME, HboxConfiguration.DEFAULT_HBOX_INPUTFILE_RENAME)) {
-                        downloadDst = downloadDir + File.separator + System.currentTimeMillis() + "_" + index++;
-                    } else {
-                        String[] fileName = StringUtils.split(path.toString(), '/');
-                        downloadDst = downloadDir + File.separator + fileName[fileName.length - 1];
+                if(inputInfo.getInputType().equals(HboxConstants.S3)){
+                    AmazonS3 s3 = new AmazonS3(this.s3Cluster, "", this.s3AccessKey, this.s3SecretKey);
+                    for (S3File s3File : inputInfo.getS3Files()) {
+                        S3DownloadTask task = new S3DownloadTask(this.heartbeatThread, this.conf, s3, s3File.getKey(), downloadDir);
                     }
-                    DownLoadTask downloadTask = new DownLoadTask(path, downloadDst);
-                    executor.submit(downloadTask);
+                }else {
+                    for (Path path : inputInfo.getPaths()) {
+                        String downloadDst;
+                        if (conf.getBoolean(HboxConfiguration.HBOX_INPUTFILE_RENAME, HboxConfiguration.DEFAULT_HBOX_INPUTFILE_RENAME)) {
+                            downloadDst = downloadDir + File.separator + System.currentTimeMillis() + "_" + index++;
+                        } else {
+                            String[] fileName = StringUtils.split(path.toString(), '/');
+                            downloadDst = downloadDir + File.separator + fileName[fileName.length - 1];
+                        }
+                        DownLoadTask downloadTask = new DownLoadTask(path, downloadDst);
+                        executor.submit(downloadTask);
+                    }
                 }
+
             }
 
             boolean allDownloadTaskFinished = false;
@@ -509,7 +530,6 @@ public class HboxContainer {
                     String outputType = outputInfo.getOutputType();
                     String bucketName = outputInfo.getDfsLocation();
                     if(outputType.equals(HboxConstants.S3)){
-                        this.s3 = new AmazonS3(s3Cluster, bucketName, this.s3AccessKey, this.s3SecretKey);
                         LOG.info("S3 Output bucket is: " + bucketName);
                     }
                     FileSystem localFs = FileSystem.getLocal(conf);
@@ -548,7 +568,8 @@ public class HboxContainer {
                                     String containerId = this.containerId.getContainerId().toString();
                                     String appId = envs.get(HboxConstants.Environment.APP_ID.toString());
                                     String objectKey = appId + "/" + containerId + "/" + uploadPath.getName();
-                                    S3UploadTask task = new S3UploadTask(conf, this.s3, objectKey, uploadPath.toString());
+                                    AmazonS3 s3 = new AmazonS3(s3Cluster, bucketName, this.s3AccessKey, this.s3SecretKey);
+                                    S3UploadTask task = new S3UploadTask(conf, s3, objectKey, uploadPath.toString());
                                     executor.submit(task);
                                 }else{
                                     Path uploadDstPath = new Path(remotePath.toString() + "/" + fileName[1]);
@@ -853,7 +874,6 @@ public class HboxContainer {
                     return false;
                 }
             }
-
         }
 
         /**

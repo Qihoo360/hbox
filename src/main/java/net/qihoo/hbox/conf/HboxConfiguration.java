@@ -101,9 +101,13 @@ public class HboxConfiguration extends YarnConfiguration {
 
     public static final String HBOX_CHIEF_WORKER_MEMORY = "hbox.chief.worker.memory";
 
-    public static final String HBOX_CHIEF_WORKER_DATA_RATIO = "hbox.chief.worker.data.ratio";
+    public static final String HBOX_CHIEF_WORKER_MINIMUM_DATA = "hbox.chief.worker.minimum.data";
 
-    public static final Double DEFAULT_HBOX_CHIEF_WORKER_DATA_RATIO = 1.0;
+    public static final Boolean DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_DATA = false;
+
+    public static final String HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM = "hbox.chief.worker.minimum.file.num";
+
+    public static final Integer DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM = 1;
 
     public static final String HBOX_EVALUATOR_WORKER_MEMORY = "hbox.evaluator.worker.memory";
 

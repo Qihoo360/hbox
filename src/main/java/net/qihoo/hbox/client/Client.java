@@ -53,6 +53,7 @@ public class Client {
     private int maxContainerMem;
     private FileSystem dfs;
     private final ConcurrentHashMap<String, String> inputPaths;
+    private final ConcurrentHashMap<String, String> s3InputPaths;
     private final ConcurrentHashMap<String, String> outputPaths;
     private final ConcurrentHashMap<String, String> s3OutputPaths;
     private static FsPermission JOB_FILE_PERMISSION;
@@ -69,6 +70,7 @@ public class Client {
         this.appFilesRemotePath = new StringBuffer(1000);
         this.appLibJarsRemotePath = new StringBuffer(1000);
         this.inputPaths = new ConcurrentHashMap<>();
+        this.s3InputPaths = new ConcurrentHashMap<>();
         this.outputPaths = new ConcurrentHashMap<>();
         this.s3OutputPaths = new ConcurrentHashMap<>();
         JOB_FILE_PERMISSION = FsPermission.createImmutable((short) 0644);
@@ -267,11 +269,11 @@ public class Client {
     }
 
     private void assignOutput() throws IOException {
-        if(clientArguments.outputs != null){
+        if (clientArguments.outputs != null) {
             addOutputPath(HboxConstants.HDFS, clientArguments.outputs);
         }
-        if(clientArguments.s3outputs != null){
-            addOutputPath(HboxConstants.S3, clientArguments.s3outputs);
+        if (clientArguments.s3Outputs != null) {
+            addOutputPath(HboxConstants.S3, clientArguments.s3Outputs);
         }
         if (conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STREAM)
                 || conf.get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY).equals("STREAM")) {
@@ -305,29 +307,46 @@ public class Client {
     }
 
     @SuppressWarnings("unchecked")
-    private void assignInput() throws IOException {
-        Enumeration<String> inputs = (Enumeration<String>) clientArguments.inputs.propertyNames();
+    private void addInputPath(String type, Properties inputProperty) throws IOException {
+        ConcurrentHashMap<String, String> inputMap;
+        if (type.equals(HboxConstants.S3))
+            inputMap = this.s3InputPaths;
+        else
+            inputMap = this.inputPaths;
+        Enumeration<String> inputs = (Enumeration<String>) inputProperty.propertyNames();
         while (inputs.hasMoreElements()) {
             String inputRemote = inputs.nextElement();
             String inputLocal = clientArguments.inputs.getProperty(inputRemote);
             if (inputLocal.equals("true")) {
                 inputLocal = "input";
             }
-            for (String pathdir : StringUtils.split(inputRemote, ",")) {
-                Path path = new Path(pathdir);
-                FileSystem fs = path.getFileSystem(conf);
-                FileStatus[] pathStatus = fs.globStatus(path);
-                if (pathStatus == null || pathStatus.length <= 0) {
-                    throw new IOException("Input path " + path + " not existed!");
+            if (type.equals(HboxConstants.HDFS)) {
+                for (String pathdir : StringUtils.split(inputRemote, ",")) {
+                    Path path = new Path(pathdir);
+                    FileSystem fs = path.getFileSystem(conf);
+                    FileStatus[] pathStatus = fs.globStatus(path);
+                    if (pathStatus == null || pathStatus.length <= 0) {
+                        throw new IOException("Input path " + path + " not existed!");
+                    }
+                    fs.close();
                 }
-                fs.close();
             }
-            if (inputPaths.containsKey(inputLocal)) {
-                inputPaths.put(inputLocal, inputPaths.get(inputLocal) + "," + inputRemote);
+            if (inputMap.containsKey(inputLocal)) {
+                inputMap.put(inputLocal, inputMap.get(inputLocal) + "," + inputRemote);
             } else {
-                inputPaths.put(inputLocal, inputRemote);
+                inputMap.put(inputLocal, inputRemote);
             }
             LOG.info("Local input path: " + inputLocal + " and remote input path: " + inputRemote);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void assignInput() throws IOException {
+        if (clientArguments.inputs != null) {
+            addInputPath(HboxConstants.HDFS, clientArguments.inputs);
+        }
+        if (clientArguments.s3Inputs != null) {
+            addInputPath(HboxConstants.S3, clientArguments.s3Inputs);
         }
     }
 
@@ -754,16 +773,30 @@ public class Client {
     }
 
     private void prepareInputEnvForAM(Map<String, String> appMasterEnv) {
-        Set<String> inputPathKeys = inputPaths.keySet();
+        putInputEnv(HboxConstants.S3, appMasterEnv);
+        putInputEnv(HboxConstants.HDFS, appMasterEnv);
+    }
+
+    private void putInputEnv(String inputType, Map<String, String> appMasterEnv) {
+        ConcurrentHashMap<String, String> inputMap;
+        String envName;
+        if (inputType.equals(HboxConstants.S3)) {
+            inputMap = this.s3InputPaths;
+            envName = HboxConstants.Environment.HBOX_S3_INPUTS.toString();
+        } else {
+            inputMap = this.inputPaths;
+            envName = HboxConstants.Environment.HBOX_INPUTS.toString();
+        }
+        Set<String> inputPathKeys = inputMap.keySet();
         StringBuilder inputLocation = new StringBuilder(1000);
         if (inputPathKeys.size() > 0) {
             for (String key : inputPathKeys) {
-                inputLocation.append(inputPaths.get(key)).
+                inputLocation.append(inputMap.get(key)).
                         append("#").
                         append(key).
                         append("|");
             }
-            appMasterEnv.put(HboxConstants.Environment.HBOX_INPUTS.toString(),
+            appMasterEnv.put(envName,
                     inputLocation.deleteCharAt(inputLocation.length() - 1).toString());
         }
     }
@@ -857,11 +890,6 @@ public class Client {
         if (clientArguments.appType.equals("VPC") || clientArguments.appType.equals("DIGITS") || containerType.toUpperCase().equals("DOCKER")) {
             String imageName = conf.get(HboxConfiguration.DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME,
                     HboxConfiguration.DEFALUT_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
-//            String shmSize = conf.get(HboxConfiguration.HBOX_DOCKER_SHM_SIZE,
-//                    HboxConfiguration.DEFAULT_HBOX_DOCKER_SHM_SIZE);
-//            if(!shmSize.equals("")){
-//                shmSize = "shm-size " + shmSize + " ";
-//            }
             if (clientArguments.appType.equals("DIGITS")) {
                 imageName = conf.get(HboxConfiguration.HBOX_DIGITS_IMAGE_NAME,
                         HboxConfiguration.DEFAULT_HBOX_DIGITS_IMAGE_NAME);
@@ -910,11 +938,11 @@ public class Client {
     }
 
     private boolean submitAndMonitor() throws IOException, YarnException {
-        if (clientArguments.inputs != null) {
+        if (clientArguments.inputs != null || clientArguments.s3Inputs != null) {
             assignInput();
         }
 
-        if (clientArguments.outputs != null || clientArguments.s3outputs != null) {
+        if (clientArguments.outputs != null || clientArguments.s3Outputs != null) {
             assignOutput();
         }
 
