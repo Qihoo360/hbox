@@ -374,7 +374,7 @@ public class HboxContainer {
                     if(inputInfo.getInputType().equals(HboxConstants.S3)){
                         List<String> stringUrls = new ArrayList<>();
                         for(S3File s3File : inputInfo.getS3Files()) {
-                            stringUrls.add(s3File.toString());
+                            stringUrls.add(s3File.getUrl());
                         }
                         s3InputInfo.put(inputInfo.getAliasName(), stringUrls);
                     }else{
@@ -420,9 +420,15 @@ public class HboxContainer {
                 }
                 int index = 0;
                 if(inputInfo.getInputType().equals(HboxConstants.S3)){
-                    AmazonS3 s3 = new AmazonS3(this.s3Cluster, "", this.s3AccessKey, this.s3SecretKey);
-                    for (S3File s3File : inputInfo.getS3Files()) {
-                        S3DownloadTask task = new S3DownloadTask(this.heartbeatThread, this.conf, s3, s3File.getKey(), downloadDir);
+                    if(inputInfo.getS3Files().size() > 0){
+                        String bucketName = inputInfo.getS3Files().get(0).getBucket();
+                        AmazonS3 s3 = new AmazonS3(this.s3Cluster, bucketName, this.s3AccessKey, this.s3SecretKey);
+                        for (S3File s3File : inputInfo.getS3Files()) {
+                            String objKey = s3File.getKey();
+                            String dst = downloadDir + File.separator + objKey;
+                            S3DownloadTask task = new S3DownloadTask(this.heartbeatThread, this.conf, s3, objKey, dst);
+                            executor.submit(task);
+                        }
                     }
                 }else {
                     for (Path path : inputInfo.getPaths()) {
@@ -1053,7 +1059,7 @@ public class HboxContainer {
             envList.add(cudaVisibleDevicesEnv);
             envList.add(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES_NUM.toString() + "=" + cudaNum);
         }
-        //if user's environments too long, write environments to file inputFileList.txt
+        //if user's environments too long, write environments to file inputFileList.txt, s3 input to file s3InputFileList.txt
         if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("PLACEHOLDER")) {
             if (this.inputFileList != null && this.inputFileList.trim() != "") {
                 envList.add(HboxConstants.Environment.HBOX_INPUT_FILE_LIST.toString() + "=" + this.inputFileList);
@@ -1063,6 +1069,17 @@ public class HboxContainer {
                     LOG.warn("InputFile list had written to local file: inputFileList.txt !!");
                     PrintWriter writer = new PrintWriter("inputFileList.txt", "UTF-8");
                     writer.println(this.inputFileList);
+                    writer.close();
+                }
+            }
+            if (this.s3InputUrlList != null && this.s3InputUrlList.trim() != "") {
+                envList.add(HboxConstants.Environment.HBOX_S3_INPUT_FILE_LIST.toString() + "=" + this.s3InputUrlList);
+                if (envList.toString().length() > conf.getInt(HboxConfiguration.HBOX_ENV_MAXLENGTH, HboxConfiguration.DEFAULT_HBOX_ENV_MAXLENGTH)) {
+                    LOG.warn("Current container environments length " + envList.toString().length() + " exceed the configuration " + HboxConfiguration.HBOX_ENV_MAXLENGTH + " " + conf.getInt(HboxConfiguration.HBOX_ENV_MAXLENGTH, HboxConfiguration.DEFAULT_HBOX_ENV_MAXLENGTH));
+                    envList.remove(envList.size() - 1);
+                    LOG.warn("InputFile list had written to local file: s3InputFileList.txt !!");
+                    PrintWriter writer = new PrintWriter("s3InputFileList.txt", "UTF-8");
+                    writer.println(this.s3InputUrlList);
                     writer.close();
                 }
             }

@@ -35,4 +35,9 @@ public class S3File {
         this.url = url;
     }
 
+    @Override
+    public String toString(){
+        return this.url;
+    }
+
 }

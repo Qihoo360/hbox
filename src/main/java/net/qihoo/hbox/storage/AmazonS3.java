@@ -28,7 +28,7 @@ public class AmazonS3 implements Storage {
     private final String accessKey;
     private final String secretKey;
 
-    public AmazonS3(String cluster, String bucketName, String accessKey, String secretKey) {
+    public AmazonS3(String cluster, String bucketName, String accessKey, String secretKey){
         this.accessKey = accessKey;
         this.secretKey = secretKey;
         this.bucketName = bucketName;

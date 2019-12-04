@@ -723,7 +723,7 @@ public class ApplicationMaster extends CompositeService {
         Runtime.getRuntime().addShutdownHook(cleanApplication);
     }
 
-    private void buildS3InputFileInfo() {
+    private void buildS3InputFileInfo() throws RuntimeException{
         String hboxS3Inputs = envs.get(HboxConstants.Environment.HBOX_S3_INPUTS.toString());
         if (StringUtils.isBlank(hboxS3Inputs)) {
             LOG.info("Application has no amazon s3 inputs");
@@ -748,7 +748,10 @@ public class ApplicationMaster extends CompositeService {
                 String inputBuckets = s3InputPathTuple[0];
                 String inputLocalDir = s3InputPathTuple[1];
                 info.setAliasName(inputLocalDir);
+                String prefix = conf.get(HboxConfiguration.HBOX_S3_CLUSTER_PREFIX, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER_PREFIX);
                 String s3Cluster = conf.get(HboxConfiguration.HBOX_S3_CLUSTER, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER);
+                if(!s3Cluster.startsWith(prefix))
+                    s3Cluster = prefix + s3Cluster;
                 String s3AccessKey = conf.get(HboxConfiguration.HBOX_S3_ACCESS_KEY, HboxConfiguration.DEFAULT_HBOX_S3_ACCESS_KEY);
                 String s3SecretKey = conf.get(HboxConfiguration.HBOX_S3_SECRET_KEY, HboxConfiguration.DEFAULT_HBOX_S3_SECRET_KEY);
                 boolean correctS3Conf = !s3Cluster.equals("") && !s3AccessKey.equals("") && !s3SecretKey.equals("");
@@ -877,7 +880,7 @@ public class ApplicationMaster extends CompositeService {
                 InputInfo inputInfo = new InputInfo();
                 inputInfo.setAliasName(localDir);
                 inputInfo.setInputType(HboxConstants.S3);
-                List<S3File> urls = new ArrayList<>(filesInfo.getS3Files().subList(0, remainFilesIndex));
+                List<S3File> urls = new ArrayList<>(filesInfo.getS3Files().subList(0, fileNumForChiefWorker));
                 inputInfo.setS3Files(urls);
                 mapSplit.put(localDir, inputInfo);
                 containersFiles.put(containerId, mapSplit);
@@ -896,13 +899,13 @@ public class ApplicationMaster extends CompositeService {
                     containersFiles.put(containerId, mapSplit);
                 }
                 if (mapSplit.containsKey(localDir)) {
-                    mapSplit.get(localDir).addS3File(filesInfo.getS3Files().get(index));
+                    mapSplit.get(localDir).addS3File(filesInfo.getS3Files().get(i));
                 } else {
                     InputInfo inputInfo = new InputInfo();
                     inputInfo.setAliasName(localDir);
                     inputInfo.setInputType(HboxConstants.S3);
                     List<S3File> urls = new ArrayList<>();
-                    urls.add(filesInfo.getS3Files().get(index));
+                    urls.add(filesInfo.getS3Files().get(i));
                     inputInfo.setS3Files(urls);
                     mapSplit.put(localDir, inputInfo);
                 }
@@ -939,7 +942,6 @@ public class ApplicationMaster extends CompositeService {
                 splitWorkerNum--;
                 //at least have 1 file
                 int fileNumForChiefWorker = conf.getInt(HboxConfiguration.HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM, HboxConfiguration.DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM);
-                remainFilesIndex = fileNumForChiefWorker;
                 HboxContainerId containerId = new HboxContainerId(acquiredWorkerContainers.get(0).getId());
                 ConcurrentHashMap<String, InputInfo> mapSplit = new ConcurrentHashMap<>();
                 InputInfo inputInfo = new InputInfo();
@@ -948,7 +950,10 @@ public class ApplicationMaster extends CompositeService {
                 List<Path> ps = new ArrayList<>();
                 for (int i = 0; i < fileNumForChiefWorker; i++) {
                     ps.add(paths.get(i));
+                    if(files.get(i).getLen() == 0)
+                        fileNumForChiefWorker++;
                 }
+                remainFilesIndex = fileNumForChiefWorker;
                 inputInfo.setPaths(ps);
                 mapSplit.put(fileName, inputInfo);
                 containersFiles.put(containerId, mapSplit);
@@ -1789,7 +1794,7 @@ public class ApplicationMaster extends CompositeService {
     }
 
     @SuppressWarnings("deprecation")
-    private boolean run() throws IOException, NoSuchAlgorithmException {
+    private boolean run() throws IOException, NoSuchAlgorithmException, RuntimeException {
         LOG.info("ApplicationMaster Starting ...");
 
         registerApplicationMaster();

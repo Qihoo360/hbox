@@ -316,7 +316,7 @@ public class Client {
         Enumeration<String> inputs = (Enumeration<String>) inputProperty.propertyNames();
         while (inputs.hasMoreElements()) {
             String inputRemote = inputs.nextElement();
-            String inputLocal = clientArguments.inputs.getProperty(inputRemote);
+            String inputLocal = inputProperty.getProperty(inputRemote);
             if (inputLocal.equals("true")) {
                 inputLocal = "input";
             }
@@ -655,19 +655,19 @@ public class Client {
         appMasterEnv.put(HboxConstants.Environment.HBOX_LIBJARS_LOCATION.toString(),
                 appLibJarsRemotePath.deleteCharAt(appLibJarsRemotePath.length() - 1).toString());
 
-        if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
-                || clientArguments.appType.equals("XFLOW")
-                || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
-            String appFilesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_LIBJARS_LOCATION.toString());
-            String[] tfFiles = StringUtils.split(appFilesRemoteLocation, ",");
-            for (String file : tfFiles) {
-                Path path = new Path(file);
-                localResources.put(path.getName(),
-                        Utilities.createApplicationResource(path.getFileSystem(conf),
-                                path,
-                                LocalResourceType.FILE));
-            }
+//        if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
+//                || clientArguments.appType.equals("XFLOW")
+//                || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
+        String appFilesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_LIBJARS_LOCATION.toString());
+        String[] tfFiles = StringUtils.split(appFilesRemoteLocation, ",");
+        for (String file : tfFiles) {
+            Path path = new Path(file);
+            localResources.put(path.getName(),
+                    Utilities.createApplicationResource(path.getFileSystem(conf),
+                            path,
+                            LocalResourceType.FILE));
         }
+//        }
     }
 
     private void prepareJobConfForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {

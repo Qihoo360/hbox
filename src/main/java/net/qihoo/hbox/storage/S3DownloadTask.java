@@ -13,7 +13,7 @@ import java.util.Date;
 
 public class S3DownloadTask implements Runnable {
 
-    private static final Log LOG = LogFactory.getLog(S3UploadTask.class);
+    private static final Log LOG = LogFactory.getLog(S3DownloadTask.class);
     private AmazonS3 s3;
     private Configuration conf;
     private final int downloadRetry;
@@ -33,7 +33,7 @@ public class S3DownloadTask implements Runnable {
 
     @Override
     public void run() {
-        LOG.info("Downloading input file " + this.objectKey + " from Bucket" + this.s3.getBucketName() + " to " + this.downloadDst);
+        LOG.info("Downloading input file " + this.objectKey + " from Bucket " + this.s3.getBucketName() + " to " + this.downloadDst);
         int retry = 0;
         while (true) {
             InputStream in = null;
