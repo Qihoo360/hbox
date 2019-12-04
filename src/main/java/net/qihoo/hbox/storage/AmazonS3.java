@@ -117,10 +117,10 @@ public class AmazonS3 implements Storage {
         return is;
     }
 
-    public List<S3ObjectSummary> listObjects() {
+    public List<S3ObjectSummary> listObjects(String prefix) {
         List<S3ObjectSummary> list = null;
         try {
-            ObjectListing objectListing = s3.listObjects(new ListObjectsRequest().withBucketName(bucketName));
+            ObjectListing objectListing = s3.listObjects(new ListObjectsRequest().withBucketName(bucketName).withPrefix(prefix));
             list = objectListing.getObjectSummaries();
         } catch (AmazonServiceException ase) {
             LOG.info("Caught an AmazonServiceException!" + "Error Message:    " + ase.getMessage());

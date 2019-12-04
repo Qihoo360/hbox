@@ -742,25 +742,31 @@ public class ApplicationMaster extends CompositeService {
                 if (s3InputPathTuple.length < 2) {
                     throw new RuntimeException("Error input path format " + hboxS3Inputs);
                 }
-
                 InputInfo info = new InputInfo();
                 List<S3File> s3FileList = new ArrayList<>();
                 String inputBuckets = s3InputPathTuple[0];
                 String inputLocalDir = s3InputPathTuple[1];
                 info.setAliasName(inputLocalDir);
-                String prefix = conf.get(HboxConfiguration.HBOX_S3_CLUSTER_PREFIX, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER_PREFIX);
+                String clusterPrefix = conf.get(HboxConfiguration.HBOX_S3_CLUSTER_PREFIX, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER_PREFIX);
                 String s3Cluster = conf.get(HboxConfiguration.HBOX_S3_CLUSTER, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER);
-                if(!s3Cluster.startsWith(prefix))
-                    s3Cluster = prefix + s3Cluster;
+                if(!s3Cluster.startsWith(clusterPrefix))
+                    s3Cluster = clusterPrefix + s3Cluster;
                 String s3AccessKey = conf.get(HboxConfiguration.HBOX_S3_ACCESS_KEY, HboxConfiguration.DEFAULT_HBOX_S3_ACCESS_KEY);
                 String s3SecretKey = conf.get(HboxConfiguration.HBOX_S3_SECRET_KEY, HboxConfiguration.DEFAULT_HBOX_S3_SECRET_KEY);
                 boolean correctS3Conf = !s3Cluster.equals("") && !s3AccessKey.equals("") && !s3SecretKey.equals("");
                 for (String bucket : StringUtils.split(inputBuckets, ",")) {
-                    AmazonS3 s3 = new AmazonS3(s3Cluster, bucket, s3AccessKey, s3SecretKey);
+                    String bucketName = bucket;
+                    String prefix = "";
+                    String split = conf.get(HboxConfiguration.HBOX_S3_BUCKET_DIR_SPLIT, HboxConfiguration.DEFAULT_HBOX_S3_BUCKET_DIR_SPLIT);
+                    if(bucket.contains(split)){
+                        bucketName = bucket.substring(0, bucket.indexOf(split));
+                        prefix = bucket.substring(bucket.indexOf(split) + 1);
+                    }
+                    AmazonS3 s3 = new AmazonS3(s3Cluster, bucketName, s3AccessKey, s3SecretKey);
                     if (s3.doesBucketExist() && correctS3Conf) {
-                        for (S3ObjectSummary obj : s3.listObjects()) {
+                        for (S3ObjectSummary obj : s3.listObjects(prefix)) {
                             String objKey = obj.getKey();
-                            S3File s3File = new S3File(bucket, objKey, s3.getUrl(objKey).toString());
+                            S3File s3File = new S3File(bucketName, objKey, s3.getUrl(objKey).toString());
                             s3FileList.add(s3File);
                         }
                     } else {

@@ -405,6 +405,8 @@ public class HboxConfiguration extends YarnConfiguration {
     public static final String DEFAULT_HBOX_S3_CLUSTER = "";
     public static final String HBOX_S3_CLUSTER_PREFIX = "hbox.s3.cluster.prefix";
     public static final String DEFAULT_HBOX_S3_CLUSTER_PREFIX = "http://";
+    public static final String HBOX_S3_BUCKET_DIR_SPLIT = "hbox.s3.bucket.dir.split";
+    public static final String DEFAULT_HBOX_S3_BUCKET_DIR_SPLIT = "/";
     public static final String HBOX_S3_ACCESS_KEY = "hbox.s3.key.access";
     public static final String DEFAULT_HBOX_S3_ACCESS_KEY = "";
     public static final String HBOX_S3_SECRET_KEY = "hbox.s3.key.secret";
