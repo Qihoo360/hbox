@@ -78,7 +78,7 @@ public interface HboxConstants {
 
         HBOX_INPUT_FILE_LIST("INPUT_FILE_LIST"),
 
-        HBOX_S3_INPUT_FILE_LIST("INPUT_FILE_LIST"),
+        HBOX_S3_INPUT_FILE_LIST("S3_INPUT_FILE_LIST"),
 
         HBOX_INPUT_PATH("INPUT_PATH"),
 

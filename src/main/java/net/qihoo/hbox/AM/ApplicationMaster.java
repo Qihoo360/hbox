@@ -457,7 +457,7 @@ public class ApplicationMaster extends CompositeService {
                         List<String> tensorboardInfo = new ArrayList<>();
                         if (conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_ENABLE)) {
                             Path boardLogPath;
-                            if (conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR).indexOf("hdfs://") == -1) {
+                            if (!conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR).contains("hdfs://")) {
                                 if (conf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR, HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR).equals(hboxConf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR, HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR))) {
                                     boardLogPath = new Path(hboxConf.get("fs.defaultFS"), conf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
                                             HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR) + "/" + applicationAttemptID.getApplicationId().toString());
