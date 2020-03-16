@@ -15,7 +15,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -24,10 +28,12 @@ import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
@@ -36,6 +42,7 @@ import java.math.RoundingMode;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.util.*;
@@ -105,6 +112,10 @@ public class ApplicationMaster extends CompositeService {
   private List<Long> savingModelList;
 
   private Thread cleanApplication;
+
+
+  private ByteBuffer allTokens;
+
 
   /**
    * Constructor, connect to Resource Manager
@@ -808,7 +819,7 @@ public class ApplicationMaster extends CompositeService {
 
     containerEnv.put(XLearningConstants.Environment.XLEARNING_TF_INDEX.toString(), String.valueOf(index));
     ContainerLaunchContext ctx = ContainerLaunchContext.newInstance(
-        containerLocalResource, containerEnv, containerLaunchcommands, null, null, null);
+        containerLocalResource, containerEnv, containerLaunchcommands, null,allTokens==null?null:allTokens.duplicate(), null);
 
     try {
       nmAsync.startContainerAsync(container, ctx);
@@ -850,6 +861,26 @@ public class ApplicationMaster extends CompositeService {
   @SuppressWarnings("deprecation")
   private boolean run() throws IOException, NoSuchAlgorithmException {
     LOG.info("ApplicationMaster Starting ...");
+
+    if(UserGroupInformation.isSecurityEnabled()) {
+      // Note: Credentials, Token, UserGroupInformation, DataOutputBuffer class
+      // are marked as LimitedPrivate
+      Credentials credentials =
+              UserGroupInformation.getCurrentUser().getCredentials();
+      DataOutputBuffer dob = new DataOutputBuffer();
+      credentials.writeTokenStorageToStream(dob);
+      // Now remove the AM->RM token so that containers cannot access it.
+      Iterator<org.apache.hadoop.security.token.Token<?>> iter = credentials.getAllTokens().iterator();
+      LOG.info("Executing with tokens:");
+      while (iter.hasNext()) {
+        Token<?> token = iter.next();
+        LOG.info(token);
+        if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
+          iter.remove();
+        }
+      }
+      allTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    }
 
     registerApplicationMaster();
     if (conf.get(XLearningConfiguration.XLEARNING_INPUT_STRATEGY, XLearningConfiguration.DEFAULT_XLEARNING_INPUT_STRATEGY).equals("STREAM")) {

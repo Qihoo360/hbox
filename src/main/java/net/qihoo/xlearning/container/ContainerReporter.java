@@ -145,7 +145,7 @@ public class ContainerReporter extends Thread {
     } catch (IOException e) {
       e.printStackTrace();
     }
-    LOG.info("containerProcessId is:" + this.containerProcessId);
+    LOG.info("ps  is:" + this.containerProcessId);
     ProcessTreeInfo processTreeInfo =
         new ProcessTreeInfo(this.containerId.getContainerId(),
             null, null, 0, 0, 0);
