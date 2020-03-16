@@ -10,6 +10,8 @@ import net.qihoo.xlearning.common.OutputInfo;
 import net.qihoo.xlearning.common.XLearningContainerStatus;
 import net.qihoo.xlearning.common.TextMultiOutputFormat;
 import net.qihoo.xlearning.conf.XLearningConfiguration;
+import net.qihoo.xlearning.security.XTokenIdentifier;
+import net.qihoo.xlearning.security.XTokenSecretManager;
 import net.qihoo.xlearning.util.Utilities;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -19,6 +21,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.io.Text;
@@ -124,11 +129,22 @@ public class XLearningContainer {
     reservedSocket = new Socket();
   }
 
-  private void init() {
+  private void init() throws IOException {
     LOG.info("XLearningContainer initializing");
     String appMasterHost = System.getenv(XLearningConstants.Environment.APPMASTER_HOST.toString());
     int appMasterPort = Integer.valueOf(System.getenv(XLearningConstants.Environment.APPMASTER_PORT.toString()));
     InetSocketAddress addr = new InetSocketAddress(appMasterHost, appMasterPort);
+
+    if(UserGroupInformation.isSecurityEnabled()) {
+      //add for kerberos
+      conf.setBoolean("hadoop.security.authorization", false);
+      XTokenSecretManager secretManager = new XTokenSecretManager();
+      UserGroupInformation current = UserGroupInformation.getCurrentUser();
+      XTokenIdentifier tokenID = new XTokenIdentifier(new Text(current.getUserName()));
+      Token<XTokenIdentifier> token = new Token<>(tokenID, secretManager);
+      SecurityUtil.setTokenService(token, addr);
+      current.addToken(token);
+    }
     try {
       this.amClient = RPC.getProxy(ApplicationContainerProtocol.class,
           ApplicationContainerProtocol.versionID, addr, conf);

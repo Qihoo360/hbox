@@ -6,6 +6,7 @@ import net.qihoo.xlearning.api.*;
 import net.qihoo.xlearning.common.*;
 import net.qihoo.xlearning.conf.XLearningConfiguration;
 import net.qihoo.xlearning.container.XLearningContainerId;
+import net.qihoo.xlearning.security.XTokenSecretManager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -14,6 +15,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
@@ -120,11 +122,21 @@ public class ApplicationContainerListener extends AbstractService implements App
   @Override
   public void start() {
     LOG.info("Starting application containers handler server");
-    RPC.Builder builder = new RPC.Builder(getConfig());
+
+    Configuration conf = getConfig();
+    conf.setBoolean("hadoop.security.authorization",false);
+
+    RPC.Builder builder = new RPC.Builder(conf);
     builder.setProtocol(ApplicationContainerProtocol.class);
     builder.setInstance(this);
     builder.setBindAddress("0.0.0.0");
     builder.setPort(0);
+
+    if(UserGroupInformation.isSecurityEnabled()) {
+      XTokenSecretManager secretManager = new XTokenSecretManager();
+      builder.setSecretManager(secretManager);
+    }
+
     try {
       server = builder.build();
     } catch (Exception e) {
