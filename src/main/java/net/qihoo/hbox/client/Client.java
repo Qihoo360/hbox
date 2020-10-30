@@ -8,7 +8,7 @@ import net.qihoo.hbox.common.exceptions.RequestOverLimitException;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.util.Utilities;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -370,7 +370,7 @@ public class Client {
         LOG.info("Max mem capability of resources in this cluster " + maxMem);
         int maxVCores = newApplication.getMaximumResourceCapability().getVirtualCores();
         LOG.info("Max vcores capability of resources in this cluster " + maxVCores);
-        int maxGCores = newApplication.getMaximumResourceCapability().getGpuCores();
+        long maxGCores = newApplication.getMaximumResourceCapability().getResourceValue(HboxConstants.GPU);
         LOG.info("Max gpu cores capability of resources in this cluster " + maxGCores);
 
         int driverMem = conf.getInt(HboxConfiguration.HBOX_DRIVER_MEMORY, HboxConfiguration.DEFAULT_HBOX_DRIVER_MEMORY);
@@ -884,7 +884,7 @@ public class Client {
         String containerType = conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE,
                 HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);
         appMasterEnv.put(HboxConstants.Environment.HADOOP_USER_NAME.toString(), conf.get("hadoop.job.ugi").split(",")[0]);
-        appMasterEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), containerType);
+        //appMasterEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), containerType);
         appMasterEnv.put(HboxConstants.Environment.HBOX_CONTAINER_MAX_MEMORY.toString(), String.valueOf(maxContainerMem));
 
         if (clientArguments.appType.equals("VPC") || clientArguments.appType.equals("DIGITS") || containerType.toUpperCase().equals("DOCKER")) {
@@ -902,7 +902,7 @@ public class Client {
             appMasterEnv.put(HboxConstants.Environment.HBOX_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME.toString(), imageName);
             appMasterEnv.put(HboxConstants.Environment.HBOX_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME.toString(), conf.get(HboxConfiguration.DOCKER_CONTAINER_EXECUTOR_EXEC_NAME,
                     HboxConfiguration.DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME));
-            appMasterEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), "docker");
+            //appMasterEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), "docker");
         }
 
         if (clientArguments.appType != null && !clientArguments.appType.equals("")) {

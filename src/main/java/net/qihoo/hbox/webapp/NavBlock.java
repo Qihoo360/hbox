@@ -10,9 +10,9 @@ public class NavBlock extends HtmlBlock {
                 div("#nav").
                 h3("Tools").
                 ul().
-                li().a("/conf", "Configuration")._().
-                li().a("/stacks", "Thread dump")._().
-                li().a("/logs", "Logs")._().
-                li().a("/jmx?qry=Hadoop:*", "Metrics")._()._()._();
+                li().a("/conf", "Configuration").__().
+                li().a("/stacks", "Thread dump").__().
+                li().a("/logs", "Logs").__().
+                li().a("/jmx?qry=Hadoop:*", "Metrics").__().__().__();
     }
 }

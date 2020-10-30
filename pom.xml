@@ -6,11 +6,11 @@
 
     <groupId>net.qihoo</groupId>
     <artifactId>hbox</artifactId>
-    <version>1.5</version>
+    <version>1.6</version>
 
 
     <properties>
-        <hadoop2.version>2.7.2U5-gpu-SNAPSHOT</hadoop2.version>
+        <hadoop2.version>3.2.1</hadoop2.version>
         <!--hadoop2.version>2.7.2</hadoop2.version-->
         <junit.version>4.11</junit.version>
         <jdk.version>1.7</jdk.version>
@@ -65,11 +65,6 @@
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20140107</version>
-        </dependency>
-        <dependency>
-            <groupId>net.qihoo</groupId>
-            <artifactId>spinner</artifactId>
-            <version>0.21.2.7.2U5</version>
         </dependency>
         <!-- junit -->
         <dependency>

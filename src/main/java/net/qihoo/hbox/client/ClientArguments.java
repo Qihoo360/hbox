@@ -4,7 +4,7 @@ import net.qihoo.hbox.AM.ApplicationMaster;
 import net.qihoo.hbox.common.JobPriority;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import org.apache.commons.cli.*;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.JobConf;
@@ -212,7 +212,7 @@ class ClientArguments {
         allOptions.addOption("inputFormatClass", "inputformat", true,
                 "The inputformat class, default:org.apache.hadoop.mapred.TextInputFormat");
         allOptions.addOption("outputFormatClass", "outputformat", true,
-                "The outputformat class, default:org.apache.hadoop.mapred.lib.TextMultiOutputFormat");
+                "The outputformat class, default:org.apache.hadoop.mapred.lib.TextOutputFormat");
         allOptions.addOption("streamEpoch", "stream-epoch", true,
                 "The num of epoch for stream input.");
 

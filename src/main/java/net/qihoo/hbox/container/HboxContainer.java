@@ -2,6 +2,12 @@ package net.qihoo.hbox.container;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import net.qihoo.hbox.api.ApplicationContainerProtocol;
 import net.qihoo.hbox.api.HboxConstants;
@@ -12,7 +18,7 @@ import net.qihoo.hbox.storage.S3DownloadTask;
 import net.qihoo.hbox.storage.S3File;
 import net.qihoo.hbox.storage.S3UploadTask;
 import net.qihoo.hbox.util.Utilities;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -25,7 +31,7 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.mapred.lib.TextMultiOutputFormat;
+import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import java.io.*;
@@ -887,19 +893,9 @@ public class HboxContainer {
          * python script can load cluster def use "json.loads(os.environ["CLUSTER_DEF"])"
          */
         List<String> envList = new ArrayList<>(20);
-        String cudaEnv;
-        int cudaNum = 0;
-        if (!System.getenv().containsKey(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES.toString())) {
-            cudaEnv = "";
-        } else {
-            cudaEnv = System.getenv(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES.toString());
-            cudaNum = StringUtils.split(cudaEnv, ',').length;
-        }
-        this.amClient.reportGPUDevice(containerId, cudaEnv);
 
         LOG.debug("hadoop user name:" + System.getenv(HboxConstants.Environment.HADOOP_USER_NAME.toString()));
         String containerExecType = conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE).toUpperCase();
-        String cudaVisibleDevicesEnv = "CUDA_VISIBLE_DEVICES=" + cudaEnv;
 
         if (conf.get(HboxConfiguration.HBOX_CONTAINER_ENV) != null) {
             String[] env = StringUtils.split(conf.get(HboxConfiguration.HBOX_CONTAINER_ENV), "|");
@@ -925,24 +921,14 @@ public class HboxContainer {
         envList.add("HADOOP_CONF_DIR=./:" + System.getenv("HADOOP_CONF_DIR"));
 
         if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) {
-            if (containerExecType.equals("DOCKER")) {
-                cudaVisibleDevicesEnv = "";
-            }
-            envList.add(cudaVisibleDevicesEnv);
             envList.add(HboxConstants.Environment.HBOX_TF_INDEX.toString() + "=" + this.index);
             envList.add(HboxConstants.Environment.HBOX_TF_ROLE.toString() + "=" + this.role);
-            envList.add(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES_NUM.toString() + "=" + cudaNum);
             if (!single) {
                 envList.add(HboxConstants.Environment.HBOX_TF_CLUSTER_DEF.toString() + "=" + this.clusterDef);
                 envList.add(HboxConstants.Environment.HBOX_TF_CONFIG.toString() + "=" + this.tfConfig);
                 envList.add(HboxConstants.Environment.HBOX_LOCAL_ADDRESS.toString() + "=" + this.localAddress);
             }
         } else if (hboxAppType.equals("MXNET")) {
-            if (containerExecType.equals("DOCKER")) {
-                cudaVisibleDevicesEnv = "";
-            }
-            envList.add(cudaVisibleDevicesEnv);
-            envList.add(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES_NUM.toString() + "=" + cudaNum);
             if (!singleMx) {
                 String dmlcID;
                 if (this.role.equals("worker")) {
@@ -958,30 +944,15 @@ public class HboxContainer {
                 envList.add("DMLC_ROLE=" + this.role);
             }
         } else if (hboxAppType.equals("DISTXGBOOST")) {
-            if (containerExecType.equals("DOCKER")) {
-                cudaVisibleDevicesEnv = "";
-            }
-            envList.add(cudaVisibleDevicesEnv);
-            envList.add(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES_NUM.toString() + "=" + cudaNum);
             envList.add("DMLC_TRACKER_URI=" + System.getenv("DMLC_TRACKER_URI"));
             envList.add("DMLC_TRACKER_PORT=" + System.getenv("DMLC_TRACKER_PORT"));
             envList.add("DMLC_NUM_WORKER=" + System.getenv("DMLC_NUM_WORKER"));
             envList.add("DMLC_TASK_ID=" + this.index);
             envList.add("DMLC_ROLE=" + this.role);
         } else if (hboxAppType.equals("DISTLIGHTGBM")) {
-            if (containerExecType.equals("DOCKER")) {
-                cudaVisibleDevicesEnv = "";
-            }
-            envList.add(cudaVisibleDevicesEnv);
-            envList.add(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES_NUM.toString() + "=" + cudaNum);
             envList.add("LIGHTGBM_NUM_MACHINE=" + System.getenv(HboxConstants.Environment.HBOX_LIGHTGBM_WORKER_NUM.toString()));
             envList.add("LIGHTGBM_LOCAL_LISTEN_PORT=" + this.lightGBMLocalPort);
         } else if (hboxAppType.equals("DISTLIGHTLDA")) {
-            if (containerExecType.equals("DOCKER")) {
-                cudaVisibleDevicesEnv = "";
-            }
-            envList.add(cudaVisibleDevicesEnv);
-            envList.add(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES_NUM.toString() + "=" + cudaNum);
             envList.add("LIGHTLDA_WORKER_NUM=" + System.getenv(HboxConstants.Environment.HBOX_LIGHTLDA_WORKER_NUM.toString()));
             envList.add("LIGHTLDA_SERVER_NUM=" + System.getenv(HboxConstants.Environment.HBOX_LIGHTLDA_PS_NUM.toString()));
             envList.add("LIGHTLDA_RANK=" + this.index);
@@ -1006,14 +977,7 @@ public class HboxContainer {
             envList.add("PATH=" + System.getenv("PATH"));
             envList.add("PWD=" + this.mpiAppDir);
             envList.add("LD_LIBRARY_PATH=" + ldLibraryPath.toString());
-            envList.add(cudaVisibleDevicesEnv);
-            envList.add(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES_NUM.toString() + "=" + cudaNum);
         } else if (hboxAppType.equals("XFLOW")) {
-            if (containerExecType.equals("DOCKER")) {
-                cudaVisibleDevicesEnv = "";
-            }
-            envList.add(cudaVisibleDevicesEnv);
-            envList.add(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES_NUM.toString() + "=" + cudaNum);
             String dmlcID;
             String heapprofile;
             if (this.role.equals("worker")) {
@@ -1031,11 +995,6 @@ public class HboxContainer {
             envList.add("DMLC_ROLE=" + this.role);
             envList.add("HEAPPROFILE=" + heapprofile + this.index);
         } else if (hboxAppType.equals("DISTTORCH")) {
-            if (containerExecType.equals("DOCKER")) {
-                cudaVisibleDevicesEnv = "";
-            }
-            envList.add(cudaVisibleDevicesEnv);
-            envList.add(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES_NUM.toString() + "=" + cudaNum);
             envList.add("INIT_METHOD=tcp://" + this.torchRank0IP);
             envList.add("RANK=" + this.index);
             envList.add("WORLD_SIZE=" + System.getenv("WORLD_SIZE"));
@@ -1052,12 +1011,6 @@ public class HboxContainer {
                     envList.add("TASK_NUM=" + envs.get("TASK_NUM"));
                 }
             }
-        } else {
-            if (containerExecType.equals("DOCKER")) {
-                cudaVisibleDevicesEnv = "";
-            }
-            envList.add(cudaVisibleDevicesEnv);
-            envList.add(HboxConstants.Environment.HBOX_CUDA_VISIBLE_DEVICES_NUM.toString() + "=" + cudaNum);
         }
         //if user's environments too long, write environments to file inputFileList.txt, s3 input to file s3InputFileList.txt
         if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("PLACEHOLDER")) {
@@ -1231,12 +1184,12 @@ public class HboxContainer {
                         jobConf.setOutputValueClass(Text.class);
                         jobConf.setBoolean("mapred.output.compress", true);
                         jobConf.set("mapred.output.compression.codec", "org.apache.hadoop.io.compress.GzipCodec");
-                        jobConf.setOutputFormat(TextMultiOutputFormat.class);
+                        jobConf.setOutputFormat(TextOutputFormat.class);
                         Path remotePath = new Path(outputs.get(0).getDfsLocation() + "/_temporary/" + containerId.toString());
                         FileSystem dfs = remotePath.getFileSystem(jobConf);
                         //FileOutputFormat.setOutputPath(jobConf, remotePath.makeQualified(dfs));
                         jobConf.set(HboxConstants.STREAM_OUTPUT_DIR, remotePath.makeQualified(dfs).toString());
-                        //TextMultiOutputFormat outputFormat = ReflectionUtils.newInstance(TextMultiOutputFormat.class, jobConf);
+
                         OutputFormat outputFormat = ReflectionUtils.newInstance(conf.getClass(HboxConfiguration.HBOX_OUTPUTFORMAT_CLASS, HboxConfiguration.DEFAULT_HBOX_OUTPUTF0RMAT_CLASS, OutputFormat.class),
                                 jobConf);
                         outputFormat.checkOutputSpecs(dfs, jobConf);
@@ -1476,6 +1429,68 @@ public class HboxContainer {
                 }
             }
         }
+        String cudaEnv = "";
+        if (Long.parseLong(envs.get(HboxConstants.Environment.HBOX_CONTAIENR_GPU_NUM.toString())) > 0) {
+            // get the container gpu assigned info
+            String gpuUsedCommand = "curl --compressed -H Accept:application/json -XGET http://" + envs.get(ApplicationConstants.Environment.NM_HOST.toString())
+                    + ":" + String.valueOf(conf.getInt(HboxConfiguration.HOBX_NM_WEBAPP_PORT, HboxConfiguration.DEFAULT_HOBX_NM_WEBAPP_PORT)) + "/ws/v1/node/resources/yarn.io%2Fgpu";
+            LOG.info("get gpu info cmd: " + gpuUsedCommand);
+            final Process getGPUUsedProcess = Runtime.getRuntime().exec(gpuUsedCommand, env);
+            LOG.info("Starting thread to get the gpu used info");
+            try {
+                StringBuilder gpuDevice = new StringBuilder();
+                BufferedReader reader;
+                reader = new BufferedReader(new InputStreamReader(getGPUUsedProcess.getInputStream()));
+                String line = reader.readLine();
+                LOG.debug("nodemanager info: " + line);
+                if (line == null) {
+                    LOG.error("Can't get the gpu info from nodemanager.");
+                } else {
+                    Gson gson = new GsonBuilder().
+                            registerTypeAdapter(
+                                    new TypeToken<Map<String, Object>>() {
+                                    }.getType(),
+                                    new JsonDeserializer<Map<String, Object>>() {
+                                        @Override
+                                        public Map<String, Object> deserialize(
+                                                JsonElement json, Type typeOfT,
+                                                JsonDeserializationContext context) throws JsonParseException {
+                                            Map<String, Object> treeMap = new HashMap<String, Object>();
+                                            JsonObject jsonObject = json.getAsJsonObject();
+                                            Set<Map.Entry<String, JsonElement>> entrySet = jsonObject.entrySet();
+                                            for (Map.Entry<String, JsonElement> entry : entrySet) {
+                                                treeMap.put(entry.getKey(), entry.getValue());
+                                            }
+                                            return treeMap;
+                                        }
+                                    }).
+                            create();
+                    Map<String, Object> gpuInfo = gson.fromJson(line, new TypeToken<Map<String, Object>>() {
+                    }.getType());
+                    if (gpuInfo.containsKey(HboxConstants.ASSIGNED_GPU_DEVICES.toString())) {
+                        List<Map> assignedInfo = gson.fromJson(gpuInfo.get(HboxConstants.ASSIGNED_GPU_DEVICES.toString()).toString(), List.class);
+                        for (Map info : assignedInfo) {
+                            if (info.get("containerId").equals(containerId.toString())) {
+                                gpuDevice.append(StringUtils.split(info.get("index").toString(), ".")[0]).append(",");
+                                LOG.info("container: " + containerId.toString() + " assigned gpu: " + info.get("index").toString());
+                            }
+                        }
+                    } else {
+                        LOG.info("Current nodemanager haven't assigned gpu.");
+                    }
+                }
+                reader.close();
+                getGPUUsedProcess.waitFor();
+                if (gpuDevice.length() > 0) {
+                    cudaEnv = gpuDevice.toString().substring(0, gpuDevice.length() - 1);
+                }
+            } catch (Exception e) {
+                LOG.warn("Exception in thread get the gpu used info process stdoutRedirectThread");
+                e.printStackTrace();
+            }
+            LOG.info("the gpu used info for container " + containerId + " : " + cudaEnv);
+        }
+        amClient.reportGPUDevice(containerId, cudaEnv);
 
         int updateAppStatusInterval = this.conf.getInt(HboxConfiguration.HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL);
         if (!hboxAppType.equals("MPI")) {

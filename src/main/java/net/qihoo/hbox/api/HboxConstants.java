@@ -21,6 +21,10 @@ public interface HboxConstants {
 
     String CHIEF = "chief";
 
+    String GPU = "yarn.io/gpu";
+
+    String ASSIGNED_GPU_DEVICES = "assignedGpuDevices";
+
     String SCHEDULER = "scheduler";
 
     String STREAM_INPUT_DIR = "mapreduce.input.fileinputformat.inputdir";
@@ -49,6 +53,8 @@ public interface HboxConstants {
         HBOX_CONTAINER_EXECUTOR_TYPE("yarn.nodemanager.container-executor.type"),
 
         HBOX_CONTAINER_MAX_MEMORY("HBOX_MAX_MEM"),
+
+        HBOX_CONTAIENR_GPU_NUM("HBOX_CONTAIENR_GPU_NUM"),
 
         HBOX_TF_ROLE("TF_ROLE"),
 

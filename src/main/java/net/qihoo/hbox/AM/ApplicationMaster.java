@@ -11,7 +11,7 @@ import net.qihoo.hbox.container.HboxContainerId;
 import net.qihoo.hbox.storage.AmazonS3;
 import net.qihoo.hbox.storage.S3File;
 import net.qihoo.hbox.util.Utilities;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1193,7 +1193,7 @@ public class ApplicationMaster extends CompositeService {
                 conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
         workerCapability.setMemory(Math.min(workerMemory + workerOverheadMem, maxContainerMem));
         workerCapability.setVirtualCores(workerVCores);
-        workerCapability.setGpuCores(workerGCores);
+        workerCapability.setResourceValue(HboxConstants.GPU, workerGCores);
         workerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
         LOG.info("Create worker container request: " + workerContainerRequest.toString());
 
@@ -1204,7 +1204,7 @@ public class ApplicationMaster extends CompositeService {
                         conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
                 chiefWorkerCapability.setMemory(Math.min(chiefWorkerMemory + chiefWorkerOverheadMem, maxContainerMem));
                 chiefWorkerCapability.setVirtualCores(workerVCores);
-                chiefWorkerCapability.setGpuCores(workerGCores);
+                chiefWorkerCapability.setResourceValue(HboxConstants.GPU, workerGCores);
                 chiefWorkerContainerRequest = new ContainerRequest(chiefWorkerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
                 LOG.info("Create chief worker container request: " + chiefWorkerContainerRequest.toString());
             }
@@ -1214,7 +1214,7 @@ public class ApplicationMaster extends CompositeService {
                         conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
                 evaluatorWorkerCapability.setMemory(Math.min(evaluatorWorkerMemory + evaluatorWorkerOverheadMem, maxContainerMem));
                 evaluatorWorkerCapability.setVirtualCores(workerVCores);
-                evaluatorWorkerCapability.setGpuCores(workerGCores);
+                evaluatorWorkerCapability.setResourceValue(HboxConstants.GPU, workerGCores);
                 evaluatorWorkerContainerRequest = new ContainerRequest(evaluatorWorkerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
                 LOG.info("Create evaluator worker container request: " + evaluatorWorkerContainerRequest.toString());
             }
@@ -1226,7 +1226,7 @@ public class ApplicationMaster extends CompositeService {
                     conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
             psCapability.setMemory(Math.min(psMemory + psOverheadMem, maxContainerMem));
             psCapability.setVirtualCores(psVCores);
-            psCapability.setGpuCores(psGCores);
+            psCapability.setResourceValue(HboxConstants.GPU, psGCores);
             psContainerRequest = new ContainerRequest(psCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
             LOG.info("Create ps container request: " + psContainerRequest.toString());
         }
@@ -1350,7 +1350,11 @@ public class ApplicationMaster extends CompositeService {
                 HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);
         containerEnv.put(HboxConstants.Environment.HADOOP_USER_NAME.toString(), conf.get("hadoop.job.ugi").split(",")[0]);
         containerEnv.put(HboxConstants.Environment.HBOX_TF_ROLE.toString(), role);
-        containerEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), containerExecType);
+        //containerEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), containerExecType);
+        if (psGCores > 0 || workerGCores > 0) {
+            containerEnv.put(HboxConstants.Environment.HBOX_CONTAIENR_GPU_NUM.toString(), String.valueOf(Math.max(psGCores, workerGCores)));
+        }
+
         if (this.inputPath.length() > 0) {
             containerEnv.put(HboxConstants.Environment.HBOX_INPUT_PATH.toString(), this.inputPath.substring(0, inputPath.length() - 1));
         }
@@ -1390,7 +1394,7 @@ public class ApplicationMaster extends CompositeService {
             containerEnv.put(HboxConstants.Environment.HBOX_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME.toString(), imageName);
             containerEnv.put(HboxConstants.Environment.HBOX_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME.toString(), conf.get(HboxConfiguration.DOCKER_CONTAINER_EXECUTOR_EXEC_NAME,
                     HboxConfiguration.DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME));
-            containerEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), "docker");
+            //containerEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), "docker");
             LOG.info("Docker image name: " + imageName);
         }
 
@@ -1466,7 +1470,7 @@ public class ApplicationMaster extends CompositeService {
             }
         }
 
-        LOG.debug("env:" + containerEnv.toString());
+        LOG.info("env:" + containerEnv.toString());
         Set<String> envStr = containerEnv.keySet();
         for (String anEnvStr : envStr) {
             LOG.debug("env:" + anEnvStr);

@@ -1,7 +1,7 @@
 package net.qihoo.hbox.util;
 
 import net.qihoo.hbox.conf.HboxConfiguration;
-import org.apache.commons.lang.ObjectUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;

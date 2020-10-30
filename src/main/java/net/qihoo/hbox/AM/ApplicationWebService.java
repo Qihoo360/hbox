@@ -11,9 +11,9 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.apache.hadoop.yarn.webapp.WebApps;
-import org.mortbay.jetty.servlet.DefaultServlet;
-import org.mortbay.jetty.servlet.FilterHolder;
-import org.mortbay.jetty.webapp.WebAppContext;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.webapp.WebAppContext;
 
 import java.io.IOException;
 
@@ -37,10 +37,10 @@ public class ApplicationWebService extends AbstractService {
 
             WebAppContext webAppContext = httpServer.getWebAppContext();
             WebAppContext appWebAppContext = new WebAppContext();
-            appWebAppContext.setContextPath("/appResource");
-            String appDir = getClass().getClassLoader().getResource("hboxWeb").toString();
-            appWebAppContext.setResourceBase(appDir + "/static");
-            appWebAppContext.addServlet(DefaultServlet.class, "/*");
+            appWebAppContext.setContextPath("/static/hboxWebApp");
+            String appDir = getClass().getClassLoader().getResource("hboxWebApp").toString();
+            appWebAppContext.setResourceBase(appDir);
+            //appWebAppContext.addServlet(DefaultServlet.class, "/*");
             final String[] ALL_URLS = {"/*"};
             FilterHolder[] filterHolders =
                     webAppContext.getServletHandler().getFilters();
@@ -51,7 +51,7 @@ public class ApplicationWebService extends AbstractService {
                             ALL_URLS);
                 }
             }
-            httpServer.addContext(appWebAppContext, true);
+            httpServer.addHandlerAtFront(appWebAppContext);
             try {
                 httpServer.start();
                 LOG.info("Web app " + webApp.name() + " started at "

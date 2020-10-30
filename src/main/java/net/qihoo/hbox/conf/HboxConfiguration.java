@@ -173,7 +173,7 @@ public class HboxConfiguration extends YarnConfiguration {
 
     public static final String HBOX_OUTPUTFORMAT_CLASS = "hbox.outputformat.class";
 
-    public static final Class<? extends OutputFormat> DEFAULT_HBOX_OUTPUTF0RMAT_CLASS = org.apache.hadoop.mapred.lib.TextMultiOutputFormat.class;
+    public static final Class<? extends OutputFormat> DEFAULT_HBOX_OUTPUTF0RMAT_CLASS = org.apache.hadoop.mapred.TextOutputFormat.class;
 
     public static final String HBOX_INPUTFILE_RENAME = "hbox.inputfile.rename";
 
@@ -530,6 +530,9 @@ public class HboxConfiguration extends YarnConfiguration {
     //container type
     public static final String CONTAINER_EXECUTOR_TYPE = "yarn.nodemanager.container-executor.type";
     public static final String DEFAULT_CONTAINER_EXECUTOR_TYPE = "";
+
+    public static final String HOBX_NM_WEBAPP_PORT = "hbox.nodemanager.webapp.port";
+    public static final int DEFAULT_HOBX_NM_WEBAPP_PORT = 8042;
 
     public static final String HBOX_DOCKER_IMAGE_NAME = "hbox.docker.image.name";
     public static final String DEFAULT_HBOX_DOCKER_IMAGE_NAME = "";

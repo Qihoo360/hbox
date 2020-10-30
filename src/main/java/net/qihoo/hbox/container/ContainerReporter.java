@@ -3,7 +3,7 @@ package net.qihoo.hbox.container;
 import com.google.gson.Gson;
 import net.qihoo.hbox.api.ApplicationContainerProtocol;
 import net.qihoo.hbox.util.Utilities;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -171,11 +171,33 @@ public class ContainerReporter extends Thread {
         }
     }
 
+    String[] convertGpuCards(String[] gpuStr) {
+        if (gpuStr != null && gpuStr.length > 0) {
+            String[] gpuList = new String[gpuStr.length];
+            int min = Integer.MIN_VALUE;
+            for (String s : gpuStr) {
+                int id = Integer.parseInt(s);
+                if (id < min) {
+                    min = id;
+                }
+            }
+            if (min <= 0) {
+                return gpuStr;
+            } else {
+                for (int i = 0; i < gpuStr.length; i++) {
+                    gpuList[i] = String.valueOf(Integer.parseInt(gpuStr[i]) - min);
+                }
+                return gpuList;
+            }
+        }
+        return gpuStr;
+    }
+
     private void produceGpuMetrics(String gpuStr, final Boolean dockerFlag) throws IOException {
         String command = "nvidia-smi --format=csv,noheader,nounits --query-gpu=index,memory.used,utilization.gpu -l 1";
         final String[] gpuList = StringUtils.split(gpuStr, ',');
         final Process finalProcess = Runtime.getRuntime().exec(command);
-        LOG.info("Starting thread to redirect stdout of nvidia-smi process");
+        LOG.info("Starting thread to redirect stdout of nvidia-smi process, assignd gpu is " + gpuStr + ", convert");
         Thread stdoutRedirectThread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -184,16 +206,11 @@ public class ContainerReporter extends Thread {
                     reader = new BufferedReader(new InputStreamReader(finalProcess.getInputStream()));
                     String line;
                     int i;
-                    Boolean flag;
                     while ((line = reader.readLine()) != null) {
                         Long time = (new Date()).getTime();
                         String[] gpusIndex = StringUtils.split(line, ',');
                         for (i = 0; i < gpuList.length; i++) {
-                            if ((dockerFlag && i == Integer.parseInt(gpusIndex[0])) || (!dockerFlag && gpuList[i].equals(gpusIndex[0])))
-                                flag = true;
-                            else
-                                flag = false;
-                            if (flag) {
+                            if (i == Integer.valueOf(gpusIndex[0])) {
                                 List<Long> memPoint = new ArrayList<>();
                                 memPoint.add(time);
                                 memPoint.add(Long.parseLong(gpusIndex[1].trim()));
