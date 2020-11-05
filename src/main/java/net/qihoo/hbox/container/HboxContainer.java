@@ -998,6 +998,9 @@ public class HboxContainer {
             envList.add("INIT_METHOD=tcp://" + this.torchRank0IP);
             envList.add("RANK=" + this.index);
             envList.add("WORLD_SIZE=" + System.getenv("WORLD_SIZE"));
+            String[] torchRank0IPs = this.torchRank0IP.split(":");
+            envList.add("master_addr=" + torchRank0IPs[0]);
+            envList.add("master_port=" + torchRank0IPs[1]);
         } else if (hboxAppType.equals("XDL")) {
             if (!conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
                 envList.add("TASK_NAME=" + this.role);

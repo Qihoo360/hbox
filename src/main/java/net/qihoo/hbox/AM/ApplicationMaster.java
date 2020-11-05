@@ -1353,6 +1353,8 @@ public class ApplicationMaster extends CompositeService {
         //containerEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), containerExecType);
         if (psGCores > 0 || workerGCores > 0) {
             containerEnv.put(HboxConstants.Environment.HBOX_CONTAIENR_GPU_NUM.toString(), String.valueOf(Math.max(psGCores, workerGCores)));
+        } else {
+            containerEnv.put(HboxConstants.Environment.HBOX_CONTAIENR_GPU_NUM.toString(), String.valueOf(0));
         }
 
         if (this.inputPath.length() > 0) {
