@@ -2698,6 +2698,7 @@ public class ApplicationMaster extends CompositeService {
                         } catch (Exception e) {
                             LOG.info("Monitor the InnerModel saving error: " + e);
                         }
+                        Utilities.sleep(conf.getInt(HboxConfiguration.HBOX_CONTAINER_HEARTBEAT_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_HEARTBEAT_INTERVAL));
                     }
                 }
             });
