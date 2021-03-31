@@ -19,6 +19,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.OutputFormat;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
@@ -1022,7 +1023,7 @@ public class Client {
                 throw new RuntimeException("Application submitAndMonitor failed!");
             }
         } catch (YarnException e) {
-            throw new RuntimeException("Application submitAndMonitor failed!");
+            throw new RuntimeException(e.getMessage());
         }
         /*TODO
          *  hbox-kill command use the HBOX_HOME/
