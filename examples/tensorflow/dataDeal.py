@@ -1,5 +1,21 @@
+#!/usr/bin/python
+# -*- coding:utf-8 -*-
+
+import tensorflow as tf
 import numpy as np
 import os
+
+def get_train(data_path, batch_size=32):
+  for s in os.listdir(data_path):
+    with open(data_path+"/"+s, "r") as f:
+        for line in f:
+          y, x = line.strip("\n").split(" ")
+          y = int(y)
+          x = list(map(float, x.split(",")))
+          x = tf.convert_to_tensor(x)
+          x = tf.reshape(x, (1, -1))
+          yield (x, tf.one_hot(y, 2))
+
 
 class trainData:
   def __init__(self, fileStr, batch_size):

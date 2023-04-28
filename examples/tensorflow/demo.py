@@ -1,125 +1,114 @@
-import argparse
-import sys
-import os
+#!/usr/bin/python
+# -*- coding:utf-8 -*-
+import sys, os
+print("lixiang pwd>>>", os.getcwd())
+sys.path.append(os.getcwd())
+sys.path.append("./anaconda3")
+sys.path.append("./anaconda3/bin")
+sys.path.append("./anaconda3/lib")
+sys.path.append("./anaconda3/lib/python3.8/")
+sys.path.append("./anaconda3/lib/python3.8/site-packages/")
+
+print("lixiang ./>>>", os.listdir("./"))
+
 import json
-import numpy as np
-import tensorflow as tf
 import time
 
-sys.path.append(os.getcwd())
+import tensorflow as tf
+import numpy as np
 from dataDeal import oneHot
-from dataDeal import trainData
-
+from dataDeal import trainData, get_train
+#import args as argparse
+import argparse
 FLAGS = None
 
-def main(_):
-  # cluster specification
+import os
+import json
+import argparse
+
+import tensorflow as tf
+from tensorflow.keras import datasets
+from tensorflow.keras import layers, models
+from tensorflow.keras import optimizers
+
+
+def set_strategy():
+    FLAGS.task_index = int(os.environ["TF_INDEX"])
+    FLAGS.job_name = os.environ["TF_ROLE"]
+    cluster = json.loads(os.environ["TF_CLUSTER_DEF"])
+    print("cluster>>>", cluster)
+
+    os.environ['GRPC_POLL_STRATEGY'] = "poll"
+    os.environ["TF_CONFIG"] = json.dumps({
+        'cluster': {
+            'worker': cluster['worker'],
+            'ps': cluster['ps']
+        },
+        'task': {'type': FLAGS.job_name, 'index': FLAGS.task_index}
+    })
+    print("TF_CONFIG>>>", os.environ["TF_CONFIG"])
+
+    strategy = tf.distribute.experimental.MultiWorkerMirroredStrategy()
+
+    return strategy
+
+
+def build_model():
+  model = tf.keras.Sequential([
+      tf.keras.layers.Dense(32, activation='relu'),
+      tf.keras.layers.Dense(32, activation='relu'),
+      tf.keras.layers.Dense(1, activation='softmax')
+  ])
+  model.compile(optimizer=tf.keras.optimizers.Adam(0.001),
+              loss=tf.losses.BinaryCrossentropy(),
+              metrics=[tf.metrics.Accuracy(), tf.metrics.AUC()])
+  return model
+
+def main():
   FLAGS.task_index = int(os.environ["TF_INDEX"])
   FLAGS.job_name = os.environ["TF_ROLE"]
   cluster_def = json.loads(os.environ["TF_CLUSTER_DEF"])
   cluster = tf.train.ClusterSpec(cluster_def)
 
-  print("ClusterSpec:", cluster_def)
+  print("ClusterSpec>>>:", cluster_def)
   print("current task id:", FLAGS.task_index, " role:", FLAGS.job_name)
-  
-  gpu_options = tf.GPUOptions(allow_growth = True)
-  server = tf.train.Server(cluster, job_name=FLAGS.job_name,task_index=FLAGS.task_index,config = tf.ConfigProto(gpu_options=gpu_options,allow_soft_placement = True))
-  
-  if FLAGS.job_name == "ps":
-    server.join()
-  elif FLAGS.job_name == "worker":
-    # set the train parameters
-    learning_rate = FLAGS.learning_rate
-    training_epochs = FLAGS.training_epochs
-    batch_size = FLAGS.batch_size
-    iterData = trainData(FLAGS.data_path, batch_size)
+  strategy = set_strategy()
+
+  if FLAGS.job_name == 'ps':
+    print("server>>>0")
+    # server = tf.distribute.Server(cluster, job_name=FLAGS.job_name,task_index=FLAGS.task_index,config = tf.compat.v1.ConfigProto())
+    # print("server def>>>1", server.server_def)
+    # server.join()
+  elif FLAGS.job_name == 'worker':
+    dist_dataset = get_train(FLAGS.data_path, batch_size = FLAGS.batch_size)
+    # dist_dataset = trainData(FLAGS.data_path, FLAGS.batch_size)
     
-    with tf.device(tf.train.replica_device_setter(worker_device=("/job:worker/task:%d"%(FLAGS.task_index)),cluster=cluster)):
-      # count the number of updates
-      global_step = tf.get_variable('global_step', [],initializer = tf.constant_initializer(0), trainable = False)
-      # input 
-      with tf.name_scope('input'):
-        x = tf.placeholder(tf.float32, shape=[None, 100], name="x-input")
-        y_ = tf.placeholder(tf.float32, shape=[None, 2], name="y-input")
-      # model parameters
-      tf.set_random_seed(1)
-      with tf.name_scope("weights"):
-        W1 = tf.Variable(tf.random_normal([100, 50]))
-        W2 = tf.Variable(tf.random_normal([50, 2]))
-      # bias
-      with tf.name_scope("biases"):
-        b1 = tf.Variable(tf.zeros([50]))
-        b2 = tf.Variable(tf.zeros([2]))
-      # implement model
-      with tf.name_scope("softmax"):
-        # y is our prediction
-        z1 = tf.add(tf.matmul(x,W1),b1)
-        a1 = tf.nn.softmax(z1)
-        z2 = tf.add(tf.matmul(a1,W2),b2)
-        y = tf.nn.softmax(z2)
-      # specify cost function
-      with tf.name_scope('cross_entropy'):
-        # this is our cost
-        cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y), reduction_indices=[1]))
-      # specify optimizer
-      with tf.name_scope('train'):
-        # optimizer is an "operation" which we can execute in a session
-        grad_op = tf.train.GradientDescentOptimizer(learning_rate)
-        train_op = grad_op.minimize(cross_entropy, global_step=global_step)
-      # init_op
-      tf.summary.scalar('cross_entropy', cross_entropy )
-      merged = tf.summary.merge_all()
-      init_op = tf.global_variables_initializer()
-      saver = tf.train.Saver()
-      print("Variables initialized ...")
-    sv = tf.train.Supervisor(is_chief = (FLAGS.task_index == 0), global_step = global_step, init_op = init_op)
+    with tf.device("/job:worker/task:%d"%(FLAGS.task_index)):
+      with strategy.scope():
+        # 模型的建立/编译需要在 `strategy.scope()` 内部。
+        model = tf.keras.Sequential([
+            tf.keras.layers.Dense(32, activation='relu'),
+            tf.keras.layers.Dense(2, activation='softmax')
+        ])
+        model.compile(optimizer='adam',
+                  loss=tf.losses.BinaryCrossentropy(),
+                      metrics=[tf.metrics.Accuracy(), tf.metrics.AUC()])
 
-    # Filter all connections except that between ps and this worker to avoid hanging issues when
-    # one worker finishes. We are using asynchronous training so there is no need for the workers to communicate.
-    config_proto = tf.ConfigProto(device_filters = ['/job:ps', '/job:worker/task:%d' % FLAGS.task_index],
-        gpu_options = gpu_options,
-        allow_soft_placement = True,
-        log_device_placement = True)
+      # Keras 的 `model.fit()` 以特定的时期数和每时期的步数训练模型。
+      # 注意此处的数量仅用于演示目的，并不足以产生高质量的模型。
+      for _ in range(3):
+        for x, y in dist_dataset:
+          model.fit(x, y)
+      model.summary()
 
-    with sv.prepare_or_wait_for_session(server.target, config = config_proto) as sess:
-      # perform training cycles
-      start_time = time.time()
+      
+      print("TrainCompleted>>>", FLAGS.job_name, FLAGS.task_index)
       if(FLAGS.task_index == 0):
-        train_writer = tf.summary.FileWriter(FLAGS.log_dir, sess.graph)
-      for epoch in range(training_epochs):
-        # number of batches in one epoch                
-        sys.stderr.write("reporter progress:%0.4f\n"%(float(epoch)/(training_epochs)))
-        totalStep = iterData.batchCount()
-        for step in range(totalStep):
-          iterator_curr = iterData.nextBatch()
-          flag = 0
-          for iter in iterator_curr:
-            if 0 == flag:
-                train_x = iter[1].reshape(1,100)
-                train_y = oneHot(iter[0]).reshape(1,2)
-            else:
-                train_x = np.concatenate((train_x, iter[1].reshape(1,100)))
-                train_y = np.concatenate((train_y, oneHot(iter[0]).reshape(1,2)))
-            flag = 1
-          _, summary, cost, gstep = sess.run(
-                  [train_op, merged, cross_entropy, global_step],
-                  feed_dict={x: train_x, y_: train_y})
-          elapsed_time = time.time() - start_time
-          start_time = time.time()
-          if(FLAGS.task_index == 0):
-            train_writer.add_summary(summary, gstep)
-          print("Step: %d," % (gstep),
-                " Epoch: %2d," % (epoch),                            
-                " Cost: %.4f," % cost,
-                " Time: %3.2fms" % float(elapsed_time*1000))
-        sys.stderr.write("reporter progress:%0.4f\n"%(float(epoch+1)/(training_epochs)))
-  
-      print("Train Completed.")
-      if(FLAGS.task_index == 0):
-        train_writer.close()
-        print("saving model...")
-        saver.save(sess, FLAGS.save_path+"/model.ckpt")
-    print("done")       
+        print("saving model...", FLAGS.job_name, FLAGS.task_index)
+        model.save(FLAGS.save_path+"/my_model.h5")
+      print("trainDone>>>")   
+    print(FLAGS.job_name, FLAGS.task_index, "weights>>>", model.weights)
+
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
@@ -178,4 +167,8 @@ if __name__ == "__main__":
   )
 
   FLAGS, unparsed = parser.parse_known_args()
-  tf.app.run(main=main)
+  # tf.app.run(main=main)
+  
+  main()
+
+  print("lixiang>>> train done")
