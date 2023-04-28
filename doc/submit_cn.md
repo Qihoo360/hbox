@@ -7,7 +7,7 @@
 参数名称 | 含义  
 ---------------- | ---------------  
 app-name | 指定作业名称  
-app-type | 指定作业类型，默认为XLearning，可根据使用深度学习平台设置为TensorFlow、Caffe、XGBoost等  
+app-type | 指定作业类型，默认为XLearning，可根据使用深度学习平台设置为TensorFlow、Caffe、XGBoost、MPI等  
 input | 输入文件路径，格式为 HDFS路径#本地文件夹名称  
 output | 输出文件路径，格式为 HDFS路径#本地文件夹名称  
 files | 指定作业执行所需本地文件
