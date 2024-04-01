@@ -1,0 +1,4 @@
+Manifest-Version: 1.0-SNAPSHOT
+Created-By: net.qihoo.xitong
+Built-By: Qihoo
+Main-Class: net.qihoo.hbox.client.Client
