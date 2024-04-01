@@ -313,6 +313,13 @@ class ClientArguments {
                     confs.setProperty("hbox.ps.num", "0");
                 }
             }
+            if(confs.containsKey("hbox.container.extra.java.opts")){
+                for (int i = 0; i < args.length; i++) {
+                    if(args[i].contains(".extra.java.opts")){
+                        confs.setProperty("hbox.container.extra.java.opts",args[i].substring(args[i].indexOf("=")+1,args[i].length()));
+                    }
+                }
+            }
         }
 
         if (cliParser.hasOption("driver-memory")) {
