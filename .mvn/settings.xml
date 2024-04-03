@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+  <servers>
+    <server>
+      <id>mediav-proxy</id>
+      <configuration>
+        <connectTimeout>5000</connectTimeout>
+        <requestTimeout>120000</requestTimeout>
+        <httpConfiguration>
+          <all>
+            <connectionTimeout>5000</connectionTimeout>
+            <readTimeout>120000</readTimeout>
+          </all>
+        </httpConfiguration>
+      </configuration>
+    </server>
+    <server>
+      <id>mediav-plugin-proxy</id>
+      <configuration>
+        <connectTimeout>5000</connectTimeout>
+        <requestTimeout>120000</requestTimeout>
+        <httpConfiguration>
+          <all>
+            <connectionTimeout>5000</connectionTimeout>
+            <readTimeout>120000</readTimeout>
+          </all>
+        </httpConfiguration>
+      </configuration>
+    </server>
+    <server>
+      <id>mediav-releases</id>
+      <configuration>
+        <connectTimeout>5000</connectTimeout>
+        <requestTimeout>120000</requestTimeout>
+        <httpConfiguration>
+          <all>
+            <connectionTimeout>5000</connectionTimeout>
+            <readTimeout>120000</readTimeout>
+          </all>
+        </httpConfiguration>
+      </configuration>
+    </server>
+    <server>
+      <id>mediav-snapshots</id>
+      <configuration>
+        <connectTimeout>5000</connectTimeout>
+        <requestTimeout>120000</requestTimeout>
+        <httpConfiguration>
+          <all>
+            <connectionTimeout>5000</connectionTimeout>
+            <readTimeout>120000</readTimeout>
+          </all>
+        </httpConfiguration>
+      </configuration>
+    </server>
+    <server>
+      <id>mediav-thirdparty</id>
+      <configuration>
+        <connectTimeout>5000</connectTimeout>
+        <requestTimeout>120000</requestTimeout>
+        <httpConfiguration>
+          <all>
+            <connectionTimeout>5000</connectionTimeout>
+            <readTimeout>120000</readTimeout>
+          </all>
+        </httpConfiguration>
+      </configuration>
+    </server>
+  </servers>
+
+  <mirrors>
+    <mirror>
+      <!--
+      maven now cannot follow 308 redirect response, see https://issues.apache.org/jira/browse/MNG-7061
+      This mirror is a work aournd for this bug.
+      -->
+      <id>cloudera-https</id>
+      <name>Fix http 308 Redirect Warning</name>
+      <url>https://repository.cloudera.com/artifactory/libs-release/</url>
+      <mirrorOf>cloudera</mirrorOf>
+    </mirror>
+  </mirrors>
+
+  <profiles>
+    <profile>
+      <id>mediav-releases-repository-profile</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <repositories>
+        <repository>
+          <id>mediav-releases</id>
+          <name>Releases Repository</name>
+          <url>https://maven.corp.mediav.com/nexus/content/repositories/releases</url>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </repository>
+      </repositories>
+    </profile>
+    <profile>
+      <id>mediav-snapshot-repository-profile</id>
+      <repositories>
+        <repository>
+          <id>mediav-snapshots</id>
+          <name>Snapshots Repository</name>
+          <url>https://maven.corp.mediav.com/nexus/content/repositories/snapshots</url>
+          <releases>
+            <enabled>false</enabled>
+          </releases>
+        </repository>
+      </repositories>
+    </profile>
+  </profiles>
+</settings>
