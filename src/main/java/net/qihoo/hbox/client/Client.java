@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.util.Records;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.*;
@@ -63,6 +64,7 @@ public class Client {
     private final Map<String, String> containerUserEnv;
 
     private Boolean boardUpload;
+    private final String clientHost;
 
     private Client(String[] args) throws IOException, ParseException, ClassNotFoundException {
         this.conf = new HboxConfiguration();
@@ -78,6 +80,7 @@ public class Client {
         this.appMasterUserEnv = new HashMap<>();
         this.containerUserEnv = new HashMap<>();
         this.boardUpload = true;
+        this.clientHost = InetAddress.getLocalHost().getHostName();
     }
 
     private void init() throws IOException, YarnException {
@@ -122,6 +125,7 @@ public class Client {
         conf.setClass(HboxConfiguration.HBOX_OUTPUTFORMAT_CLASS, clientArguments.outputFormatClass, OutputFormat.class);
         conf.set(HboxConfiguration.HBOX_STREAM_EPOCH, String.valueOf(clientArguments.streamEpoch));
         conf.setBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, clientArguments.tfEvaluator);
+        conf.set(HboxConfiguration.HBOX_CLIENT_HOSTNAME, this.clientHost);
 
 
         if (clientArguments.queue == null || clientArguments.queue.equals("")) {
@@ -582,7 +586,40 @@ public class Client {
         }
     }
 
+    private void convertHdfsCommonCacheArchive() throws IOException {
+        String commomCacheArchiveHDFS = conf.get(HboxConfiguration.HBOX_COMMON_CACHE_ARCHIVE_HDFS, HboxConfiguration.DEFAULT_HBOX_COMMON_CACHE_ARCHIVE_HDFS);
+        if (commomCacheArchiveHDFS.equals(""))
+            throw new RuntimeException("Error common HDFS cache archives is empty!");
+        StringBuilder newHboxCacheArchives = new StringBuilder();
+        String[] cacheArchives = StringUtils.split(clientArguments.hboxCacheArchives, ",");
+        for (String path : cacheArchives) {
+            if (path.startsWith("hdfs://") || path.startsWith("hdfsold://")) {
+                int pathStartIndex = path.indexOf(":9000") + 5;
+                String newPath = commomCacheArchiveHDFS + path.substring(pathStartIndex);
+                Path pathRemote;
+                if (newPath.contains("#")) {
+                    String[] paths = StringUtils.split(newPath, "#");
+                    if (paths.length != 2) {
+                        throw new RuntimeException("Error cacheArchives path format " + path);
+                    }
+                    pathRemote = new Path(paths[0]);
+                } else {
+                    pathRemote = new Path(newPath);
+                }
+                if (pathRemote.getFileSystem(conf).exists(pathRemote)) {
+                    newHboxCacheArchives.append(newPath);
+                } else {
+                    newHboxCacheArchives.append(path);
+                }
+                newHboxCacheArchives.append(",");
+            }
+        }
+        clientArguments.hboxCacheArchives = newHboxCacheArchives.substring(0, newHboxCacheArchives.length() - 1);
+    }
+
     private void assignCacheArchives() throws IOException {
+        if (conf.getBoolean(HboxConfiguration.HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE, HboxConfiguration.DEFAULT_HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE))
+            convertHdfsCommonCacheArchive();
         String[] cacheArchives = StringUtils.split(clientArguments.hboxCacheArchives, ",");
         for (String path : cacheArchives) {
             Path pathRemote;
@@ -617,8 +654,8 @@ public class Client {
         }
         appMasterEnv.put(HboxConstants.Environment.HBOX_FILES_LOCATION.toString(),
                 appFilesRemotePath.deleteCharAt(appFilesRemotePath.length() - 1).toString());
-
-        if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
+        boolean amEnableFiles = conf.getBoolean(HboxConfiguration.HBOX_AM_CMD_ENABLE, HboxConfiguration.DEFAULT_HBOX_AM_ENABLE);
+        if (amEnableFiles || (clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
                 || clientArguments.appType.equals("XFLOW")
                 || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
             String appFilesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_FILES_LOCATION.toString());
@@ -961,7 +998,7 @@ public class Client {
         conf.set(HboxConfiguration.HBOX_APP_ID, applicationId.toString());
         maxContainerMem = newAppResponse.getMaximumResourceCapability().getMemory();
 
-        if (clientArguments.appType.equals("VPC") || clientArguments.appType.equals("DIGITS") || clientArguments.appType.equals("MPI") || clientArguments.appType.equals("HOROVOD")) {
+        if (clientArguments.appType.equals("VPC") || clientArguments.appType.equals("DIGITS") || clientArguments.appType.equals("MPI") || clientArguments.appType.equals("TENSORNET")  || clientArguments.appType.equals("HOROVOD")) {
             conf.set(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE);
         } else if (clientArguments.appType.equals("XDL")) {
             configXDLAmContainer();
@@ -1025,10 +1062,10 @@ public class Client {
         } catch (YarnException e) {
             throw new RuntimeException(e.getMessage());
         }
-        /*TODO
-         *  hbox-kill command use the HBOX_HOME/
-         * */
-        LOG.info("To kill this job: ${HBOX_HOME}/bin/hbox-kill " + applicationId.toString());
+
+        String hboxHome = System.getenv("HBOX_HOME");
+
+        LOG.info("To kill this job: " + hboxHome + "/bin/hbox-kill " + applicationId.toString());
         boolean isApplicationSucceed = waitCompleted();
         return isApplicationSucceed;
     }

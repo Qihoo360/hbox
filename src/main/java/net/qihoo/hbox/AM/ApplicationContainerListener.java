@@ -436,7 +436,7 @@ public class ApplicationContainerListener extends AbstractService implements App
             if (failedNum > 0) {
                 return true;
             }
-        } else if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
+        } else if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
             if (failedNum > 0) {
                 return true;
             }
@@ -869,7 +869,7 @@ public class ApplicationContainerListener extends AbstractService implements App
             }
         }
 
-        if (this.getConfig().getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE) && !(hboxAppType.equals("HOROVOD") || hboxAppType.equals("MPI") || hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS"))) {
+        if (this.getConfig().getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE) && !(hboxAppType.equals("HOROVOD") || hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS"))) {
             if (heartbeatRequest.getContainerStdOut() != null && heartbeatRequest.getContainerStdOut() != "") {
                 containerId2StdOut.put(containerId, containerId2StdOut.get(containerId).append(heartbeatRequest.getContainerStdOut()));
             }

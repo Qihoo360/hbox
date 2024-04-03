@@ -216,6 +216,7 @@ public final class Utilities {
                 } catch (InterruptedException e2) {
                 }
             }
+            i++;
         }
         throw new IOException("couldn't allocate a unused port");
     }
