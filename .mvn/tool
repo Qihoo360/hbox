@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+set -euf
+[[ ${DEBUG-} != true ]] || set -x
+
+psrun_url=https://adgit.src.corp.qihoo.net/casino/pipe-snippet/raw/master/psrun
+
+case "${1-}" in
+"") snippet=help            ;;
+*)  snippet="adq-parent:$1"; shift ;;
+esac
+
+ADQ_PARENT_DIR=$(cd -P -- "$(dirname -- "$0")" && pwd) \
+exec /usr/bin/env bash -- <(
+  set -euf
+  if command -v wget &>/dev/null; then
+    wget -qO- $psrun_url
+  elif command -v curl &>/dev/null; then
+    curl -s -L $psrun_url
+  else
+    echo "echo [ERROR] Cannot find 'wget' nor 'curl' to download psrun; exit 1"
+  fi || echo "echo [ERROR] Cannot download psrun from $psrun_url; exit 2"
+) "$snippet" "$@"

@@ -1,0 +1,14 @@
+<ruleset comparisonMethod="maven"
+         xmlns="http://mojo.codehaus.org/versions-maven-plugin/rule/2.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://mojo.codehaus.org/versions-maven-plugin/rule/2.0.0 https://www.mojohaus.org/versions-maven-plugin/xsd/rule-2.0.0.xsd">
+  <rules>
+    <rule groupId="com.github.ekryd.sortpom" artifactId="sortpom-maven-plugin" comparisonMethod="maven">
+      <!-- from 3.1.0, this plugin requires JDK 11+ -->
+      <ignoreVersions>
+        <ignoreVersion type="regex">^[1-9][0-9].*$</ignoreVersion>
+        <ignoreVersion type="regex">^[4-9].*$</ignoreVersion>
+        <ignoreVersion type="regex">^3\.[1-9].*$</ignoreVersion>
+      </ignoreVersions>
+    </rule>
+  </rules>
+</ruleset>
