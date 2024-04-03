@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.RoundingMode;
 import java.net.*;
-import java.net.URL;
 import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -344,7 +343,7 @@ public class ApplicationMaster extends CompositeService {
             LOG.info("Hbox app type: " + hboxAppType);
         }
 
-        if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
             Path pwd = new Path(envs.get("PWD"));
             mpiExecDir = pwd.getParent().toString();
             if (conf.getBoolean(HboxConfiguration.HBOX_MPI_EXEC_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR_ENABLE)) {
@@ -701,7 +700,7 @@ public class ApplicationMaster extends CompositeService {
                     logMessage.put("psNums", Arrays.asList(String.valueOf(psNum)));
                     logMessage.put("psVCores", Arrays.asList(String.valueOf(psVCores)));
                     logMessage.put("psMemory", Arrays.asList(String.format("%.2f", psMemory / 1024.0)));
-                    logMessage.put("hboxVersion", Arrays.asList("1.3a"));
+                    logMessage.put("hboxVersion", Arrays.asList("1.5"));
                     logMessage.put("queue", Arrays.asList(conf.get(HboxConfiguration.HBOX_APP_QUEUE, HboxConfiguration.DEFAULT_HBOX_APP_QUEUE)));
                     logMessage.put("user", Arrays.asList(conf.get("hadoop.job.ugi").split(",")[0]));
                     if (chiefWorker) {
@@ -1130,7 +1129,7 @@ public class ApplicationMaster extends CompositeService {
                 outputInfo.setOutputType(type);
                 outputInfo.setDfsLocation(pathRemote);
                 String pathLocal;
-                if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
+                if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
                     pathLocal = mpiExecDir + File.separator + outputPathTuple[1];
                 } else {
                     pathLocal = outputPathTuple[1];
@@ -1273,7 +1272,7 @@ public class ApplicationMaster extends CompositeService {
                             Utilities.createApplicationResource(pathRemote.getFileSystem(conf),
                                     pathRemote,
                                     LocalResourceType.FILE));
-                    if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
+                    if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
                         reLinkFiles.append(aliasName).append(",");
                     }
                 }
@@ -1306,7 +1305,7 @@ public class ApplicationMaster extends CompositeService {
                             Utilities.createApplicationResource(pathRemote.getFileSystem(conf),
                                     pathRemote,
                                     LocalResourceType.ARCHIVE));
-                    if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
+                    if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
                         reLinkFiles.append(aliasName).append(",");
                     }
                 }
@@ -1320,7 +1319,7 @@ public class ApplicationMaster extends CompositeService {
                             Utilities.createApplicationResource(path.getFileSystem(conf),
                                     path,
                                     LocalResourceType.FILE));
-                    if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
+                    if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
                         reLinkFiles.append(path.getName()).append(",");
                     }
                 }
@@ -1463,7 +1462,7 @@ public class ApplicationMaster extends CompositeService {
                 String.valueOf(containerListener.getServerPort()));
         containerEnv.put("PATH", System.getenv("PATH") + ":" + System.getenv(HboxConstants.Environment.USER_PATH.toString()));
 
-        if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
             if (!mpiExecDir.equals("")) {
                 containerEnv.put(HboxConstants.Environment.MPI_EXEC_DIR.toString(), mpiExecDir);
             }
@@ -1570,7 +1569,7 @@ public class ApplicationMaster extends CompositeService {
                         if (mpiExecOutput.startsWith("command")) {
                             LOG.info("Container mpi Command " + mpiExecOutput);
                             appendMessage(new Message(LogType.STDERR, mpiExecOutput));
-                            mpiContainerCommand = mpiExecOutput.replaceFirst("command:", "");
+                            mpiContainerCommand = mpiExecOutput.replaceFirst("command:", "").replace("--daemonize","");
                             if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                                 amContainerStdOut.append(mpiExecOutput);
                             }
@@ -1712,7 +1711,7 @@ public class ApplicationMaster extends CompositeService {
                             LOG.info("Container horovod Command " + mpiExecOutput);
                             appendMessage(new Message(LogType.STDERR, mpiExecOutput));
                             //get orted command
-                            mpiContainerCommand = mpiExecOutput.replaceFirst("command:", "");
+                            mpiContainerCommand = mpiExecOutput.replaceFirst("command:", "").replace("--daemonize","");
                         } else {
                             LOG.info(mpiExecOutput);
                             appendMessage(new Message(LogType.STDOUT, mpiExecOutput));
@@ -1757,7 +1756,7 @@ public class ApplicationMaster extends CompositeService {
                                  Container container, int index) throws IOException {
         LOG.info("Setting up launch context for containerid="
                 + container.getId());
-        if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
             String containerMpiCommand = mpiContainerCommand.replace("<template>",
                     String.valueOf(index)).replaceAll("\"", "#");
 
@@ -1808,8 +1807,59 @@ public class ApplicationMaster extends CompositeService {
     @SuppressWarnings("deprecation")
     private boolean run() throws IOException, NoSuchAlgorithmException, RuntimeException {
         LOG.info("ApplicationMaster Starting ...");
-
         registerApplicationMaster();
+
+        LOG.info("Application submit hbox client is: " + conf.get(HboxConfiguration.HBOX_CLIENT_HOSTNAME, HboxConfiguration.DEFAULT_HBOX_CLIENT_HOSTNAME));
+        LOG.info("HBox release version: " + HboxConfiguration.VERSION);
+        if (conf.getBoolean(HboxConfiguration.HBOX_AM_CMD_ENABLE, HboxConfiguration.DEFAULT_HBOX_AM_ENABLE)) {
+            String cmd = conf.get(HboxConfiguration.HBOX_AM_CMD, HboxConfiguration.DEDAULT_HBOX_AM_CMD);
+            if (cmd != null && !cmd.equals("")) {
+                LOG.info("ApplicationMaster enable extra command: " + cmd);
+                final Process extraAmCmdProcess = Runtime.getRuntime().exec(cmd);
+                Thread stdout = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            BufferedReader reader;
+                            reader = new BufferedReader(new InputStreamReader(extraAmCmdProcess.getInputStream()));
+                            String extraAmCmdStdoutLog;
+                            while ((extraAmCmdStdoutLog = reader.readLine()) != null) {
+                                LOG.info(extraAmCmdStdoutLog);
+                                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                                    amContainerStdOut.append(extraAmCmdStdoutLog);
+                                }
+                            }
+                        } catch (Exception e) {
+                            LOG.warn("Exception in thread extraAmCmdProcess stdout Thread");
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                stdout.start();
+
+                Thread stderr = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            BufferedReader reader;
+                            reader = new BufferedReader(new InputStreamReader(extraAmCmdProcess.getInputStream()));
+                            String extraAmCmdStdoutLog;
+                            while ((extraAmCmdStdoutLog = reader.readLine()) != null) {
+                                LOG.info(extraAmCmdStdoutLog);
+                                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                                    amContainerStdErr.append(extraAmCmdStdoutLog);
+                                }
+                            }
+                        } catch (Exception e) {
+                            LOG.warn("Exception in thread extraAmCmdProcess stderr Thread");
+                            e.printStackTrace();
+                        }
+                    }
+                });
+                stderr.start();
+            }
+        }
+
         if (conf.getBoolean(HboxConfiguration.HBOX_INPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM) ||
                 conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("STREAM")) {
             buildInputStreamFileStatus();
@@ -1915,7 +1965,7 @@ public class ApplicationMaster extends CompositeService {
         LOG.info("Try to allocate " + requestWorkerNum + " worker containers");
         int workerCancelCount = 0;
         while (rmCallbackHandler.getAllocatedWorkerContainerNumber() < requestWorkerNum) {
-            if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
+            if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
                 rmCallbackHandler.addBlackHost(applicationMasterHostname);
                 List<String> blackAMs = rmCallbackHandler.getBlackHosts();
                 amrmAsync.updateBlacklist(blackAMs, null);
@@ -2028,13 +2078,16 @@ public class ApplicationMaster extends CompositeService {
                 LOG.info("Try to allocate evaluator worker containers");
                 rmCallbackHandler.setEvaluatorWorkerContainersAllocating();
                 amrmAsync.addContainerRequest(evaluatorWorkerContainerRequest);
+                LOG.info("evaluatorWorkerContainerRequest:" + evaluatorWorkerContainerRequest);
                 evaluatorCancelCount++;
                 while (rmCallbackHandler.getAcquiredEvaluatorWorkerContainers().size() < 1) {
+                    LOG.info("start request evaluator");
                     List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
                     List<String> blackHosts = rmCallbackHandler.getBlackHosts();
                     amrmAsync.updateBlacklist(blackHosts, null);
                     synchronized (cancelContainers) {
                         if (cancelContainers.size() != 0) {
+                            LOG.info("cancelContainers");
                             for (Container container : cancelContainers) {
                                 LOG.info("Canceling container: " + container.getId().toString());
                                 amrmAsync.releaseAssignedContainer(container.getId());
@@ -2054,10 +2107,11 @@ public class ApplicationMaster extends CompositeService {
                     Utilities.sleep(allocateInterval);
                 }
 
-
+                LOG.info("release extra evaluator");
                 acquiredEvaluatorWorkerContainers = rmCallbackHandler.getAcquiredEvaluatorWorkerContainers();
                 synchronized (acquiredEvaluatorWorkerContainers) {
                     if (acquiredEvaluatorWorkerContainers.size() > 1) {
+                        LOG.info("start release");
                         while (acquiredEvaluatorWorkerContainers.size() > 1) {
                             Container releaseContainer = acquiredEvaluatorWorkerContainers.remove(0);
                             amrmAsync.releaseAssignedContainer(releaseContainer.getId());
@@ -2070,9 +2124,11 @@ public class ApplicationMaster extends CompositeService {
             }
 
             for (int i = 0; i < chiefWorkerCancelCount; i++) {
+                LOG.info("remove request chief container.");
                 amrmAsync.removeContainerRequest(chiefWorkerContainerRequest);
             }
             for (int i = 0; i < evaluatorCancelCount; i++) {
+                LOG.info("remove request evaluator container.");
                 amrmAsync.removeContainerRequest(evaluatorWorkerContainerRequest);
             }
         }
@@ -2441,8 +2497,8 @@ public class ApplicationMaster extends CompositeService {
         }
 
         //launch mpi exec process
-        if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
-            if (hboxAppType.equals("MPI"))
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+            if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") )
                 launchMpiExec();
             else launchHorovodExec();
             mpiExitCode = -1;
@@ -2597,6 +2653,15 @@ public class ApplicationMaster extends CompositeService {
         List<String> workerContainerLaunchcommands = buildContainerLaunchCommand(workerMemory);
         List<String> psContainerLaunchcommands = buildContainerLaunchCommand(psMemory);
 
+        boolean jobExecTimeoutFlag = false;
+        long startJobExecTimeStamp = Long.MIN_VALUE;
+        long jobExecTimeout = conf.getLong(HboxConfiguration.HBOX_JOB_EXEC_TIMEOUT, HboxConfiguration.DEFAULT_HBOX_JOB_EXEC_TIME);
+        String failMessage = "Job running timeout after "  + jobExecTimeout / 1000 + " seconds. ";
+        if (jobExecTimeout > 0) {
+            jobExecTimeoutFlag = true;
+            startJobExecTimeStamp = System.currentTimeMillis();
+        }
+
         LOG.info("Launching containers");
         if (hboxAppType.equals("XDL") && psNum > 0) {
             schedulerContainerId = acquiredPsContainers.get(0).getId().toString();
@@ -2616,7 +2681,7 @@ public class ApplicationMaster extends CompositeService {
             }
             containerListener.registerContainer(new HboxContainerId(container.getId()), HboxConstants.PS);
         }
-        if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
             index = 1;
         } else {
             index = 0;
@@ -2649,9 +2714,12 @@ public class ApplicationMaster extends CompositeService {
             containerListener.registerContainer(new HboxContainerId(container.getId()), HboxConstants.WORKER);
         }
 
-        if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
             while (!containerListener.isAllContainerStarted()) {
                 Utilities.sleep(statusUpdateInterval);
+                if(jobExecTimeoutFlag && (System.currentTimeMillis() - startJobExecTimeStamp) > jobExecTimeout){
+                    throw new HboxExecException(failMessage);
+                }
             }
             this.appendMessage(new Message(LogType.STDERR, "All containers are launched successfully"));
             while (mpiExitCode == -1) {
@@ -2660,6 +2728,9 @@ public class ApplicationMaster extends CompositeService {
                     mpiExitCode = mpiExecProcess.exitValue();
                 } catch (IllegalThreadStateException e) {
                     LOG.debug(hboxAppType.toLowerCase() + " exec process is running");
+                }
+                if (jobExecTimeoutFlag && (System.currentTimeMillis() - startJobExecTimeStamp) > jobExecTimeout) {
+                    throw new HboxExecException(failMessage);
                 }
             }
             appendMessage(new Message(LogType.STDERR, "finish mpiexec with code " + mpiExitCode));
@@ -2709,13 +2780,13 @@ public class ApplicationMaster extends CompositeService {
         try {
             boolean flag = true;
             boolean digitsFlag = true;
-            if (!hboxAppType.equals("MPI") && !hboxAppType.equals("HOROVOD")) {
+            if (!hboxAppType.equals("MPI") && !hboxAppType.equals("TENSORNET")  && !hboxAppType.equals("HOROVOD")) {
                 LOG.info("Waiting for train completed");
                 Map<HboxContainerId, HboxContainerStatus> lastWorkerContainerStatus = new ConcurrentHashMap<>();
                 Map<HboxContainerId, HboxContainerStatus> lastPsContainerStatus = new ConcurrentHashMap<>();
                 while (!containerListener.isTrainCompleted()) {
                     //report progress to client
-                    if (conf.getBoolean(HboxConfiguration.HBOX_REPORT_CONTAINER_STATUS, HboxConfiguration.DEFAULT_HBOX_REPORT_CONTAINER_STATUS) && !hboxAppType.equals("MPI") && !hboxAppType.equals("HOROVOD")) {
+                    if (conf.getBoolean(HboxConfiguration.HBOX_REPORT_CONTAINER_STATUS, HboxConfiguration.DEFAULT_HBOX_REPORT_CONTAINER_STATUS) && !hboxAppType.equals("MPI") && !hboxAppType.equals("TENSORNET")  && !hboxAppType.equals("HOROVOD")) {
                         List<Container> workerContainersStatus = applicationContext.getWorkerContainers();
                         List<Container> psContainersStatus = applicationContext.getPsContainers();
                         for (Container container : workerContainersStatus) {
@@ -2840,7 +2911,9 @@ public class ApplicationMaster extends CompositeService {
                         this.appendMessage("reporter progress:" + df.format(finalProgress * 100) + "%", false);
                         rmCallbackHandler.setProgress(finalProgress);
                     }
-
+                    if (jobExecTimeoutFlag && (System.currentTimeMillis() - startJobExecTimeStamp) > jobExecTimeout) {
+                        throw new HboxExecException(failMessage);
+                    }
                     Utilities.sleep(statusUpdateInterval);
                 }
                 LOG.info("Train completed");
@@ -2862,6 +2935,9 @@ public class ApplicationMaster extends CompositeService {
                 finalSuccess = mpiExitCode == 0;
                 while (!containerListener.isTrainCompleted()) {
                     Utilities.sleep(statusUpdateInterval);
+                    if (jobExecTimeoutFlag && (System.currentTimeMillis() - startJobExecTimeStamp) > jobExecTimeout) {
+                        throw new HboxExecException(failMessage);
+                    }
                 }
                 LOG.info("All containers completed");
             }
@@ -2937,7 +3013,7 @@ public class ApplicationMaster extends CompositeService {
             }
         } catch (Exception e) {
             finalSuccess = false;
-            this.appendMessage("Some error occurs"
+            this.appendMessage("Some error occurs "
                     + org.apache.hadoop.util.StringUtils.stringifyException(e), true);
             diagnostics = e.getMessage();
         }

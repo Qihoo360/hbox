@@ -7,6 +7,7 @@ import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 public class HboxConfiguration extends YarnConfiguration {
+    public static final String VERSION = "1.5.0";
 
     private static final String HBOX_DEFAULT_XML_FILE = "hbox-default.xml";
 
@@ -81,7 +82,7 @@ public class HboxConfiguration extends YarnConfiguration {
 
     public static final String HBOX_DRIVER_CORES = "hbox.driver.cores";
 
-    public static final int DEFAULT_HBOX_DRIVER_CORES = 1;
+    public static final int DEFAULT_HBOX_DRIVER_CORES = 2;
 
     public static final String HBOX_WORKER_MEMORY = "hbox.worker.memory";
 
@@ -251,7 +252,7 @@ public class HboxConfiguration extends YarnConfiguration {
             "$HADOOP_YARN_HOME/share/hadoop/mapreduce/lib/*"
     };
     public static final String HBOX_TF_DISTRIBUTION_STRATEGY = "hbox.tf.distribution.strategy";
-    public static final Boolean DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY = false;
+    public static final Boolean DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY = true;
     public static final String HBOX_TF_BOARD_WORKER_INDEX = "hbox.tf.board.worker.index";
     public static final int DEFAULT_HBOX_TF_BOARD_WORKER_INDEX = 0;
     public static final String HBOX_TF_BOARD_RELOAD_INTERVAL = "hbox.tf.board.reload.interval";
@@ -330,6 +331,10 @@ public class HboxConfiguration extends YarnConfiguration {
     public static final String HBOX_CONTAINER_RUNNING_LOG_ENABLE = "hbox.container.running.log.enable";
 
     public static final boolean DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE = false;
+
+    public static final String HBOX_JOB_EXEC_TIMEOUT = "hbox.job.exec.timeout";
+
+    public static final Long DEFAULT_HBOX_JOB_EXEC_TIME = 0L;
 
     /**
      * Configuration used in Container
@@ -594,4 +599,32 @@ public class HboxConfiguration extends YarnConfiguration {
     public static final String HBOX_DOCKER_NUM_PER_WORKER = "hbox.docker.num.per.worker";
     public static final int DEDAULT_HBOX_DOCKER_NUM_PER_WORKER = 0;
 
+    /**
+     * Prophet platform special paramters
+     */
+    public static final String HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE = "hbox.commom.cache.archive.hdfs.convert.enable";
+    public static final boolean DEFAULT_HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE = false;
+
+    public static final String HBOX_COMMON_CACHE_ARCHIVE_HDFS = "hbox.commom.cache.archive.hdfs";
+    public static final String DEFAULT_HBOX_COMMON_CACHE_ARCHIVE_HDFS = "";
+
+    public static final String HBOX_AM_CMD_ENABLE = "hbox.am.cmd.enable";
+    public static final boolean DEFAULT_HBOX_AM_ENABLE = false;
+
+    public static final String HBOX_AM_CMD = "hbox.am.cmd";
+    public static final String DEDAULT_HBOX_AM_CMD = "";
+
+    /**
+     * AD special paramters
+     */
+    public static final String HBOX_CLIENT_HOSTNAME = "hbox.client.hostname";
+    public static final String DEFAULT_HBOX_CLIENT_HOSTNAME = "";
+    public static final String HBOX_PYTHON_HOME = "hbox.python.home";
+    public static final String DEFAULT_HBOX_PYTHON_HOME = "";
+    public static final String HBOX_CLIENT_LOG_COLLECT = "hbox.client.log.collect";
+    public static final boolean DEFAULT_HBOX_CLIENT_LOG_COLLECT = false;
+    public static final String HBOX_CUSTOM_EXIT = "hbox.custom.exit";
+    public static final String DEFAULT_HBOX_CUSTOM_EXIT = "exit.code";
+    public static final String HBOX_LOG_SAMPLING = "hbox.log.sampling";
+    public static final boolean DEFAULT_HBOX_LOG_SAMPLING = true;
 }
