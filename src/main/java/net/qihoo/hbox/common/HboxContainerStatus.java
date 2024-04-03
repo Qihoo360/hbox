@@ -9,5 +9,6 @@ public enum HboxContainerStatus {
     RUNNING,
     FAILED,
     SUCCEEDED,
-    STARTED
+    STARTED,
+    FINISHED
 }

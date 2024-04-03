@@ -389,7 +389,7 @@ public class HsController extends Controller implements AMParams {
                         set(BOARD_INFO, boardInfo);
                     } else {
                         String boardLogDir = $(BOARD_INFO);
-                        if ($(APP_TYPE).equals("Tensorflow")) {
+                        if ($(APP_TYPE).equals("Tensorflow") || $(APP_TYPE).equalsIgnoreCase("Tensornet")) {
                             set(BOARD_INFO, String.format("tensorboard --logdir=%s", boardLogDir));
                         } else {
                             set(BOARD_INFO, String.format("VisualDL not support the hdfs path for logdir. Please download the log from %s first. Then using \" visualDL \" to start the board", boardLogDir));
