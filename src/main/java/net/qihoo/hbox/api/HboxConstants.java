@@ -60,6 +60,12 @@ public interface HboxConstants {
 
         HBOX_TF_INDEX("TF_INDEX"),
 
+        HBOX_TN_ROLE("TN_ROLE"),
+
+        HBOX_TN_INDEX("TN_INDEX"),
+
+        HBOX_TN_CLUSTER_DEF("TN_CLUSTER_DEF"),
+
         HBOX_OUTPUT_INDEX("HBOX_OUTPUT_INDEX"),
 
         HBOX_TF_CLUSTER_DEF("TF_CLUSTER_DEF"),

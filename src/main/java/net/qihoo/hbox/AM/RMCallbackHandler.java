@@ -154,7 +154,7 @@ public class RMCallbackHandler implements CallbackHandler {
         HboxConfiguration configuration = new HboxConfiguration();
         containerType = configuration.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);
         //add blackHosts addition and limit number per host
-        if (this.hboxAppType.equals("MPI") || this.hboxAppType.equals("HOROVOD")) {
+        if (this.hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || this.hboxAppType.equals("HOROVOD")) {
             blackHostsLimit = 1;
         } else if (containerType.equalsIgnoreCase("DOCKER")) {
             blackHostsLimit = configuration.getInt(HboxConfiguration.HBOX_DOCKER_NUM_PER_WORKER, HboxConfiguration.DEDAULT_HBOX_DOCKER_NUM_PER_WORKER);
