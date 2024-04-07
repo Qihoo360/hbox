@@ -3,8 +3,25 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>net.qihoo</groupId>
-  <artifactId>hbox</artifactId>
+  <artifactId>hbox-parent</artifactId>
   <version>1.7-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>HBox Parent Pom</name>
+  <description>Parent pom and modules registration.</description>
+
+  <modules>
+    <module>common</module>
+
+    <!-- core yarn application -->
+    <module>core</module>
+
+    <!-- application master web service -->
+    <module>web</module>
+
+    <!-- history server web service -->
+    <module>history-server</module>
+  </modules>
 
   <properties>
     <maven.min-version>3.6.3</maven.min-version>
@@ -16,10 +33,9 @@
     -->
     <project.target.release>8</project.target.release>
 
-    <hadoop2.version>3.2.1</hadoop2.version>
-    <!--hadoop2.version>2.7.2</hadoop2.version-->
+    <hadoop.version>3.2.1</hadoop.version>
 
-    <hbox.jar.basename>hbox-${project.version}-hadoop${hadoop2.version}</hbox.jar.basename>
+    <hbox.jar.basename>hbox-${project.version}-hadoop${hadoop.version}</hbox.jar.basename>
     <hbox.jar>${hbox.jar.basename}.jar</hbox.jar>
 
     <junit.version>4.11</junit.version>
@@ -27,78 +43,81 @@
     <sort.verifyFail>warn</sort.verifyFail>
   </properties>
 
-  <dependencies>
-    <!-- hadoop -->
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
-      <version>${hadoop2.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-api</artifactId>
-      <version>${hadoop2.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-common</artifactId>
-      <version>${hadoop2.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-core</artifactId>
-      <version>${hadoop2.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-app</artifactId>
-      <version>${hadoop2.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-common</artifactId>
-      <version>${hadoop2.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-hs</artifactId>
-      <version>${hadoop2.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-client</artifactId>
-      <version>${hadoop2.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.json</groupId>
-      <artifactId>json</artifactId>
-      <version>20140107</version>
-    </dependency>
-    <!-- junit -->
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>${junit.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <!-- amazon s3 -->
-    <dependency>
-      <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-s3</artifactId>
-      <version>1.11.86</version>
-    </dependency>
-  </dependencies>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>net.qihoo</groupId>
+        <artifactId>hbox-common</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.qihoo</groupId>
+        <artifactId>hbox-web</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <!-- hadoop -->
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-common</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-api</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-common</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-core</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-app</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-common</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-hs</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-client</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.json</groupId>
+        <artifactId>json</artifactId>
+        <version>20140107</version>
+      </dependency>
+      <!-- junit -->
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <!-- amazon s3 -->
+      <dependency>
+        <groupId>com.amazonaws</groupId>
+        <artifactId>aws-java-sdk-s3</artifactId>
+        <version>1.11.86</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <build>
-    <finalName>${hbox.jar.basename}</finalName>
-
-    <resources>
-      <resource>
-        <filtering>true</filtering>
-        <directory>src/main/resources</directory>
-      </resource>
-    </resources>
-
     <pluginManagement>
       <plugins>
         <plugin>
@@ -132,15 +151,65 @@
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>
           <version>3.3.0</version>
-          <configuration>
-            <archive>
-              <manifestFile>src/main/resources/META-INF/MANIFEST.MF</manifestFile>
-            </archive>
-          </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.13.0</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>3.5.2</version>
+          <configuration>
+            <createDependencyReducedPom>false</createDependencyReducedPom>
+            <filters combine.children="append">
+              <filter>
+                <artifact>*:*</artifact>
+                <excludes>
+                  <!-- exclude MANIFEST.MF, the one from original jar will be processed by ManifestResourceTransformer -->
+                  <exclude>META-INF/MANIFEST.MF</exclude>
+
+                  <!-- avoid errors when verifing digital signature -->
+                  <exclude>META-INF/*.SF</exclude>
+                  <exclude>META-INF/*.DSA</exclude>
+                  <exclude>META-INF/*.RSA</exclude>
+                  <exclude>META-INF/*.EC</exclude>
+                  <exclude>META-INF/*.sf</exclude>
+                  <exclude>META-INF/*.dsa</exclude>
+                  <exclude>META-INF/*.rsa</exclude>
+                  <exclude>META-INF/*.ec</exclude>
+
+                  <!-- exclude common license and notice files -->
+                  <exclude>NOTICE</exclude>
+                  <exclude>LICENSE</exclude>
+                  <exclude>META-INF/LICENSE.txt</exclude>
+                  <exclude>META-INF/license.txt</exclude>
+                  <exclude>about_files/LICENSE.txt</exclude>
+                  <exclude>META-INF/ASL2.0</exclude>
+                  <exclude>META-INF/NOTICE.txt</exclude>
+                  <exclude>META-INF/notice.txt</exclude>
+                  <exclude>about.html</exclude>
+
+                  <!-- exclude some eclipse files -->
+                  <exclude>META-INF/eclipse.inf</exclude>
+                  <exclude>plugin.properties</exclude>
+
+                  <exclude>META-INF/DEPENDENCIES</exclude>
+                </excludes>
+              </filter>
+            </filters>
+            <transformers combine.children="append">
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"></transformer>
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"></transformer>
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
+                <addHeader>false</addHeader>
+              </transformer>
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"></transformer>
+            </transformers>
+          </configuration>
+        </plugin>
+        <plugin>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>3.4.1</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -148,7 +217,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.4.1</version>
+        <inherited>false</inherited>
         <executions>
           <execution>
             <id>enforce-building-environment</id>
@@ -199,24 +268,6 @@
               <goal>verify</goal>
             </goals>
             <phase>verify</phase>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>dist</id>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <phase>package</phase>
-            <configuration>
-              <descriptors>
-                <descriptor>src/main/assembly/assembly.xml</descriptor>
-              </descriptors>
-            </configuration>
           </execution>
         </executions>
       </plugin>
