@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>net.qihoo</groupId>
+    <artifactId>hbox-parent</artifactId>
+    <version>1.7-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>hbox-web</artifactId>
+  <packaging>jar</packaging>
+
+  <name>HBox Web</name>
+  <description>The Web servers for HBox, e.g. HistoryServer, AMServer.</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>net.qihoo</groupId>
+      <artifactId>hbox-common</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- hadoop -->
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-hs</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <phase>package</phase>
+            <configuration>
+              <minimizeJar>true</minimizeJar>
+              <artifactSet>
+                <excludes>
+                  <exclude>com.google.guava:*</exclude>
+                </excludes>
+              </artifactSet>
+              <filters>
+                <filter>
+                  <artifact>org.apache.hadoop:*</artifact>
+                  <excludes>
+                    <exclude>org/apache/hadoop/fs/**</exclude>
+                    <exclude>org/apache/hadoop/conf/Configuration*</exclude>
+                    <exclude>org/apache/hadoop/security/*</exclude>
+                    <exclude>org/apache/hadoop/yarn/ams/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/api/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/client/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/conf/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/event/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/exceptions/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/factories/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/factory/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/ipc/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/lib/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/logaggregation/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/nodelabels/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/proto/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/security/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/server/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/sharedcache/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/state/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/util/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/YarnUncaughtExceptionHandler</exclude>
+                    <exclude>META-INF/services/org.apache.hadoop.*</exclude>
+                    <exclude>*-default.xml</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <relocations>
+                <relocation>
+                  <pattern>org.apache.hadoop</pattern>
+                  <shadedPattern>hbox-shaded.org.apache.hadoop</shadedPattern>
+                  <excludes>
+                    <exclude>org.apache.hadoop.fs.*</exclude>
+                    <exclude>org.apache.hadoop.conf.Configuration*</exclude>
+                    <exclude>org.apache.hadoop.service.Service*</exclude>
+                    <exclude>org.apache.hadoop.service.AbstractService*</exclude>
+                    <exclude>org.apache.hadoop.security.*</exclude>
+                    <exclude>org.apache.hadoop.security.authorize.*</exclude>
+                    <exclude>org.apache.hadoop.security.authentication.server.*</exclude>
+                    <exclude>org.apache.hadoop.http.FilterInitializer*</exclude>
+                    <exclude>org.apache.hadoop.http.FilterContainer*</exclude>
+                    <exclude>org.apache.hadoop.yarn.api.records.*</exclude>
+                    <exclude>org.apache.hadoop.yarn.factories.impl.pb.*</exclude>
+                    <exclude>org.apache.hadoop.yarn.factory.providers.*</exclude>
+                    <exclude>org.apache.hadoop.yarn.util.*</exclude>
+                    <exclude>org.apache.hadoop.yarn.exceptions.*</exclude>
+                    <exclude>org.apache.hadoop.yarn.conf.*</exclude>
+                  </excludes>
+                </relocation>
+              </relocations>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <scm>
+    <tag>HEAD</tag>
+  </scm>
+</project>
