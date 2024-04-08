@@ -24,7 +24,6 @@ if [ "$num_jars" -eq "0" ]; then
   echo "Failed to find Hbox jar in $HBOX_LIB_DIR." 1>&2
   exit 1
 fi
-HBOX_JARS="$(ls -1 "$HBOX_LIB_DIR" | grep "^hbox.*hadoop.*\.jar$" || true)"
 if [ "$num_jars" -gt "1" ]; then
   echo "Found multiple Hbox jars in $HBOX_LIB_DIR:" 1>&2
   echo "$HBOX_LIB_DIR" 1>&2
@@ -32,15 +31,6 @@ if [ "$num_jars" -gt "1" ]; then
   exit 1
 fi
 
-HBOX_JAR="${HBOX_LIB_DIR}/${HBOX_JARS}"
 LAUNCH_CLASSPATH=$HBOX_CLASSPATH
-#LAUNCH_CLASSPATH=$HBOX_JARS:$HBOX_CLASSPATH
 
-# an array that will be used to exec the final command.
-CMD=()
-
-while IFS= read -d '' -r ARG; do
-  CMD+=("$ARG")
-
-
-done < <(nohup "$RUNNER" -cp "$LAUNCH_CLASSPATH" "net.qihoo.hbox.jobhistory.JobHistoryServer" "$@"  2>&1 &)
+nohup "$RUNNER" -cp "$LAUNCH_CLASSPATH" "net.qihoo.hbox.jobhistory.JobHistoryServer" "$@"  2>&1 &

@@ -36,5 +36,4 @@ fi
 HBOX_JAR="${HBOX_LIB_DIR}/${HBOX_JARS}"
 LAUNCH_CLASSPATH=$HBOX_CLASSPATH
 
-exec "$RUNNER" -cp "$LAUNCH_CLASSPATH" org.apache.hadoop.yarn.client.cli.ApplicationCLI application -kill "$@"
-
+exec "$RUNNER" $CLIENT_EXTRA_JAVAOPTIONS -cp "$LAUNCH_CLASSPATH" org.apache.hadoop.util.RunJar "$HBOX_JAR" "$@"
