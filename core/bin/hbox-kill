@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+set -e
+
+export HBOX_HOME="$(cd "`dirname "$0"`"/..; pwd)"
+
+. "$HBOX_HOME"/conf/hbox-env.sh
+
+# Find the java binary
+if [ -n "${JAVA_HOME}" ]; then
+  RUNNER="${JAVA_HOME}/bin/java"
+else
+  if [ `command -v java` ]; then
+    RUNNER="java"
+  else
+    echo "JAVA_HOME is not set" >&2
+    exit 1
+  fi
+fi
+
+exec "$RUNNER" -cp "$HBOX_CLASSPATH" org.apache.hadoop.yarn.client.cli.ApplicationCLI application -kill "$@"
