@@ -38,7 +38,6 @@
     <hbox.jar.basename>hbox-${project.version}-hadoop${hadoop.version}</hbox.jar.basename>
     <hbox.jar>${hbox.jar.basename}.jar</hbox.jar>
 
-    <junit.version>4.11</junit.version>
     <sortpom.version>3.4.1</sortpom.version>
     <sort.verifyFail>warn</sort.verifyFail>
   </properties>
@@ -103,10 +102,11 @@
       </dependency>
       <!-- junit -->
       <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>${junit.version}</version>
-        <scope>test</scope>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>5.10.2</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
       <!-- amazon s3 -->
       <dependency>

@@ -60,12 +60,6 @@
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
     </dependency>
-    <!-- junit -->
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
     <!-- amazon s3 -->
     <dependency>
       <groupId>com.amazonaws</groupId>
