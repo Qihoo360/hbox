@@ -24,6 +24,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.*;
+import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
@@ -49,7 +50,9 @@ public class ApplicationMaster extends CompositeService {
     private static final Log LOG = LogFactory.getLog(ApplicationMaster.class);
     private final HboxConfiguration conf;
     private Map<String, String> envs;
+
     private AMRMClientAsync<ContainerRequest> amrmAsync;
+    private AMRMClient<ContainerRequest> amrmSync; // work around YARN-1723 for hadoop 2.6
     private NMClientAsync nmAsync;
     private ApplicationAttemptId applicationAttemptID;
     private String applicationMasterHostname;
@@ -370,7 +373,8 @@ public class ApplicationMaster extends CompositeService {
         appendMessage(new Message(LogType.STDERR, "ApplicationMaster starting services"));
 
         this.rmCallbackHandler = new RMCallbackHandler();
-        this.amrmAsync = AMRMClientAsync.createAMRMClientAsync(1000, rmCallbackHandler);
+        this.amrmSync = AMRMClient.<ContainerRequest>createAMRMClient();
+        this.amrmAsync = AMRMClientAsync.<ContainerRequest>createAMRMClientAsync(amrmSync, 1000, rmCallbackHandler);
         this.amrmAsync.init(conf);
 
         NMCallbackHandler nmAsyncHandler = new NMCallbackHandler();
@@ -1900,7 +1904,7 @@ public class ApplicationMaster extends CompositeService {
                     hostBlackList.add(host);
                 }
             }
-            amrmAsync.updateBlacklist(hostBlackList, null);
+            amrmSync.updateBlacklist(hostBlackList, null);
         }
 
         for (int i = 0; i < psNum; i++) {
@@ -1917,7 +1921,7 @@ public class ApplicationMaster extends CompositeService {
         while (rmCallbackHandler.getAllocatedPsContainerNumber() < psNum) {
             List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
             List<String> blackHosts = rmCallbackHandler.getBlackHosts();
-            amrmAsync.updateBlacklist(blackHosts, null);
+            amrmSync.updateBlacklist(blackHosts, null);
             synchronized (cancelContainers) {
                 if (cancelContainers.size() != 0) {
                     for (Container container : cancelContainers) {
@@ -1968,11 +1972,11 @@ public class ApplicationMaster extends CompositeService {
             if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
                 rmCallbackHandler.addBlackHost(applicationMasterHostname);
                 List<String> blackAMs = rmCallbackHandler.getBlackHosts();
-                amrmAsync.updateBlacklist(blackAMs, null);
+                amrmSync.updateBlacklist(blackAMs, null);
             }
             List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
             List<String> blackHosts = rmCallbackHandler.getBlackHosts();
-            amrmAsync.updateBlacklist(blackHosts, null);
+            amrmSync.updateBlacklist(blackHosts, null);
             synchronized (cancelContainers) {
                 if (cancelContainers.size() != 0) {
                     for (Container container : cancelContainers) {
@@ -2038,7 +2042,7 @@ public class ApplicationMaster extends CompositeService {
                 while (rmCallbackHandler.getAcquiredChiefWorkerContainers().size() < 1) {
                     List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
                     List<String> blackHosts = rmCallbackHandler.getBlackHosts();
-                    amrmAsync.updateBlacklist(blackHosts, null);
+                    amrmSync.updateBlacklist(blackHosts, null);
                     synchronized (cancelContainers) {
                         if (cancelContainers.size() != 0) {
                             for (Container container : cancelContainers) {
@@ -2084,7 +2088,7 @@ public class ApplicationMaster extends CompositeService {
                     LOG.info("start request evaluator");
                     List<Container> cancelContainers = rmCallbackHandler.getCancelContainer();
                     List<String> blackHosts = rmCallbackHandler.getBlackHosts();
-                    amrmAsync.updateBlacklist(blackHosts, null);
+                    amrmSync.updateBlacklist(blackHosts, null);
                     synchronized (cancelContainers) {
                         if (cancelContainers.size() != 0) {
                             LOG.info("cancelContainers");
