@@ -2,11 +2,12 @@ package net.qihoo.hbox.AM;
 
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.gson.Gson;
-import net.qihoo.hbox.api.ApplicationContext;
+import net.qihoo.hbox.AM.ApplicationMasterContext;
 import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.*;
 import net.qihoo.hbox.common.exceptions.HboxExecException;
 import net.qihoo.hbox.conf.HboxConfiguration;
+import net.qihoo.hbox.conf.HboxConfiguration2;
 import net.qihoo.hbox.container.HboxContainerId;
 import net.qihoo.hbox.storage.AmazonS3;
 import net.qihoo.hbox.storage.S3File;
@@ -104,7 +105,7 @@ public class ApplicationMaster extends CompositeService {
     // An RPC Service listening the container status
     private ApplicationContainerListener containerListener;
     private int statusUpdateInterval;
-    private final ApplicationContext applicationContext;
+    private final ApplicationMasterContext applicationContext;
     private RMCallbackHandler rmCallbackHandler;
     private ContainerRequest workerContainerRequest;
     private ContainerRequest psContainerRequest;
@@ -852,7 +853,7 @@ public class ApplicationMaster extends CompositeService {
         if (!StringUtils.isBlank(inputPathRemote)) {
             JobConf jobConf = new JobConf(conf);
             jobConf.set(HboxConstants.STREAM_INPUT_DIR, inputPathRemote);
-            InputFormat inputFormat = ReflectionUtils.newInstance(conf.getClass(HboxConfiguration.HBOX_INPUTF0RMAT_CLASS, HboxConfiguration.DEFAULT_HBOX_INPUTF0RMAT_CLASS, InputFormat.class),
+            InputFormat inputFormat = ReflectionUtils.newInstance(conf.getClass(HboxConfiguration2.HBOX_INPUTF0RMAT_CLASS, HboxConfiguration2.DEFAULT_HBOX_INPUTF0RMAT_CLASS, InputFormat.class),
                     jobConf);
             inputFileSplits = inputFormat.getSplits(jobConf, 1);
         } else {
@@ -3039,7 +3040,7 @@ public class ApplicationMaster extends CompositeService {
     /**
      * Internal class for running application class
      */
-    private class RunningAppContext implements ApplicationContext {
+    private class RunningAppContext implements ApplicationMasterContext {
 
         @Override
         public ApplicationId getApplicationID() {
@@ -3138,7 +3139,7 @@ public class ApplicationMaster extends CompositeService {
         @Override
         public List<InputInfo> getInputs(HboxContainerId containerId) {
             if (!containerId2InputInfo.containsKey(containerId)) {
-                LOG.info("containerId2InputInfo not conains" + containerId.getContainerId());
+                LOG.info("containerId2InputInfo not conains " + containerId.getContainerId());
                 return new ArrayList<InputInfo>();
             }
             return containerId2InputInfo.get(containerId);
@@ -3153,7 +3154,7 @@ public class ApplicationMaster extends CompositeService {
         @Override
         public List<InputSplit> getStreamInputs(HboxContainerId containerId) {
             if (!containerId2InputSplit.containsKey(containerId)) {
-                LOG.info("containerId2InputSplit not conains" + containerId.getContainerId());
+                LOG.info("containerId2InputSplit not conains " + containerId.getContainerId());
                 return new ArrayList<InputSplit>();
             }
             return containerId2InputSplit.get(containerId);

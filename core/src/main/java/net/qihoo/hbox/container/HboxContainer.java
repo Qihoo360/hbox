@@ -13,6 +13,7 @@ import net.qihoo.hbox.api.ApplicationContainerProtocol;
 import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.*;
 import net.qihoo.hbox.conf.HboxConfiguration;
+import net.qihoo.hbox.conf.HboxConfiguration2;
 import net.qihoo.hbox.storage.AmazonS3;
 import net.qihoo.hbox.storage.S3DownloadTask;
 import net.qihoo.hbox.storage.S3File;
@@ -1141,7 +1142,7 @@ public class HboxContainer {
                         List<InputSplit> inputs = Arrays.asList(amClient.getStreamInputSplit(containerId));
                         JobConf jobConf = new JobConf(conf);
                         RecordReader reader;
-                        InputFormat inputFormat = ReflectionUtils.newInstance(conf.getClass(HboxConfiguration.HBOX_INPUTF0RMAT_CLASS, HboxConfiguration.DEFAULT_HBOX_INPUTF0RMAT_CLASS, InputFormat.class),
+                        InputFormat inputFormat = ReflectionUtils.newInstance(conf.getClass(HboxConfiguration2.HBOX_INPUTF0RMAT_CLASS, HboxConfiguration2.DEFAULT_HBOX_INPUTF0RMAT_CLASS, InputFormat.class),
                                 jobConf);
                         for (int j = 0; j < conf.getInt(HboxConfiguration.HBOX_STREAM_EPOCH, HboxConfiguration.DEFAULT_HBOX_STREAM_EPOCH); j++) {
                             LOG.info("Epoch " + (j + 1) + " starting...");
@@ -1218,7 +1219,7 @@ public class HboxContainer {
                         //FileOutputFormat.setOutputPath(jobConf, remotePath.makeQualified(dfs));
                         jobConf.set(HboxConstants.STREAM_OUTPUT_DIR, remotePath.makeQualified(dfs).toString());
 
-                        OutputFormat outputFormat = ReflectionUtils.newInstance(conf.getClass(HboxConfiguration.HBOX_OUTPUTFORMAT_CLASS, HboxConfiguration.DEFAULT_HBOX_OUTPUTF0RMAT_CLASS, OutputFormat.class),
+                        OutputFormat outputFormat = ReflectionUtils.newInstance(conf.getClass(HboxConfiguration2.HBOX_OUTPUTFORMAT_CLASS, HboxConfiguration2.DEFAULT_HBOX_OUTPUTF0RMAT_CLASS, OutputFormat.class),
                                 jobConf);
                         outputFormat.checkOutputSpecs(dfs, jobConf);
                         JobID jobID = new JobID(new SimpleDateFormat("yyyyMMddHHmm").format(new Date()), 0);

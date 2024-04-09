@@ -6,6 +6,7 @@ import net.qihoo.hbox.common.LogType;
 import net.qihoo.hbox.common.Message;
 import net.qihoo.hbox.common.exceptions.RequestOverLimitException;
 import net.qihoo.hbox.conf.HboxConfiguration;
+import net.qihoo.hbox.conf.HboxConfiguration2;
 import net.qihoo.hbox.util.Utilities;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
@@ -121,8 +122,8 @@ public class Client {
         conf.setBoolean(HboxConfiguration.HBOX_INPUT_STREAM, clientArguments.inputStream);
         conf.setBoolean(HboxConfiguration.HBOX_OUTPUT_STREAM, clientArguments.outputStream);
         conf.setBoolean(HboxConfiguration.HBOX_INPUT_STREAM_SHUFFLE, clientArguments.inputStreamShuffle);
-        conf.setClass(HboxConfiguration.HBOX_INPUTF0RMAT_CLASS, clientArguments.inputFormatClass, InputFormat.class);
-        conf.setClass(HboxConfiguration.HBOX_OUTPUTFORMAT_CLASS, clientArguments.outputFormatClass, OutputFormat.class);
+        conf.setClass(HboxConfiguration2.HBOX_INPUTF0RMAT_CLASS, clientArguments.inputFormatClass, InputFormat.class);
+        conf.setClass(HboxConfiguration2.HBOX_OUTPUTFORMAT_CLASS, clientArguments.outputFormatClass, OutputFormat.class);
         conf.set(HboxConfiguration.HBOX_STREAM_EPOCH, String.valueOf(clientArguments.streamEpoch));
         conf.setBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, clientArguments.tfEvaluator);
         conf.set(HboxConfiguration.HBOX_CLIENT_HOSTNAME, this.clientHost);

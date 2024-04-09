@@ -3,6 +3,7 @@ package net.qihoo.hbox.client;
 import net.qihoo.hbox.AM.ApplicationMaster;
 import net.qihoo.hbox.common.JobPriority;
 import net.qihoo.hbox.conf.HboxConfiguration;
+import net.qihoo.hbox.conf.HboxConfiguration2;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -114,8 +115,8 @@ class ClientArguments {
         streamEpoch = HboxConfiguration.DEFAULT_HBOX_STREAM_EPOCH;
         outputStream = HboxConfiguration.DEFAULT_HBOX_OUTPUT_STREAM;
         inputStreamShuffle = HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM_SHUFFLE;
-        inputFormatClass = HboxConfiguration.DEFAULT_HBOX_INPUTF0RMAT_CLASS;
-        outputFormatClass = HboxConfiguration.DEFAULT_HBOX_OUTPUTF0RMAT_CLASS;
+        inputFormatClass = HboxConfiguration2.DEFAULT_HBOX_INPUTF0RMAT_CLASS;
+        outputFormatClass = HboxConfiguration2.DEFAULT_HBOX_OUTPUTF0RMAT_CLASS;
         inputStrategy = HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY.toUpperCase();
         outputStrategy = HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY.toUpperCase();
         createContaineridDir = HboxConfiguration.DEFAULT_HBOX_CREATE_CONTAINERID_DIR;
