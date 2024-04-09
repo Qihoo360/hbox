@@ -28,7 +28,6 @@ import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 import java.io.BufferedReader;
@@ -229,8 +228,7 @@ public class ApplicationMaster extends CompositeService {
 
         if (envs.containsKey(ApplicationConstants.Environment.CONTAINER_ID.toString())) {
             amContainerId = envs.get(ApplicationConstants.Environment.CONTAINER_ID.toString());
-            ContainerId containerId = ConverterUtils
-                    .toContainerId(amContainerId);
+            ContainerId containerId = ContainerId.fromString(amContainerId);
             applicationAttemptID = containerId.getApplicationAttemptId();
         } else {
             throw new IllegalArgumentException(

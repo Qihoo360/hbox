@@ -30,11 +30,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 
 import java.io.*;
 import java.lang.reflect.Field;
@@ -131,7 +131,7 @@ public class HboxContainer {
         this.conf = new HboxConfiguration();
         conf.addResource(new Path(HboxConstants.HBOX_JOB_CONFIGURATION));
         LOG.info("user is " + conf.get("hadoop.job.ugi"));
-        this.containerId = new HboxContainerId(ConverterUtils.toContainerId(System
+        this.containerId = new HboxContainerId(ContainerId.fromString(System
                 .getenv(ApplicationConstants.Environment.CONTAINER_ID.name())));
         this.downloadRetry = conf.getInt(HboxConfiguration.HBOX_DOWNLOAD_FILE_RETRY, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_RETRY);
         this.envs = System.getenv();
