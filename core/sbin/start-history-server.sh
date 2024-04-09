@@ -1,36 +1,35 @@
 #!/usr/bin/env bash
-set -e
 
-export HBOX_HOME="$(cd "`dirname "$0"`"/..; pwd)"
+set -euo pipefail
+[[ ${DEBUG-} != true ]] || set -x
 
-. "$HBOX_HOME"/conf/hbox-env.sh
+HBOX_HOME="$(cd -- "$(dirname -- "$0")"/.. && pwd)"
+
+# shellcheck source-path=SCRIPTDIR/..
+. "$HBOX_HOME/conf/hbox-env.sh"
 
 # Find the java binary
-if [ -n "${JAVA_HOME}" ]; then
+if [[ ${JAVA_HOME-} ]] && [[ -x "${JAVA_HOME}/bin/java" ]]; then
   RUNNER="${JAVA_HOME}/bin/java"
+elif hash java >/dev/null; then
+  RUNNER=java
 else
-  if [ `command -v java` ]; then
-    RUNNER="java"
-  else
-    echo "JAVA_HOME is not set" >&2
-    exit 1
-  fi
-fi
-
-HBOX_LIB_DIR=$HBOX_HOME/lib
-
-num_jars="$(ls -1 "$HBOX_LIB_DIR" | grep "^hbox.*hadoop.*\.jar$" | wc -l)"
-if [ "$num_jars" -eq "0" ]; then
-  echo "Failed to find Hbox jar in $HBOX_LIB_DIR." 1>&2
-  exit 1
-fi
-if [ "$num_jars" -gt "1" ]; then
-  echo "Found multiple Hbox jars in $HBOX_LIB_DIR:" 1>&2
-  echo "$HBOX_LIB_DIR" 1>&2
-  echo "Please remove all but one jar." 1>&2
+  echo "[ERROR] JAVA_HOME is not set" >&2
   exit 1
 fi
 
-LAUNCH_CLASSPATH=$HBOX_CLASSPATH
+HBOX_LIB_DIR="$HBOX_HOME/lib"
 
-nohup "$RUNNER" -cp "$LAUNCH_CLASSPATH" "net.qihoo.hbox.jobhistory.JobHistoryServer" "$@"  2>&1 &
+num_jars="$(find "$HBOX_LIB_DIR" -maxdepth 1 -name "hbox*hadoop*.jar" | wc -l)"
+if (( num_jars == 0 )); then
+  echo "[ERROR] Failed to find Hbox jar in $HBOX_LIB_DIR." >&2
+  exit 1
+elif (( num_jars > 1 )); then
+  echo "[ERROR] Found multiple Hbox jars in $HBOX_LIB_DIR:" >&2
+  find "$HBOX_LIB_DIR" -maxdepth 1 -name "hbox*hadoop*.jar" >&2
+  echo "Please remove all but one jar." >&2
+  exit 1
+fi
+
+# include HS jar
+nohup "$RUNNER" -cp "$HBOX_CLASSPATH" net.qihoo.hbox.jobhistory.JobHistoryServer "$@" 2>&1 &

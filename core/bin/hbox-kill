@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 
-set -e
+set -euo pipefail
+[[ ${DEBUG-} != true ]] || set -x
 
-export HBOX_HOME="$(cd "`dirname "$0"`"/..; pwd)"
+HBOX_HOME="$(cd -- "$(dirname -- "$0")"/.. && pwd)"
 
-. "$HBOX_HOME"/conf/hbox-env.sh
+# shellcheck source-path=SCRIPTDIR/..
+. "$HBOX_HOME/conf/hbox-env.sh"
 
 # Find the java binary
-if [ -n "${JAVA_HOME}" ]; then
+if [[ ${JAVA_HOME-} ]] && [[ -x "${JAVA_HOME}/bin/java" ]]; then
   RUNNER="${JAVA_HOME}/bin/java"
+elif hash java >/dev/null; then
+  RUNNER=java
 else
-  if [ `command -v java` ]; then
-    RUNNER="java"
-  else
-    echo "JAVA_HOME is not set" >&2
-    exit 1
-  fi
+  echo "[ERROR] JAVA_HOME is not set" >&2
+  exit 1
 fi
 
 exec "$RUNNER" -cp "$HBOX_CLASSPATH" org.apache.hadoop.yarn.client.cli.ApplicationCLI application -kill "$@"
