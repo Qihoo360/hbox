@@ -6,7 +6,7 @@
 <configuration>
     <property>
         <name>hbox.staging.dir</name>
-        <value>/home/yarn/hbox/staging/${user.name}</value>
+        <value>viewfs://ss-hadoop/user/${user.name}/.hbox-staging</value>
     </property>
     <property>
         <name>hbox.cleanup.enable</name>
@@ -68,39 +68,6 @@
         <name>hbox.digits.image-name</name>
         <value>harbor.docker.qihoo.net:5000/ai/digits:v1.6</value>
     </property>
-
-    <property>
-        <name>fs.viewfs.namenode.dfs.shbt.qihoo.net:9000./home/yarn/hbox/staging</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/staging</value>
-    </property>
-    <property>
-        <name>fs.viewfs.namenodefd1v.qss.zzzc.qihoo.net:9000./home/yarn/hbox/staging</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/staging</value>
-    </property>
-    <property>
-        <name>fs.viewfs.namenodefd1v.se.zzzc.qihoo.net:9000./home/yarn/hbox/staging</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/staging</value>
-    </property>
-    <property>
-        <name>fs.viewfs.namenode.safe.lycc.qihoo.net:9000./home/yarn/hbox/staging</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/staging</value>
-    </property>
-    <property>
-        <name>fs.viewfs.namenode.dfs.shbt.qihoo.net:9000./home/yarn/hbox/history</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/history</value>
-    </property>
-    <property>
-        <name>fs.viewfs.namenodefd1v.qss.zzzc.qihoo.net:9000./home/yarn/hbox/history</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/history</value>
-    </property>
-    <property>
-        <name>fs.viewfs.namenodefd1v.se.zzzc.qihoo.net:9000./home/yarn/hbox/history</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/history</value>
-    </property>
-    <property>
-        <name>fs.viewfs.namenode.safe.lycc.qihoo.net:9000./home/yarn/hbox/history</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/history</value>
-    </property>
     <property>
         <name>hbox.mpi.install.dir.enable</name>
         <value>true</value>
@@ -114,18 +81,19 @@
         <value>/usr/bin/hadoop/software/hbox/conf-safe-lycc/yarn-site.xml,/usr/bin/hadoop/software/hbox/conf-safe-lycc/yarn-site.xml</value>
     </property>
     <property>
+        <name>ss-hadoop.conf.path</name>
+        <value>/etc/hadoop/conf</value>
+    </property>
+    <property>
         <name>hbox.container.extra.java.opts</name>
         <value>-Dfile.encoding=UTF-8</value>
     </property>
     <property>
         <name>yarn.application.classpath</name>
-        <value>$HADOOP_CONF_DIR,$HADOOP_COMMON_HOME/share/hadoop/common/*,$HADOOP_COMMON_HOME/share/hadoop/common/lib/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*,$HADOOP_YARN_HOME/share/hadoop/yarn/*,$HADOOP_YARN_HOME/share/hadoop/yarn/lib/*,$HADOOP_YARN_HOME/share/hadoop/mapreduce/*,$HADOOP_YARN_HOME/share/hadoop/mapreduce/lib/*,/home/yarn/software/lib4yarn/hadoop/</value>
+        <value>$(yarn classpath)</value>
     </property>
     <property>
         <name>hbox.python.home</name>
         <value>/home/yarn/software/anaconda3/bin</value>
     </property>
-
-
 </configuration>
-

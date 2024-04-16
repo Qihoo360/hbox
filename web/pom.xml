@@ -15,24 +15,118 @@
   <description>The Web servers for HBox, e.g. HistoryServer, AMServer.</description>
 
   <dependencies>
+    <!-- provided dependencies by hbox -->
     <dependency>
       <groupId>net.qihoo</groupId>
       <artifactId>hbox-common</artifactId>
       <scope>provided</scope>
     </dependency>
 
-    <!-- hadoop -->
+    <!-- hadoop dependencies to be shaded -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.kerby</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.avro</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.module</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.jaxrs</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.woodstox</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.woodstox</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.re2j</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.protobuf</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.jcraft</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.curator</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.htrace</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.zookeeper</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>dnsjava</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
+
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-common</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>javax.xml.bind</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
+
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-hs</artifactId>
+      <artifactId>hadoop-yarn-api</artifactId>
+      <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 
@@ -50,16 +144,60 @@
               <minimizeJar>true</minimizeJar>
               <artifactSet>
                 <excludes>
-                  <exclude>com.google.guava:*</exclude>
+                  <!-- provided by hadoop dependencies on the gateway -->
+                  <exclude>aopalliance:*</exclude>
+                  <exclude>com.google.code.gson:*</exclude>
+                  <exclude>com.google.inject.extensions:*</exclude>
+                  <exclude>com.google.inject:*</exclude>
+                  <exclude>com.google.protobuf:*</exclude>
+                  <exclude>com.sun.jersey.contribs:*</exclude>
+                  <exclude>com.sun.jersey:*</exclude>
+                  <exclude>com.sun.xml.bind:jaxb-impl</exclude>
+                  <exclude>commons-beanutils:*</exclude>
+                  <exclude>commons-cli:*</exclude>
+                  <exclude>commons-codec:*</exclude>
+                  <exclude>commons-collections:*</exclude>
+                  <exclude>commons-io:*</exclude>
+                  <exclude>commons-logging:*</exclude>
+                  <exclude>commons-net:*</exclude>
+                  <exclude>javax.inject:*</exclude>
+                  <exclude>javax.servlet.jsp:*</exclude>
+                  <exclude>log4j:*</exclude>
+                  <exclude>org.apache.commons:commons-compress</exclude>
+                  <exclude>org.apache.commons:commons-math3</exclude>
+                  <exclude>org.apache.httpcomponents:*</exclude>
+                  <exclude>org.codehaus.jettison:*</exclude>
+                  <exclude>org.slf4j:*</exclude>
                 </excludes>
               </artifactSet>
+
               <filters>
                 <filter>
                   <artifact>org.apache.hadoop:*</artifact>
                   <excludes>
+                    <exclude>org/apache/hadoop/conf/**</exclude>
+                    <exclude>org/apache/hadoop/crypto/**</exclude>
                     <exclude>org/apache/hadoop/fs/**</exclude>
-                    <exclude>org/apache/hadoop/conf/Configuration*</exclude>
+                    <exclude>org/apache/hadoop/ha/**</exclude>
+                    <exclude>org/apache/hadoop/http/FilterContainer*</exclude>
+                    <exclude>org/apache/hadoop/http/FilterInitializer*</exclude>
+                    <exclude>org/apache/hadoop/io/**</exclude>
+                    <exclude>org/apache/hadoop/ipc/**</exclude>
+                    <exclude>org/apache/hadoop/jmx/**</exclude>
+                    <exclude>org/apache/hadoop/log/**</exclude>
+                    <exclude>org/apache/hadoop/metrics2/**</exclude>
+                    <exclude>org/apache/hadoop/net/**</exclude>
                     <exclude>org/apache/hadoop/security/*</exclude>
+                    <exclude>org/apache/hadoop/security/alias/**</exclude>
+                    <exclude>org/apache/hadoop/security/authentication/util/**</exclude>
+                    <exclude>org/apache/hadoop/security/authorize/**</exclude>
+                    <exclude>org/apache/hadoop/security/proto/**</exclude>
+                    <exclude>org/apache/hadoop/security/ssl/**</exclude>
+                    <exclude>org/apache/hadoop/security/token/**</exclude>
+                    <exclude>org/apache/hadoop/service/**</exclude>
+                    <exclude>org/apache/hadoop/tracing/**</exclude>
+                    <exclude>org/apache/hadoop/util/**</exclude>
+                    <exclude>org/apache/hadoop/yarn/YarnUncaughtExceptionHandler</exclude>
                     <exclude>org/apache/hadoop/yarn/ams/**</exclude>
                     <exclude>org/apache/hadoop/yarn/api/**</exclude>
                     <exclude>org/apache/hadoop/yarn/client/**</exclude>
@@ -78,32 +216,41 @@
                     <exclude>org/apache/hadoop/yarn/sharedcache/**</exclude>
                     <exclude>org/apache/hadoop/yarn/state/**</exclude>
                     <exclude>org/apache/hadoop/yarn/util/**</exclude>
-                    <exclude>org/apache/hadoop/yarn/YarnUncaughtExceptionHandler</exclude>
                     <exclude>META-INF/services/org.apache.hadoop.*</exclude>
                     <exclude>*-default.xml</exclude>
+                    <exclude>common-version-info.properties</exclude>
+                    <exclude>org.apache.hadoop.application-classloader.properties</exclude>
                   </excludes>
                 </filter>
               </filters>
+
               <relocations>
                 <relocation>
                   <pattern>org.apache.hadoop</pattern>
                   <shadedPattern>hbox-shaded.org.apache.hadoop</shadedPattern>
                   <excludes>
+                    <exclude>org.apache.hadoop.conf.*</exclude>
                     <exclude>org.apache.hadoop.fs.*</exclude>
-                    <exclude>org.apache.hadoop.conf.Configuration*</exclude>
-                    <exclude>org.apache.hadoop.service.Service*</exclude>
-                    <exclude>org.apache.hadoop.service.AbstractService*</exclude>
-                    <exclude>org.apache.hadoop.security.*</exclude>
-                    <exclude>org.apache.hadoop.security.authorize.*</exclude>
-                    <exclude>org.apache.hadoop.security.authentication.server.*</exclude>
-                    <exclude>org.apache.hadoop.http.FilterInitializer*</exclude>
+                    <exclude>org.apache.hadoop.ha.*</exclude>
+                    <exclude>org.apache.hadoop.ha.proto.*</exclude>
                     <exclude>org.apache.hadoop.http.FilterContainer*</exclude>
+                    <exclude>org.apache.hadoop.http.FilterInitializer*</exclude>
+                    <exclude>org.apache.hadoop.io.*</exclude>
+                    <exclude>org.apache.hadoop.jmx.*</exclude>
+                    <exclude>org.apache.hadoop.log.*</exclude>
+                    <exclude>org.apache.hadoop.security.*</exclude>
+                    <exclude>org.apache.hadoop.security.authentication.server.*</exclude>
+                    <exclude>org.apache.hadoop.security.authentication.util.*</exclude>
+                    <exclude>org.apache.hadoop.security.authorize.*</exclude>
+                    <exclude>org.apache.hadoop.service.*</exclude>
+                    <exclude>org.apache.hadoop.tracing.*</exclude>
+                    <exclude>org.apache.hadoop.util.*</exclude>
                     <exclude>org.apache.hadoop.yarn.api.records.*</exclude>
+                    <exclude>org.apache.hadoop.yarn.conf.*</exclude>
+                    <exclude>org.apache.hadoop.yarn.exceptions.*</exclude>
                     <exclude>org.apache.hadoop.yarn.factories.impl.pb.*</exclude>
                     <exclude>org.apache.hadoop.yarn.factory.providers.*</exclude>
                     <exclude>org.apache.hadoop.yarn.util.*</exclude>
-                    <exclude>org.apache.hadoop.yarn.exceptions.*</exclude>
-                    <exclude>org.apache.hadoop.yarn.conf.*</exclude>
                   </excludes>
                 </relocation>
               </relocations>

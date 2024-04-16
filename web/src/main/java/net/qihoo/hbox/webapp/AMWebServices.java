@@ -10,7 +10,7 @@ import net.qihoo.hbox.webapp.dao.ContainersInfo;
 import net.qihoo.hbox.webapp.dao.OutputInfo;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
@@ -60,7 +60,7 @@ public class AMWebServices {
     public ContainersInfo getContainersInfo() {
         init();
         ContainersInfo containersInfo = new ContainersInfo();
-        containersInfo.add(new ContainerInfo(new HboxContainerId(ConverterUtils.toContainerId(appCtx.getAMContainerID())), appCtx));
+        containersInfo.add(new ContainerInfo(new HboxContainerId(ContainerId.fromString(appCtx.getAMContainerID())), appCtx));
         for (Container c : appCtx.getPsContainers()) {
             containersInfo.add(new ContainerInfo(new HboxContainerId(c.getId()), appCtx));
         }
@@ -75,7 +75,7 @@ public class AMWebServices {
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     public ContainerInfo getContainerInfo(@PathParam("containerid") String cid) {
         init();
-        return new ContainerInfo(new HboxContainerId(ConverterUtils.toContainerId(cid)), appCtx);
+        return new ContainerInfo(new HboxContainerId(ContainerId.fromString(cid)), appCtx);
     }
 
     @GET
@@ -93,9 +93,9 @@ public class AMWebServices {
         init();
         if (appCtx.getContainerStarted()) {
             if (logType.toUpperCase().equals(LogType.STDOUT.toString()))
-                return appCtx.getContainerStdOut(new HboxContainerId(ConverterUtils.toContainerId(cid)));
+                return appCtx.getContainerStdOut(new HboxContainerId(ContainerId.fromString(cid)));
             if (logType.toUpperCase().equals(LogType.STDERR.toString()))
-                return appCtx.getContainerStdErr(new HboxContainerId(ConverterUtils.toContainerId(cid)));
+                return appCtx.getContainerStdErr(new HboxContainerId(ContainerId.fromString(cid)));
         }
         return "";
     }
