@@ -1111,7 +1111,7 @@ public class HboxContainer {
             }
             command = envs.get(HboxConstants.Environment.HBOX_EXEC_CMD.toString());
         }
-        LOG.info("Executing command:" + command);
+        LOG.info("Executing command: " + command);
 
         Runtime rt = Runtime.getRuntime();
 

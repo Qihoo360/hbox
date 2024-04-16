@@ -359,6 +359,9 @@ public class ApplicationMaster extends CompositeService {
             applicationMasterHostname = envs.get(ApplicationConstants.Environment.NM_HOST.toString());
         }
 
+        // force disable protocol check
+        conf.set("hadoop.security.authorization", "false");
+
         this.messageService = new ApplicationMessageService(this.applicationContext, conf);
         this.webService = new ApplicationWebService(this.applicationContext, conf);
         this.containerListener = new ApplicationContainerListener(applicationContext, conf);
@@ -1196,7 +1199,9 @@ public class ApplicationMaster extends CompositeService {
                 conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
         workerCapability.setMemory(Math.min(workerMemory + workerOverheadMem, maxContainerMem));
         workerCapability.setVirtualCores(workerVCores);
-        workerCapability.setResourceValue(HboxConstants.GPU, workerGCores);
+        if (HadoopVersion.SUPPORTS_GPU && workerGCores > 0) {
+            workerCapability.setResourceValue(HboxConstants.GPU, workerGCores);
+        }
         workerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
         LOG.info("Create worker container request: " + workerContainerRequest.toString());
 
@@ -1207,7 +1212,9 @@ public class ApplicationMaster extends CompositeService {
                         conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
                 chiefWorkerCapability.setMemory(Math.min(chiefWorkerMemory + chiefWorkerOverheadMem, maxContainerMem));
                 chiefWorkerCapability.setVirtualCores(workerVCores);
-                chiefWorkerCapability.setResourceValue(HboxConstants.GPU, workerGCores);
+                if (HadoopVersion.SUPPORTS_GPU && workerGCores > 0) {
+                    chiefWorkerCapability.setResourceValue(HboxConstants.GPU, workerGCores);
+                }
                 chiefWorkerContainerRequest = new ContainerRequest(chiefWorkerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
                 LOG.info("Create chief worker container request: " + chiefWorkerContainerRequest.toString());
             }
@@ -1217,7 +1224,9 @@ public class ApplicationMaster extends CompositeService {
                         conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
                 evaluatorWorkerCapability.setMemory(Math.min(evaluatorWorkerMemory + evaluatorWorkerOverheadMem, maxContainerMem));
                 evaluatorWorkerCapability.setVirtualCores(workerVCores);
-                evaluatorWorkerCapability.setResourceValue(HboxConstants.GPU, workerGCores);
+                if (HadoopVersion.SUPPORTS_GPU && workerGCores > 0) {
+                    evaluatorWorkerCapability.setResourceValue(HboxConstants.GPU, workerGCores);
+                }
                 evaluatorWorkerContainerRequest = new ContainerRequest(evaluatorWorkerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
                 LOG.info("Create evaluator worker container request: " + evaluatorWorkerContainerRequest.toString());
             }
@@ -1229,7 +1238,9 @@ public class ApplicationMaster extends CompositeService {
                     conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
             psCapability.setMemory(Math.min(psMemory + psOverheadMem, maxContainerMem));
             psCapability.setVirtualCores(psVCores);
-            psCapability.setResourceValue(HboxConstants.GPU, psGCores);
+            if (HadoopVersion.SUPPORTS_GPU && psGCores > 0) {
+                psCapability.setResourceValue(HboxConstants.GPU, psGCores);
+            }
             psContainerRequest = new ContainerRequest(psCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
             LOG.info("Create ps container request: " + psContainerRequest.toString());
         }
@@ -1347,12 +1358,13 @@ public class ApplicationMaster extends CompositeService {
     }
 
     private Map<String, String> buildContainerEnv(String role) {
-        LOG.info("Seting environments for the Container");
+        LOG.info("Seting environments for the Container as the role of " + role);
         Map<String, String> containerEnv = new HashMap<>();
         String containerExecType = conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE,
                 HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);
         containerEnv.put(HboxConstants.Environment.HADOOP_USER_NAME.toString(), conf.get("hadoop.job.ugi").split(",")[0]);
         containerEnv.put(HboxConstants.Environment.HBOX_TF_ROLE.toString(), role);
+
         //containerEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), containerExecType);
         if (psGCores > 0 || workerGCores > 0) {
             containerEnv.put(HboxConstants.Environment.HBOX_CONTAIENR_GPU_NUM.toString(), String.valueOf(Math.max(psGCores, workerGCores)));
@@ -1375,7 +1387,6 @@ public class ApplicationMaster extends CompositeService {
             containerEnv.put(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString(), String.valueOf(this.outputIndex));
         }
 
-//        if (conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE).equalsIgnoreCase("docker")) {
         if (conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE).equalsIgnoreCase("docker")) {
             if (role.equalsIgnoreCase(HboxConstants.PS) || role.equalsIgnoreCase(HboxConstants.SCHEDULER)) {
                 containerEnv.put("DOCKER_CONTAINER_MEMORY", psMemory + "");
@@ -1464,7 +1475,10 @@ public class ApplicationMaster extends CompositeService {
                 System.getenv(ApplicationConstants.Environment.NM_HOST.toString()));
         containerEnv.put(HboxConstants.Environment.APPMASTER_PORT.toString(),
                 String.valueOf(containerListener.getServerPort()));
-        containerEnv.put("PATH", System.getenv("PATH") + ":" + System.getenv(HboxConstants.Environment.USER_PATH.toString()));
+        final String userPath = System.getenv(HboxConstants.Environment.USER_PATH.toString());
+        if (null != userPath) {
+            containerEnv.put("PATH", System.getenv("PATH") + ":" + userPath);
+        }
 
         if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
             if (!mpiExecDir.equals("")) {
@@ -1475,12 +1489,6 @@ public class ApplicationMaster extends CompositeService {
             }
         }
 
-        LOG.info("env:" + containerEnv.toString());
-        Set<String> envStr = containerEnv.keySet();
-        for (String anEnvStr : envStr) {
-            LOG.debug("env:" + anEnvStr);
-        }
-
         if (conf.get(HboxConfiguration.HBOX_CONTAINER_ENV) != null) {
             String[] containerUserEnv = StringUtils.split(conf.get(HboxConfiguration.HBOX_CONTAINER_ENV), "|");
             if (containerUserEnv.length > 0) {
@@ -1489,17 +1497,23 @@ public class ApplicationMaster extends CompositeService {
                     if (env.length != 2) {
                         LOG.error(envPair + " is not the correct.");
                     } else {
-                        Utilities.addPathToEnvironment(containerEnv, env[0], env[1]);
+                        containerEnv.put(env[0], env[1]);
                     }
                 }
             }
         }
+
+        LOG.info("Container launch environments for the " + role + " role:");
+        containerEnv.forEach((key, value) -> {
+            LOG.info("  " + key + "=" + value);
+        });
+
         return containerEnv;
     }
 
-    private List<String> buildContainerLaunchCommand(int containerMemory) {
+    private List<String> buildContainerLaunchCommand(final String role, final int containerMemory) {
         List<String> containerLaunchcommands = new ArrayList<>();
-        LOG.info("Setting up container command");
+        LOG.info("Setting up container command for the role of " + role);
         Vector<CharSequence> vargs = new Vector<>(10);
         int jvmContainerMem = (int) Math.max(containerMemory * conf.getDouble(HboxConfiguration.HBOX_CONTAINER_JVM_MEMORY_FRACTION, HboxConfiguration.DEFAULT_HBOX_CONTAINER_JVM_MEMORY_FRACTION),
                 conf.getInt(HboxConfiguration.HBOX_CONTAINER_JVM_MEMORY_MINIMUM, HboxConfiguration.DEFAULT_HBOX_CONTAINER_JVM_MEMORY_MINIMUM));
@@ -1521,7 +1535,7 @@ public class ApplicationMaster extends CompositeService {
             containerCmd.append(str).append(" ");
         }
         containerLaunchcommands.add(containerCmd.toString());
-        LOG.info("Container launch command: " + containerLaunchcommands.toString());
+        LOG.info("Container launch command of the " + role + " role: " + containerLaunchcommands.toString());
         return containerLaunchcommands;
     }
 
@@ -2654,8 +2668,8 @@ public class ApplicationMaster extends CompositeService {
         Map<String, String> workerContainerEnv = buildContainerEnv(HboxConstants.WORKER);
         Map<String, String> psContainerEnv = buildContainerEnv(HboxConstants.PS);
         Map<String, String> schedulerContainerEnv = buildContainerEnv(HboxConstants.SCHEDULER);
-        List<String> workerContainerLaunchcommands = buildContainerLaunchCommand(workerMemory);
-        List<String> psContainerLaunchcommands = buildContainerLaunchCommand(psMemory);
+        List<String> workerContainerLaunchcommands = buildContainerLaunchCommand(HboxConstants.WORKER, workerMemory);
+        List<String> psContainerLaunchcommands = buildContainerLaunchCommand(HboxConstants.PS, psMemory);
 
         boolean jobExecTimeoutFlag = false;
         long startJobExecTimeStamp = Long.MIN_VALUE;
@@ -2704,12 +2718,12 @@ public class ApplicationMaster extends CompositeService {
 
             //TODO launch container in special thread take with fault-tolerant
             if (chiefWorker && container.getId().toString().equals(chiefWorkerContainerId)) {
-                List<String> chiefWorkerContainerLaunchcommands = buildContainerLaunchCommand(chiefWorkerMemory);
+                List<String> chiefWorkerContainerLaunchcommands = buildContainerLaunchCommand(HboxConstants.CHIEF, chiefWorkerMemory);
                 launchContainer(containerLocalResource, workerContainerEnv,
                         chiefWorkerContainerLaunchcommands, container, index++);
             } else if (tfEvaluator && container.getId().toString().equals(tfEvaluatorContainerId)) {
                 Map<String, String> evaluatorWorkerContainerEnv = buildContainerEnv(HboxConstants.EVALUATOR);
-                List<String> evaluatorWorkerContainerLaunchcommands = buildContainerLaunchCommand(evaluatorWorkerMemory);
+                List<String> evaluatorWorkerContainerLaunchcommands = buildContainerLaunchCommand(HboxConstants.EVALUATOR, evaluatorWorkerMemory);
                 launchContainer(containerLocalResource, evaluatorWorkerContainerEnv, evaluatorWorkerContainerLaunchcommands, container, 0);
             } else {
                 launchContainer(containerLocalResource, workerContainerEnv,

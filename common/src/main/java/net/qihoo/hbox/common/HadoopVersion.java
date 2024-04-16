@@ -60,4 +60,8 @@ public class HadoopVersion {
       return HADOOP_VER_PATCH >= patch;
     }
   }
+
+  // hadoop 3.1 supports schedule GPU resource natively
+  // see https://hadoop.apache.org/docs/r3.1.0/hadoop-yarn/hadoop-yarn-site/UsingGpus.html
+  static public boolean SUPPORTS_GPU = isHaddopVersionAtLeast(3, 1, 0);
 }

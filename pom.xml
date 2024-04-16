@@ -96,9 +96,27 @@
         <version>${hadoop.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>3.7</version>
+        <!-- sync version with hadoop -->
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-text</artifactId>
+        <version>1.4</version>
+        <!-- sync version with hadoop -->
+      </dependency>
+      <dependency>
         <groupId>org.json</groupId>
         <artifactId>json</artifactId>
         <version>20140107</version>
+      </dependency>
+      <!-- amazon s3 -->
+      <dependency>
+        <groupId>com.amazonaws</groupId>
+        <artifactId>aws-java-sdk-s3</artifactId>
+        <version>1.11.86</version>
       </dependency>
       <!-- junit -->
       <dependency>
@@ -107,12 +125,6 @@
         <version>5.10.2</version>
         <type>pom</type>
         <scope>import</scope>
-      </dependency>
-      <!-- amazon s3 -->
-      <dependency>
-        <groupId>com.amazonaws</groupId>
-        <artifactId>aws-java-sdk-s3</artifactId>
-        <version>1.11.86</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -135,6 +147,9 @@
         <plugin>
           <artifactId>maven-resources-plugin</artifactId>
           <version>3.3.1</version>
+          <configuration>
+            <propertiesEncoding>${project.build.sourceEncoding}</propertiesEncoding>
+          </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-install-plugin</artifactId>
@@ -236,7 +251,7 @@
                 <requireProperty>
                   <property>project.target.release</property>
                   <regex>^([89]|[1-9][0-9]+)$</regex>
-                  <regexMessage>project.target.release need at leat 8, but found "${project.target.release}"</regexMessage>
+                  <regexMessage>project.target.release need at least 8, but found "${project.target.release}"</regexMessage>
                 </requireProperty>
                 <requireProperty>
                   <level>WARN</level>

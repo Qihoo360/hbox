@@ -2,16 +2,18 @@ package net.qihoo.hbox.client;
 
 import net.qihoo.hbox.api.ApplicationMessageProtocol;
 import net.qihoo.hbox.api.HboxConstants;
+import net.qihoo.hbox.common.HadoopVersion;
 import net.qihoo.hbox.common.LogType;
 import net.qihoo.hbox.common.Message;
 import net.qihoo.hbox.common.exceptions.RequestOverLimitException;
-import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.conf.HboxConfiguration2;
+import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.util.Utilities;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -134,19 +136,8 @@ public class Client {
         }
         conf.set(HboxConfiguration.HBOX_APP_QUEUE, clientArguments.queue);
 
-        if (clientArguments.confs != null) {
-            setConf();
-            if (containerUserEnv.size() > 0) {
-                StringBuilder userEnv = new StringBuilder();
-                for (String key : containerUserEnv.keySet()) {
-                    userEnv.append(key);
-                    userEnv.append("=");
-                    userEnv.append(containerUserEnv.get(key));
-                    userEnv.append("|");
-                }
-                conf.set(HboxConfiguration.HBOX_CONTAINER_ENV, userEnv.deleteCharAt(userEnv.length() - 1).toString());
-            }
-        }
+        setConf();
+        propagateRemoteEnvs();
         readClusterConf();
 
         if ("TENSORFLOW".equals(clientArguments.appType) || "TENSOR2TENSOR".equals(clientArguments.appType)) {
@@ -204,6 +195,24 @@ public class Client {
         newAPP = yarnClient.createApplication();
     }
 
+    private static boolean yarnRMSupportsGPU(final YarnClient yarnClient) {
+        if (HadoopVersion.SUPPORTS_GPU) {
+            try {
+                // ResourceTypeInfo is added since hadoop 2.10
+                final List<org.apache.hadoop.yarn.api.records.ResourceTypeInfo> typeInfos = yarnClient.getResourceTypeInfo();
+                for (final org.apache.hadoop.yarn.api.records.ResourceTypeInfo info : typeInfos) {
+                    if (null != info && HboxConstants.GPU.equals(info.getName())) {
+                        return true;
+                    }
+                }
+            } catch (final YarnException|IOException e) {
+                LOG.error("Fail when get RM resource type infos:", e);
+                return false;
+            }
+        }
+        return false;
+    }
+
     private static void showWelcome() {
         System.err.println("Welcome to\n " +
                 "\t _  _   ___\n" +
@@ -213,18 +222,42 @@ public class Client {
     }
 
     private void setConf() {
-        Enumeration<String> confSet = (Enumeration<String>) clientArguments.confs.propertyNames();
-        while (confSet.hasMoreElements()) {
-            String confArg = confSet.nextElement();
-            if (confArg.startsWith(HboxConstants.AM_ENV_PREFIX)) {
-                String key = confArg.substring(HboxConstants.AM_ENV_PREFIX.length()).trim();
-                Utilities.addPathToEnvironment(appMasterUserEnv, key, clientArguments.confs.getProperty(confArg).trim());
-            } else if (confArg.startsWith(HboxConstants.CONTAINER_ENV_PREFIX)) {
-                String key = confArg.substring(HboxConstants.CONTAINER_ENV_PREFIX.length()).trim();
-                Utilities.addPathToEnvironment(containerUserEnv, key, clientArguments.confs.getProperty(confArg).trim());
-            } else {
-                conf.set(confArg, clientArguments.confs.getProperty(confArg));
+        if (clientArguments.confs != null) {
+            clientArguments.confs.forEach((k, v) -> {
+                if (null != k && null != v) {
+                    conf.set(k.toString().trim(), v.toString(), "cli-arguments");
+                }
+            });
+        }
+    }
+
+    private void propagateRemoteEnvs() {
+        conf.forEach(entry -> {
+            final String key = entry.getKey();
+            final String value = entry.getValue();
+            if (null != key && null != value) {
+                if (key.startsWith(HboxConstants.AM_ENV_PREFIX)) {
+                    final String envName = key.substring(HboxConstants.AM_ENV_PREFIX.length()).trim();
+                    if (!envName.isEmpty()) {
+                        appMasterUserEnv.put(envName, value);
+                    }
+                } else if (key.startsWith(HboxConstants.CONTAINER_ENV_PREFIX)) {
+                    final String envName = key.substring(HboxConstants.CONTAINER_ENV_PREFIX.length()).trim();
+                    if (!envName.isEmpty()) {
+                        containerUserEnv.put(envName, value);
+                    }
+                }
             }
+        });
+        if (containerUserEnv.size() > 0) {
+            StringBuilder userEnv = new StringBuilder();
+            for (String key : containerUserEnv.keySet()) {
+                userEnv.append(key);
+                userEnv.append("=");
+                userEnv.append(containerUserEnv.get(key));
+                userEnv.append("|");
+            }
+            conf.set(HboxConfiguration.HBOX_CONTAINER_ENV, userEnv.deleteCharAt(userEnv.length() - 1).toString());
         }
     }
 
@@ -376,8 +409,11 @@ public class Client {
         LOG.info("Max mem capability of resources in this cluster " + maxMem);
         int maxVCores = newApplication.getMaximumResourceCapability().getVirtualCores();
         LOG.info("Max vcores capability of resources in this cluster " + maxVCores);
-        long maxGCores = newApplication.getMaximumResourceCapability().getResourceValue(HboxConstants.GPU);
-        LOG.info("Max gpu cores capability of resources in this cluster " + maxGCores);
+        long maxGCores = 0;
+        if (yarnRMSupportsGPU(this.yarnClient)) {
+            maxGCores = newApplication.getMaximumResourceCapability().getResourceValue(HboxConstants.GPU);
+        }
+        LOG.info("Max gpu cores capability of resources in this cluster is " + maxGCores);
 
         int driverMem = conf.getInt(HboxConfiguration.HBOX_DRIVER_MEMORY, HboxConfiguration.DEFAULT_HBOX_DRIVER_MEMORY);
         int driverCores = conf.getInt(HboxConfiguration.HBOX_DRIVER_CORES, HboxConfiguration.DEFAULT_HBOX_DRIVER_CORES);
@@ -1035,14 +1071,15 @@ public class Client {
         prepareOutputEnvForAM(appMasterEnv);
         prepareClassPathEnvForAM(appMasterEnv);
 
-        if (appMasterUserEnv.size() > 0) {
-            for (String envKey : appMasterUserEnv.keySet()) {
-                Utilities.addPathToEnvironment(appMasterEnv, envKey, appMasterUserEnv.get(envKey));
-            }
-        }
+        appMasterEnv.putAll(appMasterUserEnv);
         List<String> appMasterLaunchcommands = prepareLaunchCommandForAM(appMasterEnv, applicationContext);
         ContainerLaunchContext amContainer = ContainerLaunchContext.newInstance(
                 localResources, appMasterEnv, appMasterLaunchcommands, null, null, null);
+
+        LOG.info("Application Master Environments:");
+        appMasterEnv.forEach((key, value) -> {
+            LOG.info("  " + key + "=" + value);
+        });
 
         applicationContext.setAMContainerSpec(amContainer);
 
@@ -1064,9 +1101,17 @@ public class Client {
             throw new RuntimeException(e.getMessage());
         }
 
-        String hboxHome = System.getenv("HBOX_HOME");
+        final String hboxHome = System.getenv("HBOX_HOME");
+        final String hboxConf = System.getenv("HBOX_CONF_DIR");
+        final String killCmd = null == hboxConf
+            ? String.format("%s/bin/hbox-kill %s", StringEscapeUtils.escapeXSI(hboxHome), StringEscapeUtils.escapeXSI(applicationId.toString()))
+            : String.format("HBOX_CONF_DIR=%s %s/bin/hbox-kill %s", StringEscapeUtils.escapeXSI(hboxConf), StringEscapeUtils.escapeXSI(hboxHome), StringEscapeUtils.escapeXSI(applicationId.toString()));
+        final String logsCmd = null == hboxConf
+            ? String.format("%s/bin/hbox-logs %s", StringEscapeUtils.escapeXSI(hboxHome), StringEscapeUtils.escapeXSI(applicationId.toString()))
+            : String.format("HBOX_CONF_DIR=%s %s/bin/hbox-logs -applicationId %s", StringEscapeUtils.escapeXSI(hboxConf), StringEscapeUtils.escapeXSI(hboxHome), StringEscapeUtils.escapeXSI(applicationId.toString()));
+        LOG.info("To kill this job: " + killCmd);
+        LOG.info("To view job logs: " + logsCmd);
 
-        LOG.info("To kill this job: " + hboxHome + "/bin/hbox-kill " + applicationId.toString());
         boolean isApplicationSucceed = waitCompleted();
         return isApplicationSucceed;
     }

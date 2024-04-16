@@ -20,5 +20,7 @@ public class HadoopVersionTest {
 
     assertTrue(HadoopVersion.isHaddopVersionAtLeast(2, 6));
     assertTrue(HadoopVersion.isHaddopVersionAtLeast(2, 7));
+
+    assertTrue(HadoopVersion.SUPPORTS_GPU);
   }
 }
