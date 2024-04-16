@@ -37,7 +37,7 @@ public class ApplicationContainerListener extends AbstractService implements App
 
     private static final Log LOG = LogFactory.getLog(ApplicationContainerListener.class);
 
-    private final ApplicationContext applicationContext;
+    private final ApplicationMasterContext applicationContext;
 
     private Server server;
 
@@ -125,7 +125,7 @@ public class ApplicationContainerListener extends AbstractService implements App
 
     private int signalID;
 
-    public ApplicationContainerListener(ApplicationContext applicationContext, Configuration conf) {
+    public ApplicationContainerListener(ApplicationMasterContext applicationContext, Configuration conf) {
         super(ApplicationContainerListener.class.getSimpleName());
         this.setConfig(conf);
         this.containerId2Role = new ConcurrentHashMap<>();

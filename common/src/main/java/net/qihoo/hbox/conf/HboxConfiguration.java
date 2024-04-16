@@ -2,8 +2,6 @@ package net.qihoo.hbox.conf;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.mapred.InputFormat;
-import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 public class HboxConfiguration extends YarnConfiguration {
@@ -167,14 +165,6 @@ public class HboxConfiguration extends YarnConfiguration {
     public static final String HBOX_OUTPUT_LOCAL_DIR = "hbox.output.local.dir";
 
     public static final String DEFAULT_HBOX_OUTPUT_LOCAL_DIR = "output";
-
-    public static final String HBOX_INPUTF0RMAT_CLASS = "hbox.inputformat.class";
-
-    public static final Class<? extends InputFormat> DEFAULT_HBOX_INPUTF0RMAT_CLASS = org.apache.hadoop.mapred.TextInputFormat.class;
-
-    public static final String HBOX_OUTPUTFORMAT_CLASS = "hbox.outputformat.class";
-
-    public static final Class<? extends OutputFormat> DEFAULT_HBOX_OUTPUTF0RMAT_CLASS = org.apache.hadoop.mapred.TextOutputFormat.class;
 
     public static final String HBOX_INPUTFILE_RENAME = "hbox.inputfile.rename";
 

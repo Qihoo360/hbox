@@ -3,11 +3,12 @@ package net.qihoo.hbox.client;
 import net.qihoo.hbox.AM.ApplicationMaster;
 import net.qihoo.hbox.common.JobPriority;
 import net.qihoo.hbox.conf.HboxConfiguration;
+import net.qihoo.hbox.conf.HboxConfiguration2;
 import org.apache.commons.cli.*;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.util.StringUtils;
 
 import java.io.IOException;
 import java.util.Properties;
@@ -114,8 +115,8 @@ class ClientArguments {
         streamEpoch = HboxConfiguration.DEFAULT_HBOX_STREAM_EPOCH;
         outputStream = HboxConfiguration.DEFAULT_HBOX_OUTPUT_STREAM;
         inputStreamShuffle = HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM_SHUFFLE;
-        inputFormatClass = HboxConfiguration.DEFAULT_HBOX_INPUTF0RMAT_CLASS;
-        outputFormatClass = HboxConfiguration.DEFAULT_HBOX_OUTPUTF0RMAT_CLASS;
+        inputFormatClass = HboxConfiguration2.DEFAULT_HBOX_INPUTF0RMAT_CLASS;
+        outputFormatClass = HboxConfiguration2.DEFAULT_HBOX_OUTPUTF0RMAT_CLASS;
         inputStrategy = HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY.toUpperCase();
         outputStrategy = HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY.toUpperCase();
         createContaineridDir = HboxConfiguration.DEFAULT_HBOX_CREATE_CONTAINERID_DIR;
@@ -313,13 +314,6 @@ class ClientArguments {
                     confs.setProperty("hbox.ps.num", "0");
                 }
             }
-            if(confs.containsKey("hbox.container.extra.java.opts")){
-                for (int i = 0; i < args.length; i++) {
-                    if(args[i].contains(".extra.java.opts")){
-                        confs.setProperty("hbox.container.extra.java.opts",args[i].substring(args[i].indexOf("=")+1,args[i].length()));
-                    }
-                }
-            }
         }
 
         if (cliParser.hasOption("driver-memory")) {
@@ -426,11 +420,11 @@ class ClientArguments {
         }
 
         if (cliParser.hasOption("files")) {
-            hboxFiles = StringUtils.split(cliParser.getOptionValue("files"), ",");
+            hboxFiles = StringUtils.split(cliParser.getOptionValue("files"), ',');
         }
 
         if (cliParser.hasOption("jars")) {
-            libJars = StringUtils.split(cliParser.getOptionValue("jars"), ",");
+            libJars = StringUtils.split(cliParser.getOptionValue("jars"), ',');
         }
 
         if (cliParser.hasOption("hbox-cmd")) {
@@ -543,7 +537,9 @@ class ClientArguments {
     }
 
     private void printUsage(Options opts) {
-        new HelpFormatter().printHelp("Client", opts);
+        final HelpFormatter formatter = new HelpFormatter();
+        formatter.setWidth(120);
+        formatter.printHelp("Client", opts);
     }
 
     private int getNormalizedMem(String rawMem) {

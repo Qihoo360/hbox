@@ -1,14 +1,14 @@
 package net.qihoo.hbox.webapp;
 
 import net.qihoo.hbox.common.AMParams;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TD;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TR;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import java.text.SimpleDateFormat;
@@ -421,9 +421,9 @@ public class InfoBlock extends HtmlBlock implements AMParams {
                                     "            data: " + dataGpuUtil[j] + "\n" +
                                     "        }";
                         }
-                        String seriesGpuMemOptionsData = StringUtils.join(seriesGpuMemOptions, ",");
+                        String seriesGpuMemOptionsData = StringUtils.join(",", seriesGpuMemOptions);
                         seriesGpuMemOptionsData = "[" + seriesGpuMemOptionsData + "]";
-                        String seriesGpuUtilOptionsData = StringUtils.join(seriesGpuUtilOptions, ",");
+                        String seriesGpuUtilOptionsData = StringUtils.join(",", seriesGpuUtilOptions);
                         seriesGpuUtilOptionsData = "[" + seriesGpuUtilOptionsData + "]";
                         String seriesCpuMemOptions = "[{\n" +
                                 "            name: 'cpu mem used',\n" +
@@ -740,9 +740,9 @@ public class InfoBlock extends HtmlBlock implements AMParams {
                                     "            data: " + dataGpuUtil[j] + "\n" +
                                     "        }";
                         }
-                        String seriesGpuMemOptionsData = StringUtils.join(seriesGpuMemOptions, ",");
+                        String seriesGpuMemOptionsData = StringUtils.join(",", seriesGpuMemOptions);
                         seriesGpuMemOptionsData = "[" + seriesGpuMemOptionsData + "]";
-                        String seriesGpuUtilOptionsData = StringUtils.join(seriesGpuUtilOptions, ",");
+                        String seriesGpuUtilOptionsData = StringUtils.join(",", seriesGpuUtilOptions);
                         seriesGpuUtilOptionsData = "[" + seriesGpuUtilOptionsData + "]";
                         String seriesCpuMemOptions = "[{\n" +
                                 "            name: 'cpu mem used',\n" +

@@ -1,39 +1,27 @@
 #!/usr/bin/env bash
 
-set -e
+set -euo pipefail
+[[ ${DEBUG-} != true ]] || set -x
 
-export HBOX_HOME="$(cd "`dirname "$0"`"/..; pwd)"
+[[ -d ${HBOX_HOME-} ]] || HBOX_HOME="$(cd -- "$(dirname -- "$0")"/.. && pwd)"
 
-. "$HBOX_HOME"/conf/hbox-env.sh
+# shellcheck source-path=SCRIPTDIR/..
+. "$HBOX_HOME/conf/hbox-common-env.sh"
+# hbox-common-env.sh setups required and optional environments:
+#   JAVACMD - required, path to java binary
+#   HBOX_CLASSPATH - required, classpath to run hbox
+#   HBOX_JAR - required, result array for finding the hbox main jars, may find 0 or multiple ones
+#   HBOX_CLIENT_OPTS - optional, java cli opts to pass to hbox client
 
-# Find the java binary
-if [ -n "${JAVA_HOME}" ]; then
-  RUNNER="${JAVA_HOME}/bin/java"
-else
-  if [ `command -v java` ]; then
-    RUNNER="java"
-  else
-    echo "JAVA_HOME is not set" >&2
-    exit 1
-  fi
-fi
-
-HBOX_LIB_DIR=$HBOX_HOME/lib
-
-num_jars="$(ls -1 "$HBOX_LIB_DIR" | grep "^hbox.*hadoop.*\.jar$" | wc -l)"
-if [ "$num_jars" -eq "0" ]; then
-  echo "Failed to find Hbox jar in $HBOX_LIB_DIR." 1>&2
+if (( ${#HBOX_JAR[@]} == 0 )); then
+  echo "[ERROR] Failed to find Hbox jar in $HBOX_HOME/lib." >&2
   exit 1
-fi
-HBOX_JARS="$(ls -1 "$HBOX_LIB_DIR" | grep "^hbox.*hadoop.*\.jar$" || true)"
-if [ "$num_jars" -gt "1" ]; then
-  echo "Found multiple Hbox jars in $HBOX_LIB_DIR:" 1>&2
-  echo "$HBOX_LIB_DIR" 1>&2
-  echo "Please remove all but one jar." 1>&2
+elif (( ${#HBOX_JAR[@]} > 1 )); then
+  echo "[ERROR] Found multiple Hbox jars in $HBOX_HOME/lib:" >&2
+  printf "  %s\n" "${HBOX_JAR[@]}"
+  echo "Please remove all but one jar." >&2
   exit 1
 fi
 
-HBOX_JAR="${HBOX_LIB_DIR}/${HBOX_JARS}"
-LAUNCH_CLASSPATH=$HBOX_CLASSPATH
-
-exec "$RUNNER" $CLIENT_EXTRA_JAVAOPTIONS -cp "$LAUNCH_CLASSPATH" org.apache.hadoop.util.RunJar "$HBOX_JAR" "$@"
+# shellcheck disable=SC2086
+exec "$JAVACMD" ${HBOX_CLIENT_OPTS-} -cp "$HBOX_CLASSPATH" org.apache.hadoop.util.RunJar "${HBOX_JAR[0]}" "$@"

@@ -14,17 +14,17 @@
         <fileSet>
             <directory>bin</directory>
             <outputDirectory>/bin</outputDirectory>
-            <fileMode>0755</fileMode> 
+            <fileMode>0755</fileMode>
         </fileSet>
         <fileSet>
             <directory>sbin</directory>
             <outputDirectory>/sbin</outputDirectory>
-            <fileMode>0755</fileMode> 
+            <fileMode>0755</fileMode>
         </fileSet>
         <fileSet>
             <directory>conf</directory>
             <outputDirectory>/conf</outputDirectory>
-            <fileMode>0755</fileMode> 
+            <fileMode>0755</fileMode>
         </fileSet>
         <fileSet>
             <directory>lib</directory>

@@ -8,9 +8,9 @@ import net.qihoo.hbox.common.OutputInfo;
 import net.qihoo.hbox.common.AMParams;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.container.HboxContainerId;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.webapp.Controller;
 

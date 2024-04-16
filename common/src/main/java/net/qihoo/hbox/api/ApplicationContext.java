@@ -7,7 +7,6 @@ import net.qihoo.hbox.container.HboxContainerId;
 import net.qihoo.hbox.common.HboxContainerStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.mapred.InputSplit;
 
 import java.util.List;
 import java.util.Map;
@@ -54,8 +53,6 @@ public interface ApplicationContext {
     List<InputInfo> getInputs(HboxContainerId containerId);
 
     Map<String, InputInfo> getWholeInputs();
-
-    List<InputSplit> getStreamInputs(HboxContainerId containerId);
 
     List<OutputInfo> getOutputs();
 

@@ -3,10 +3,10 @@ package net.qihoo.hbox.container;
 import com.google.gson.Gson;
 import net.qihoo.hbox.api.ApplicationContainerProtocol;
 import net.qihoo.hbox.util.Utilities;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
@@ -310,7 +310,7 @@ public class ContainerReporter extends Thread {
                         double currentPmemUsage = 0.0;
                         int cpuUsagePercentPerCore = 0;
                         while ((line = reader.readLine()) != null) {
-                            String[] topInfo = StringUtils.split(line.trim(), " ");
+                            String[] topInfo = StringUtils.split(line.trim(), ' ');
                             if (topInfo.length > 0 && topInfo[1].toLowerCase().equals("root")) {
                                 if (topInfo[5].trim().contains("g")) {
                                     currentPmemUsage += Double.parseDouble(topInfo[5].trim().split("g")[0].trim());

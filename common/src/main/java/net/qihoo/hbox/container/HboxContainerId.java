@@ -3,7 +3,6 @@ package net.qihoo.hbox.container;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -27,7 +26,7 @@ public class HboxContainerId implements Writable {
 
     @Override
     public void readFields(DataInput dataInput) throws IOException {
-        this.containerId = ConverterUtils.toContainerId(Text.readString(dataInput));
+        this.containerId = ContainerId.fromString(Text.readString(dataInput));
     }
 
     @Override

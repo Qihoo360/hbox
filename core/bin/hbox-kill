@@ -1,21 +1,16 @@
 #!/usr/bin/env bash
 
-set -e
+set -euo pipefail
+[[ ${DEBUG-} != true ]] || set -x
 
-export HBOX_HOME="$(cd "`dirname "$0"`"/..; pwd)"
+[[ -d ${HBOX_HOME-} ]] || HBOX_HOME="$(cd -- "$(dirname -- "$0")"/.. && pwd)"
 
-. "$HBOX_HOME"/conf/hbox-env.sh
+# shellcheck source-path=SCRIPTDIR/..
+. "$HBOX_HOME/conf/hbox-common-env.sh"
+# hbox-common-env.sh setups required and optional environments:
+#   JAVACMD - required, path to java binary
+#   HBOX_CLASSPATH - required, classpath to run hbox
+#   HBOX_JAR - required, result array for finding the hbox main jars, may find 0 or multiple ones
+#   HBOX_CLIENT_OPTS - optional, java cli opts to pass to hbox client
 
-# Find the java binary
-if [ -n "${JAVA_HOME}" ]; then
-  RUNNER="${JAVA_HOME}/bin/java"
-else
-  if [ `command -v java` ]; then
-    RUNNER="java"
-  else
-    echo "JAVA_HOME is not set" >&2
-    exit 1
-  fi
-fi
-
-exec "$RUNNER" -cp "$HBOX_CLASSPATH" org.apache.hadoop.yarn.client.cli.ApplicationCLI application -kill "$@"
+exec "$JAVACMD" -cp "$HBOX_CLASSPATH" org.apache.hadoop.yarn.client.cli.ApplicationCLI application -kill "$@"

@@ -1,12 +1,25 @@
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
 
 <!-- Put site-specific property overrides in this file. -->
 
 <configuration>
     <property>
         <name>hbox.staging.dir</name>
-        <value>/tmp/Hbox/staging</value>
+        <value>/home/yarn/hbox/staging/${user.name}</value>
     </property>
     <property>
         <name>hbox.cleanup.enable</name>
@@ -14,7 +27,7 @@
     </property>
     <property>
         <name>hbox.execute.node.limit</name>
-        <value>100</value>
+        <value>1000</value>
     </property>
     <property>
         <name>hbox.container.maxFailures.rate</name>
@@ -22,7 +35,7 @@
     </property>
     <property>
         <name>hbox.history.webapp.address</name>
-        <value>0.0.0.0:19966</value>
+        <value>hpc82.sys.lycc.qihoo.net:19966</value>
     </property>
     <property>
         <name>hbox.history.webapp.port</name>
@@ -30,15 +43,15 @@
     </property>
     <property>
         <name>hbox.tf.board.history.dir</name>
-        <value>/tmp/Hbox/eventLog</value>
+        <value>/home/yarn/hbox/eventLog</value>
     </property>
     <property>
         <name>hbox.history.log.dir</name>
-        <value>/tmp/Hbox/history</value>
+        <value>/home/yarn/hbox/history</value>
     </property>
     <property>
         <name>hbox.history.address</name>
-        <value>0.0.0.0:10121</value>
+        <value>hpc82.sys.lycc.qihoo.net:10121</value>
     </property>
     <property>
         <name>hbox.hisotory.port</name>
@@ -46,7 +59,7 @@
     </property>
     <property>
         <name>hbox.history.webapp.https.addresss</name>
-        <value>0.0.0.0:19967</value>
+        <value>hpc82.sys.lycc.qihoo.net:19967</value>
     </property>
     <property>
         <name>hbox.history.webapp.https.port</name>
@@ -70,38 +83,6 @@
     </property>
 
     <property>
-        <name>fs.viewfs.namenode.dfs.shbt.qihoo.net:9000./home/yarn/hbox/staging</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/staging</value>
-    </property>
-    <property>
-        <name>fs.viewfs.namenodefd1v.qss.zzzc.qihoo.net:9000./home/yarn/hbox/staging</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/staging</value>
-    </property>
-    <property>
-        <name>fs.viewfs.namenodefd1v.se.zzzc.qihoo.net:9000./home/yarn/hbox/staging</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/staging</value>
-    </property>
-    <property>
-        <name>fs.viewfs.namenode.safe.lycc.qihoo.net:9000./home/yarn/hbox/staging</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/staging</value>
-    </property>
-    <property>
-        <name>fs.viewfs.namenode.dfs.shbt.qihoo.net:9000./home/yarn/hbox/history</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/history</value>
-    </property>
-    <property>
-        <name>fs.viewfs.namenodefd1v.qss.zzzc.qihoo.net:9000./home/yarn/hbox/history</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/history</value>
-    </property>
-    <property>
-        <name>fs.viewfs.namenodefd1v.se.zzzc.qihoo.net:9000./home/yarn/hbox/history</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/history</value>
-    </property>
-    <property>
-        <name>fs.viewfs.namenode.safe.lycc.qihoo.net:9000./home/yarn/hbox/history</name>
-        <value>hdfsold://namenodefd2v.safe.lycc.qihoo.net:9000/home/yarn/hbox/history</value>
-    </property>
-    <property>
         <name>hbox.mpi.install.dir.enable</name>
         <value>true</value>
     </property>
@@ -119,13 +100,18 @@
     </property>
     <property>
         <name>yarn.application.classpath</name>
-        <value>$HADOOP_CONF_DIR,$HADOOP_COMMON_HOME/share/hadoop/common/*,$HADOOP_COMMON_HOME/share/hadoop/common/lib/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*,$HADOOP_YARN_HOME/share/hadoop/yarn/*,$HADOOP_YARN_HOME/share/hadoop/yarn/lib/*,$HADOOP_YARN_HOME/share/hadoop/mapreduce/*,$HADOOP_YARN_HOME/share/hadoop/mapreduce/lib/*,/home/yarn/software/lib4yarn/hadoop/</value>
+        <value>$("$HADOOP_YARN_HOME/bin/yarn" classpath)</value>
     </property>
     <property>
         <name>hbox.python.home</name>
         <value>/home/yarn/software/anaconda3/bin</value>
     </property>
-
-
+    <property>
+        <name>hbox.am.env.JAVA_HOME</name>
+        <value>$HADOOP_YARN_HOME/../java8</value>
+    </property>
+    <property>
+        <name>hbox.container.env.JAVA_HOME</name>
+        <value>$HADOOP_YARN_HOME/../java8</value>
+    </property>
 </configuration>
-
