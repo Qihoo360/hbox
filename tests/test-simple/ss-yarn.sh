@@ -3,4 +3,7 @@
 set -euo pipefail
 [[ ${DEBUG-} != true ]] || set -x
 
-exec "$(dirname -- "$0")"/hpc-yarn.sh ss-yarn
+: "${HBOX_CONF_DIR:="$(dirname -- "$0")"/../conf.ss-yarn}"
+export HBOX_CONF_DIR
+
+exec "$(dirname -- "$0")"/hpc-yarn.sh

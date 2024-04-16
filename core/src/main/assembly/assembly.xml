@@ -27,21 +27,6 @@
             <fileMode>0755</fileMode>
         </fileSet>
         <fileSet>
-            <directory>conf.ss-yarn</directory>
-            <outputDirectory>/conf.ss-yarn</outputDirectory>
-            <fileMode>0755</fileMode>
-        </fileSet>
-        <fileSet>
-            <directory>conf.hpc-yarn</directory>
-            <outputDirectory>/conf.hpc-yarn</outputDirectory>
-            <fileMode>0755</fileMode>
-        </fileSet>
-        <fileSet>
-            <directory>conf.lycc-yarn</directory>
-            <outputDirectory>/conf.lycc-yarn</outputDirectory>
-            <fileMode>0755</fileMode>
-        </fileSet>
-        <fileSet>
             <directory>lib</directory>
             <outputDirectory>/lib</outputDirectory>
         </fileSet>

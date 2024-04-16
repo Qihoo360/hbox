@@ -3,10 +3,11 @@
 set -euo pipefail
 [[ ${DEBUG-} != true ]] || set -x
 
-: "${HBOX_HOME:="$(dirname -- "$0")"/hbox-1.7-SNAPSHOT-hadoop3.2.1}"
+: "${HBOX_HOME:="$(dirname -- "$0")"/../../hbox-1.7-SNAPSHOT-hadoop3.2.1}"
+: "${HBOX_CONF_DIR:="$(dirname -- "$0")"/../conf.hpc-yarn}"
+export HBOX_CONF_DIR
 
 submit_opts=(--app-name "[HBOX][test] yarn submit")
-[[ ! ${1-} ]] || submit_opts+=(--cluster "$1")
 submit_opts+=(--app-type  fake-app-type)
 submit_opts+=(--worker-num 2)
 submit_opts+=(--worker-cores 2)
