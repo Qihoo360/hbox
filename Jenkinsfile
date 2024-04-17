@@ -1,9 +1,9 @@
 pipeline {
     agent any
     stages {
-        stage('Build') { 
+        stage('Build') {
             steps {
-                sh './mvnw -V -B clean verify' 
+                sh './mvnw -V -B -Dmirror.of.aliyun=central clean verify'
             }
         }
     }
