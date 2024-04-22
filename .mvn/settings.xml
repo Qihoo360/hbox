@@ -83,6 +83,12 @@
       <url>https://repository.cloudera.com/artifactory/libs-release/</url>
       <mirrorOf>cloudera</mirrorOf>
     </mirror>
+    <mirror>
+      <id>aliyun-mirror</id>
+      <name>Aliyun Mirror Repository</name>
+      <url>https://maven.aliyun.com/nexus/content/groups/public</url>
+      <mirrorOf>${mirror.of.aliyun}</mirrorOf>
+    </mirror>
   </mirrors>
 
   <profiles>
