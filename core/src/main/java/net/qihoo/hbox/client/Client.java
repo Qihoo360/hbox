@@ -764,7 +764,9 @@ public class Client {
         appMasterEnv.put(HboxConstants.Environment.HBOX_CACHE_FILE_LOCATION.toString(), clientArguments.hboxCacheFiles);
         if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
                 || clientArguments.appType.equals("DISTXGBOOST") || clientArguments.appType.equals("XFLOW")
-                || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
+                || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))
+                || clientArguments.appType.equals("TENSORNET")
+                || clientArguments.appType.equals("MPI")) {
             URI defaultUri = new Path(conf.get("fs.defaultFS")).toUri();
             LOG.info("default URI is " + defaultUri.toString());
             String appCacheFilesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_CACHE_FILE_LOCATION.toString());
@@ -802,7 +804,9 @@ public class Client {
         appMasterEnv.put(HboxConstants.Environment.HBOX_CACHE_ARCHIVE_LOCATION.toString(), clientArguments.hboxCacheArchives);
         if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
                 || clientArguments.appType.equals("DISTXGBOOST") || clientArguments.appType.equals("XFLOW")
-                || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
+                || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))
+                || clientArguments.appType.equals("TENSORNET")
+                || clientArguments.appType.equals("MPI")) {
             URI defaultUri = new Path(conf.get("fs.defaultFS")).toUri();
             String appCacheArchivesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_CACHE_ARCHIVE_LOCATION.toString());
             String[] cacheArchives = StringUtils.split(appCacheArchivesRemoteLocation, ",");

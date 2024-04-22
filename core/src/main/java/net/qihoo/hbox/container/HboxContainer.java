@@ -168,11 +168,12 @@ public class HboxContainer {
             LOG.info("Current index is:" + this.index);
         }
         if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
-            if (this.envs.containsKey(HboxConstants.Environment.MPI_EXEC_DIR.toString())) {
-                this.mpiAppDir = envs.get(HboxConstants.Environment.MPI_EXEC_DIR.toString());
-            } else {
-                this.mpiAppDir = envs.get(ApplicationConstants.Environment.PWD.name());
+            this.mpiAppDir = envs.get(ApplicationConstants.Environment.PWD.name());
+
+            if (conf.getBoolean(HboxConfiguration.HBOX_MPI_EXEC_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR_ENABLE)) {
+                this.mpiAppDir = conf.get(HboxConfiguration.HBOX_MPI_EXEC_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR);
             }
+
             LOG.info(hboxAppType.toLowerCase() + " app dir is:" + this.mpiAppDir);
             LOG.info(hboxAppType.toLowerCase() + " container index is: " + this.index);
         }
@@ -997,6 +998,8 @@ public class HboxContainer {
             if (conf.getBoolean(HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR_ENABLE)) {
                 String mpiInstallDir = conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR);
                 ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib");
+                envList.add("OPAL_PREFIX=" + mpiInstallDir);
+                envList.add("HOME=" + mpiInstallDir);
             }
             ldLibraryPath.append(":" + System.getenv("LD_LIBRARY_PATH"));
             envList.add("PATH=" + System.getenv("PATH"));
@@ -1101,7 +1104,15 @@ public class HboxContainer {
                 command = "sh " + digitsShellname;
             }
         } else if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
-            command = envs.get(HboxConstants.Environment.CONTAINER_COMMAND.toString()).replaceAll("#", "\"");
+            command =  envs.get(HboxConstants.Environment.CONTAINER_COMMAND.toString()).replaceAll("#", "\"");
+
+            // If command not starts with absolute path, should add MPI_INSTALL_DIR prefix to command
+            if (!command.startsWith("/")
+                    && conf.getBoolean(HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR_ENABLE)) {
+                String mpiInstallDir = conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR);
+                command = mpiInstallDir + "/bin/" + command;
+            }
+
         } else {
             if (containerExecType.equals("DOCKER")) {
                 String dockerPort = envs.get("DOCKER_PORT");

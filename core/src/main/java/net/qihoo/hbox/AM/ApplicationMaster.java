@@ -348,7 +348,7 @@ public class ApplicationMaster extends CompositeService {
 
         if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
             Path pwd = new Path(envs.get("PWD"));
-            mpiExecDir = pwd.getParent().toString();
+            mpiExecDir = pwd.toString();
             if (conf.getBoolean(HboxConfiguration.HBOX_MPI_EXEC_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR_ENABLE)) {
                 mpiExecDir = conf.get(HboxConfiguration.HBOX_MPI_EXEC_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR);
             }
@@ -1584,10 +1584,10 @@ public class ApplicationMaster extends CompositeService {
                     reader = new BufferedReader(new InputStreamReader(mpiExecProcess.getInputStream()));
                     String mpiExecOutput;
                     while ((mpiExecOutput = reader.readLine()) != null) {
-                        if (mpiExecOutput.startsWith("command")) {
+                        if (mpiExecOutput.contains("<template>")) {
                             LOG.info("Container mpi Command " + mpiExecOutput);
                             appendMessage(new Message(LogType.STDERR, mpiExecOutput));
-                            mpiContainerCommand = mpiExecOutput.replaceFirst("command:", "").replace("--daemonize","");
+                            mpiContainerCommand = extractMpiCommand(mpiExecOutput);
                             if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                                 amContainerStdOut.append(mpiExecOutput);
                             }
@@ -1623,6 +1623,29 @@ public class ApplicationMaster extends CompositeService {
             }
         });
         stderrThread.start();
+    }
+
+    /**
+     * Extract orted command from mpiexec
+     * For openmpi-1.4.5 version, sample command syntax is "orted --daemonize -mca ess env -mca orte_ess_jobid "<jobid>" -mca orte_ess_vpid <template> -mca orte_ess_num_procs 31 --hnp-uri "<jobid>.0;tcp://xx.xx.xx.xx:xxxx" "
+     * For openmpi-3.1.4 version, sample command syntax is "/usr/bin/ssh <template>  orted -mca ess "env" -mca ess_base_jobid "<jobid>" -mca ess_base_vpid "<template>" -mca ess_base_num_procs "2" -mca orte_node_regex "qt[x:x,x]ss@0(2)" -mca orte_hnp_uri "<jobid>.0;tcp://xx.xx.xx.xx:xxxx" -mca plm_base_verbose "1" -mca plm "rsh" -mca pmix "^s1,s2,cray,isolated""
+     * @param input
+     * @return
+     */
+    private static String extractMpiCommand(String input){
+
+        int commandStartIndex = input.indexOf("orted");
+        String rawCommand = input.substring(commandStartIndex);
+
+        // 生成新的字符串
+        String replacedString = rawCommand.replace("--daemonize","");
+
+        // 输出结果
+        LOG.info("Original String: " + rawCommand);
+        LOG.info("Replaced String: " + replacedString);
+
+        return replacedString;
+
     }
 
     //read user horovod config parameter
