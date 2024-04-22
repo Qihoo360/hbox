@@ -71,10 +71,4 @@ HBOX_CLASSPATH="$HBOX_CONF_DIR:$HBOX_HOME/conf:$HBOX_HOME/lib/*:$(yarn classpath
 HBOX_CLIENT_OPTS="-Xmx1024m"
 
 # shellcheck disable=SC2034
-readarray -t HBOX_JAR < <(find "$HBOX_HOME/lib" -maxdepth 1 -name "hbox*hadoop*.jar")
-
-#if [ -z $HADOOP_CONF_DIR ];then
-    #export HADOOP_CONF_DIR=$HBOX_HOME/../yarn/etc/hadoop/:$HBOX_HOME/../hadoop/etc/hadoop/
-#fi
-#export HBOX_CONF_DIR=$HBOX_HOME/conf/
-#export HBOX_CLASSPATH="$HBOX_HOME/lib/*.jar:$HBOX_CONF_DIR:$HADOOP_CONF_DIR"
+readarray -t HBOX_JAR < <(find "$HBOX_HOME" -maxdepth 1 -name "hbox-core*.jar")

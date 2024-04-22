@@ -22,9 +22,8 @@
             <fileMode>0755</fileMode>
         </fileSet>
         <fileSet>
-            <directory>conf</directory>
-            <outputDirectory>/conf</outputDirectory>
-            <fileMode>0755</fileMode>
+            <directory>libexec</directory>
+            <outputDirectory>/libexec</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>lib</directory>
@@ -32,9 +31,9 @@
         </fileSet>
         <fileSet>
             <directory>target</directory>
-            <outputDirectory>/lib</outputDirectory>
+            <outputDirectory>/</outputDirectory>
             <includes>
-                <include>${hbox.jar}</include>
+                <include>${project.build.finalName}.jar</include>
             </includes>
         </fileSet>
     </fileSets>
@@ -46,6 +45,10 @@
             <unpack>false</unpack>
             <scope>runtime</scope>
             <useProjectArtifact>false</useProjectArtifact>
+            <excludes>
+                <!-- use shade -->
+                <exclude>net.qihoo:*</exclude>
+            </excludes>
         </dependencySet>
     </dependencySets>
 

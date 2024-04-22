@@ -34,7 +34,7 @@
     </property>
     <property>
         <name>hbox.history.log.dir</name>
-        <value>/home/yarn/hbox/history</value>
+        <value>viewfs://ss-hadoop/data/hbox/history</value>
     </property>
     <property>
         <name>hbox.history.address</name>
