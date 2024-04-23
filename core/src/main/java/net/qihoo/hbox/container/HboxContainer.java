@@ -999,7 +999,8 @@ public class HboxContainer {
                 String mpiInstallDir = conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR);
                 ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib");
                 envList.add("OPAL_PREFIX=" + mpiInstallDir);
-                envList.add("HOME=" + mpiInstallDir);
+                // for rsh agent, will use $HOME as working dir
+                envList.add("HOME=" + this.mpiAppDir);
             }
             ldLibraryPath.append(":" + System.getenv("LD_LIBRARY_PATH"));
             envList.add("PATH=" + System.getenv("PATH"));
