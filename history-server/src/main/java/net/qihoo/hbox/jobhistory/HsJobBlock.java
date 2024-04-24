@@ -357,14 +357,18 @@ public class HsJobBlock extends HtmlBlock implements AMParams {
                 int workerGcores = Integer.parseInt($("WORKER_GCORES"));
                 int numPS = Integer.parseInt($("PS_NUM"));
                 int PSGcores = Integer.parseInt($("PS_GCORES"));
+                boolean injectedHighstockJS = false;
                 html.div().$style("margin:20px 2px;").__(" ").__();
                 if (PSGcores > 0) {
                     for (int i = 0; i < numPS; i++) {
                         if (!$("pscpuMemMetrics" + i).equals("") && $("pscpuMemMetrics" + i) != null) {
                             html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px").__(String.format($("PS_CONTAINER_ID" + i)) + " metrics:").__();
-                            html.script().$src("/static/hboxWebApp/jquery-3.1.1.min.js").__();
-                            html.script().$src("/static/hboxWebApp/highstock.js").__();
-                            html.script().$src("/static/hboxWebApp/exporting.js").__();
+                            if (!injectedHighstockJS) {
+                                html.script().$src("/static/hboxWebApp/jquery-3.1.1.min.js").__();
+                                html.script().$src("/static/hboxWebApp/highstock.js").__();
+                                html.script().$src("/static/hboxWebApp/exporting.js").__();
+                                injectedHighstockJS = true;
+                            }
 
                             String containerGpuMemID = "pscontainerGpuMem" + i;
                             String containerGpuUtilID = "pscontainerGpuUtil" + i;
@@ -570,9 +574,12 @@ public class HsJobBlock extends HtmlBlock implements AMParams {
                     for (int i = 0; i < numPS; i++) {
                         if (!$("pscpuMemMetrics" + i).equals("") && $("pscpuMemMetrics" + i) != null) {
                             html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px").__(String.format($("PS_CONTAINER_ID" + i)) + " metrics:").__();
-                            html.script().$src("/static/hboxWebApp/jquery-3.1.1.min.js").__();
-                            html.script().$src("/static/hboxWebApp/highstock.js").__();
-                            html.script().$src("/static/hboxWebApp/exporting.js").__();
+                            if (!injectedHighstockJS) {
+                                html.script().$src("/static/hboxWebApp/jquery-3.1.1.min.js").__();
+                                html.script().$src("/static/hboxWebApp/highstock.js").__();
+                                html.script().$src("/static/hboxWebApp/exporting.js").__();
+                                injectedHighstockJS = true;
+                            }
 
                             String containerCpuMemID = "pscontainerCpuMem" + i;
                             String containerCpuUtilID = "pscontainercpuUtil" + i;
@@ -681,9 +688,12 @@ public class HsJobBlock extends HtmlBlock implements AMParams {
                     for (int i = 0; i < numWorkers; i++) {
                         if (!$("workercpuMemMetrics" + i).equals("") && $("workercpuMemMetrics" + i) != null) {
                             html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px").__(String.format($("WORKER_CONTAINER_ID" + i)) + " metrics:").__();
-                            html.script().$src("/static/hboxWebApp/jquery-3.1.1.min.js").__();
-                            html.script().$src("/static/hboxWebApp/highstock.js").__();
-                            html.script().$src("/static/hboxWebApp/exporting.js").__();
+                            if (!injectedHighstockJS) {
+                                html.script().$src("/static/hboxWebApp/jquery-3.1.1.min.js").__();
+                                html.script().$src("/static/hboxWebApp/highstock.js").__();
+                                html.script().$src("/static/hboxWebApp/exporting.js").__();
+                                injectedHighstockJS = true;
+                            }
 
                             String containerGpuMemID = "workercontainerGpuMem" + i;
                             String containerGpuUtilID = "workercontainerGpuUtil" + i;
@@ -889,9 +899,12 @@ public class HsJobBlock extends HtmlBlock implements AMParams {
                     for (int i = 0; i < numWorkers; i++) {
                         if (!$("workercpuMemMetrics" + i).equals("") && $("workercpuMemMetrics" + i) != null) {
                             html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px").__(String.format($("WORKER_CONTAINER_ID" + i)) + " metrics:").__();
-                            html.script().$src("/static/hboxWebApp/jquery-3.1.1.min.js").__();
-                            html.script().$src("/static/hboxWebApp/highstock.js").__();
-                            html.script().$src("/static/hboxWebApp/exporting.js").__();
+                            if (!injectedHighstockJS) {
+                                html.script().$src("/static/hboxWebApp/jquery-3.1.1.min.js").__();
+                                html.script().$src("/static/hboxWebApp/highstock.js").__();
+                                html.script().$src("/static/hboxWebApp/exporting.js").__();
+                                injectedHighstockJS = true;
+                            }
 
                             String containerCpuMemID = "workercontainerCpuMem" + i;
                             String containerCpuUtilID = "workercontainercpuUtil" + i;

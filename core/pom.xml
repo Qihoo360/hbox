@@ -30,6 +30,19 @@
       </exclusions>
     </dependency>
 
+    <!-- for assembly dist tgz -->
+    <dependency>
+      <groupId>net.qihoo</groupId>
+      <artifactId>hbox-history-server</artifactId>
+      <scope>runtime</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
     <!-- hadoop -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -125,6 +138,9 @@
                 <includes>
                   <include>net.qihoo:*</include>
                 </includes>
+                <excludes>
+                  <exclude>net.qihoo:hbox-history-server</exclude>
+                </excludes>
               </artifactSet>
             </configuration>
           </execution>

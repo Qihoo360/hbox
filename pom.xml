@@ -51,6 +51,11 @@
         <artifactId>hbox-web</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>net.qihoo</groupId>
+        <artifactId>hbox-history-server</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <!-- hadoop -->
       <dependency>
         <groupId>org.apache.hadoop</groupId>

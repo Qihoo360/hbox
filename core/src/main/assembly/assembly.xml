@@ -34,6 +34,7 @@
             <outputDirectory>/</outputDirectory>
             <includes>
                 <include>${project.build.finalName}.jar</include>
+                <include>hbox-history-server-${project.version}.jar</include>
             </includes>
         </fileSet>
     </fileSets>
@@ -49,6 +50,16 @@
                 <!-- use shade -->
                 <exclude>net.qihoo:*</exclude>
             </excludes>
+        </dependencySet>
+        <dependencySet>
+            <outputDirectory>/</outputDirectory>
+            <useTransitiveDependencies>false</useTransitiveDependencies>
+            <unpack>false</unpack>
+            <scope>runtime</scope>
+            <useProjectArtifact>false</useProjectArtifact>
+            <includes>
+                <include>net.qihoo:hbox-history-server</include>
+            </includes>
         </dependencySet>
     </dependencySets>
 
