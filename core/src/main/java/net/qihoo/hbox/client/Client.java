@@ -1,5 +1,6 @@
 package net.qihoo.hbox.client;
 
+import net.qihoo.hbox.AM.ApplicationMaster;
 import net.qihoo.hbox.api.ApplicationMessageProtocol;
 import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.HadoopVersion;
@@ -927,7 +928,7 @@ public class Client {
         appMasterArgs.add("${JAVA_HOME}" + "/bin/java");
         appMasterArgs.add("-Xms" + Math.min(driverMem, maxContainerMem) + "m");
         appMasterArgs.add("-Xmx" + Math.min(driverMem, maxContainerMem) + "m");
-        appMasterArgs.add("net.qihoo.hbox.AM.ApplicationMaster");
+        appMasterArgs.add(ApplicationMaster.class.getName());
         appMasterArgs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
                 + "/" + ApplicationConstants.STDOUT);
         appMasterArgs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR

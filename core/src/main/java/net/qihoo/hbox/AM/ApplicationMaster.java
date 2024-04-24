@@ -6,8 +6,9 @@ import net.qihoo.hbox.AM.ApplicationMasterContext;
 import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.*;
 import net.qihoo.hbox.common.exceptions.HboxExecException;
-import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.conf.HboxConfiguration2;
+import net.qihoo.hbox.conf.HboxConfiguration;
+import net.qihoo.hbox.container.HboxContainer;
 import net.qihoo.hbox.container.HboxContainerId;
 import net.qihoo.hbox.storage.AmazonS3;
 import net.qihoo.hbox.storage.S3File;
@@ -1526,7 +1527,7 @@ public class ApplicationMaster extends CompositeService {
         if (!StringUtils.isBlank(javaOpts)) {
             vargs.add(javaOpts);
         }
-        vargs.add("net.qihoo.hbox.container.HboxContainer");
+        vargs.add(HboxContainer.class.getName());
         vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/" + ApplicationConstants.STDOUT);
         vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/" + ApplicationConstants.STDERR);
 

@@ -14,6 +14,10 @@
   <name>HBox Web</name>
   <description>The Web servers for HBox, e.g. HistoryServer, AMServer.</description>
 
+  <properties>
+    <maven.jar.forceCreation>true</maven.jar.forceCreation>
+  </properties>
+
   <dependencies>
     <!-- provided dependencies by hbox -->
     <dependency>

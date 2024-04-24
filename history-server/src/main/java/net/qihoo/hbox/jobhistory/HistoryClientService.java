@@ -64,15 +64,18 @@ public class HistoryClientService extends AbstractService {
     private JHSDelegationTokenSecretManager jhsDTSecretManager;
 
     public HistoryClientService(HistoryContext history,
-                                JHSDelegationTokenSecretManager jhsDTSecretManager) {
+                                JHSDelegationTokenSecretManager jhsDTSecretManager,
+                                final Configuration conf) {
         super("HistoryClientService");
         this.history = history;
         this.protocolHandler = new HSClientProtocolHandler();
         this.jhsDTSecretManager = jhsDTSecretManager;
+        setConfig(null == conf ? new HboxConfiguration() : conf);
     }
 
+    @Override
     protected void serviceStart() throws Exception {
-        Configuration conf = new HboxConfiguration();
+        final Configuration conf = getConfig();
         YarnRPC rpc = YarnRPC.create(conf);
         initializeWebApp(conf);
         InetSocketAddress address = conf.getSocketAddr(
