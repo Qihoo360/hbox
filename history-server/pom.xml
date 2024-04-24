@@ -14,30 +14,143 @@
   <name>HBox History Server</name>
   <description>The HistoryServer for HBox.</description>
 
+  <properties>
+    <maven.jar.forceCreation>true</maven.jar.forceCreation>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>net.qihoo</groupId>
       <artifactId>hbox-common</artifactId>
-      <scope>provided</scope>
     </dependency>
 
     <!-- hadoop -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.kerby</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.avro</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.module</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.jaxrs</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.re2j</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.protobuf</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.jcraft</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.curator</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.zookeeper</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>dnsjava</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
+
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-common</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.xml.bind</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
+
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-hs</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.avro</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.curator</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.zookeeper</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>dnsjava</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.microsoft.sqlserver</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.fusesource.leveldbjni</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-shuffle</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-nodemanager</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 
   <build>
     <plugins>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifest>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+            </manifest>
+            <manifestEntries>
+              <Build-Timestamp>${project.build.outputTimestamp}</Build-Timestamp>
+              <Main-Class>net.qihoo.hbox.jobhistory.JobHistoryServer</Main-Class>
+              <URL>${project.url}</URL>
+              <X-Git-Branch>${git.branch}</X-Git-Branch>
+              <X-Git-Revision>${git.commit.id}</X-Git-Revision>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>
         <executions>
@@ -47,7 +160,98 @@
             </goals>
             <phase>package</phase>
             <configuration>
-              <minimizeJar>false</minimizeJar>
+              <minimizeJar>true</minimizeJar>
+              <artifactSet>
+                <excludes>
+                  <!-- provided by hadoop dependencies on the gateway -->
+                  <exclude>aopalliance:*</exclude>
+                  <exclude>com.google.code.gson:*</exclude>
+                  <exclude>com.google.guava:failureaccess</exclude>
+                  <exclude>com.google.inject.extensions:*</exclude>
+                  <exclude>com.google.inject:*</exclude>
+                  <exclude>com.google.protobuf:*</exclude>
+                  <exclude>com.sun.jersey.contribs:*</exclude>
+                  <exclude>com.sun.jersey:*</exclude>
+                  <exclude>com.sun.xml.bind:jaxb-impl</exclude>
+                  <exclude>commons-beanutils:*</exclude>
+                  <exclude>commons-cli:*</exclude>
+                  <exclude>commons-codec:*</exclude>
+                  <exclude>commons-collections:*</exclude>
+                  <exclude>commons-io:*</exclude>
+                  <exclude>commons-logging:*</exclude>
+                  <exclude>commons-net:*</exclude>
+                  <exclude>javax.inject:*</exclude>
+                  <exclude>javax.servlet.jsp:*</exclude>
+                  <exclude>log4j:*</exclude>
+                  <exclude>org.apache.commons:commons-compress</exclude>
+                  <exclude>org.apache.commons:commons-math3</exclude>
+                  <exclude>org.apache.httpcomponents:*</exclude>
+                  <exclude>org.codehaus.jettison:*</exclude>
+                  <exclude>org.slf4j:*</exclude>
+                </excludes>
+              </artifactSet>
+
+              <filters>
+                <filter>
+                  <artifact>org.apache.hadoop:*</artifact>
+                  <includes>
+                    <!-- for /jobhistory/job -->
+                    <include>*-default.xml</include>
+                    <include>org/apache/hadoop/io/*</include>
+                    <include>org/apache/hadoop/tracing/*</include>
+                    <include>org/apache/hadoop/conf/*</include>
+                    <include>org/apache/hadoop/crypto/key/*</include>
+                    <include>org/apache/hadoop/fs/*</include>
+                    <include>org/apache/hadoop/fs/viewfs/*</include>
+                    <include>org/apache/hadoop/hdfs/*</include>
+                    <include>org/apache/hadoop/hdfs/client/**/*</include>
+                    <include>org/apache/hadoop/hdfs/net/*</include>
+                    <include>org/apache/hadoop/hdfs/protocol*/**/*</include>
+                    <include>org/apache/hadoop/hdfs/security/token/**/*</include>
+                    <include>org/apache/hadoop/hdfs/server/namenode/ha/*</include>
+                    <include>org/apache/hadoop/hdfs/shortcircuit/*</include>
+                    <include>org/apache/hadoop/hdfs/util/*</include>
+                    <include>org/apache/hadoop/http/*</include>
+                    <include>org/apache/hadoop/io/retry/*</include>
+                    <include>org/apache/hadoop/ipc/**/*</include>
+                    <include>org/apache/hadoop/metrics2/**/*</include>
+                    <include>org/apache/hadoop/net/unix/*</include>
+                    <include>org/apache/hadoop/security/http/XFrameOptionsFilter*</include>
+                    <include>org/apache/hadoop/security/token/**/*</include>
+                    <include>org/apache/hadoop/service/*</include>
+                    <include>org/apache/hadoop/util/*</include>
+                    <include>org/apache/hadoop/util/concurrent/*</include>
+                    <include>org/apache/hadoop/yarn/webapp/**/*</include>
+                    <include>webapps/**/*</include>
+
+                    <!-- for /jobhistory/logs -->
+                    <include>org/apache/hadoop/yarn/api/records/*</include>
+                    <include>org/apache/hadoop/yarn/logaggregation/**/*</include>
+                  </includes>
+                </filter>
+                <filter>
+                  <artifact>org.eclipse.jetty:*</artifact>
+                  <includes>
+                    <include>**/*</include>
+                  </includes>
+                </filter>
+                <filter>
+                  <artifact>org.apache.htrace:*</artifact>
+                  <includes>
+                    <include>**/*</include>
+                  </includes>
+                  <excludes>
+                    <exclude>META-INF/maven/com.fasterxml.jackson.core/**/*</exclude>
+                  </excludes>
+                </filter>
+                <filter>
+                  <artifact>org.apache.hadoop:hadoop-yarn-api</artifact>
+                  <excludes>
+                    <!-- included in hadoop-yarn-common -->
+                    <exclude>yarn-default.xml</exclude>
+                  </excludes>
+                </filter>
+              </filters>
             </configuration>
           </execution>
         </executions>
@@ -55,6 +259,7 @@
     </plugins>
   </build>
 
+  <url>https://geelib.qihoo.net/geelib/repoOverview?repoId=xt_hadoop/hbox</url>
   <scm>
     <tag>HEAD</tag>
   </scm>

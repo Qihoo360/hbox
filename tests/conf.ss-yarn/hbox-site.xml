@@ -22,7 +22,7 @@
     </property>
     <property>
         <name>hbox.history.webapp.address</name>
-        <value>hpc82.sys.lycc.qihoo.net:19966</value>
+        <value>qt1ss.prod.mediav.com:19966</value>
     </property>
     <property>
         <name>hbox.history.webapp.port</name>
@@ -30,15 +30,15 @@
     </property>
     <property>
         <name>hbox.tf.board.history.dir</name>
-        <value>/home/yarn/hbox/eventLog</value>
+        <value>/data/hbox/tfboard</value>
     </property>
     <property>
         <name>hbox.history.log.dir</name>
-        <value>/home/yarn/hbox/history</value>
+        <value>/data/hbox/history</value>
     </property>
     <property>
         <name>hbox.history.address</name>
-        <value>hpc82.sys.lycc.qihoo.net:10121</value>
+        <value>qt1ss.prod.mediav.com:10121</value>
     </property>
     <property>
         <name>hbox.hisotory.port</name>
@@ -46,7 +46,7 @@
     </property>
     <property>
         <name>hbox.history.webapp.https.addresss</name>
-        <value>hpc82.sys.lycc.qihoo.net:19967</value>
+        <value>qt1ss.prod.mediav.com:19967</value>
     </property>
     <property>
         <name>hbox.history.webapp.https.port</name>

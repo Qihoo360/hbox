@@ -5,7 +5,7 @@ pipeline {
             steps {
               sh """
                   set -eux
-                  shellcheck core/bin/hbox-* core/sbin/start-history-server.sh core/conf/hbox-common-env.sh
+                  shellcheck core/bin/hbox-* core/sbin/start-history-server.sh core/libexec/hbox-common-env.sh
                   find tests -name '*.sh' | xargs shellcheck
               """
             }

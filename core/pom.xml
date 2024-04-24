@@ -30,6 +30,19 @@
       </exclusions>
     </dependency>
 
+    <!-- for assembly dist tgz -->
+    <dependency>
+      <groupId>net.qihoo</groupId>
+      <artifactId>hbox-history-server</artifactId>
+      <scope>runtime</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
     <!-- hadoop -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -93,23 +106,45 @@
   </dependencies>
 
   <build>
-    <finalName>${hbox.jar.basename}</finalName>
-
-    <resources>
-      <resource>
-        <filtering>true</filtering>
-        <directory>src/main/resources</directory>
-      </resource>
-    </resources>
-
     <plugins>
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <configuration>
           <archive>
-            <manifestFile>src/main/resources/META-INF/MANIFEST.MF</manifestFile>
+            <manifest>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+            </manifest>
+            <manifestEntries>
+              <Build-Timestamp>${project.build.outputTimestamp}</Build-Timestamp>
+              <Main-Class>net.qihoo.hbox.client.Client</Main-Class>
+              <URL>${project.url}</URL>
+              <X-Git-Branch>${git.branch}</X-Git-Branch>
+              <X-Git-Revision>${git.commit.id}</X-Git-Revision>
+            </manifestEntries>
           </archive>
         </configuration>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <phase>package</phase>
+            <configuration>
+              <artifactSet>
+                <includes>
+                  <include>net.qihoo:*</include>
+                </includes>
+                <excludes>
+                  <exclude>net.qihoo:hbox-history-server</exclude>
+                </excludes>
+              </artifactSet>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
 
       <plugin>
@@ -122,6 +157,7 @@
             </goals>
             <phase>package</phase>
             <configuration>
+              <finalName>hbox-${project.version}</finalName>
               <descriptors>
                 <descriptor>src/main/assembly/assembly.xml</descriptor>
               </descriptors>
@@ -132,6 +168,7 @@
     </plugins>
   </build>
 
+  <url>https://geelib.qihoo.net/geelib/repoOverview?repoId=xt_hadoop/hbox</url>
   <scm>
     <tag>HEAD</tag>
   </scm>

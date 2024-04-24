@@ -19,7 +19,7 @@
 <configuration>
     <property>
         <name>hbox.staging.dir</name>
-        <value>/home/yarn/hbox/staging/${user.name}</value>
+        <value>/home/yarn/hbox-lycc/staging/${user.name}</value>
     </property>
     <property>
         <name>hbox.cleanup.enable</name>
@@ -43,11 +43,11 @@
     </property>
     <property>
         <name>hbox.tf.board.history.dir</name>
-        <value>/home/yarn/hbox/eventLog</value>
+        <value>/home/yarn/hbox-lycc/eventLog</value>
     </property>
     <property>
         <name>hbox.history.log.dir</name>
-        <value>/home/yarn/hbox/history</value>
+        <value>/home/yarn/hbox-lycc/history</value>
     </property>
     <property>
         <name>hbox.history.address</name>
