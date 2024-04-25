@@ -4,7 +4,7 @@ pipeline {
         stage('Lint') {
             failFast true
             parallel {
-                stage('ShellCheck') {
+                stage('Lint: ShellCheck') {
                     steps {
                         sh '''
                             set -eux
@@ -13,14 +13,14 @@ pipeline {
                         '''
                     }
                 }
-                stage('Maven Pom Format') {
+                stage('Lint: Maven Pom Format') {
                     steps {
                         sh './mvnw -V -B -Dmirror.of.aliyun=central sortpom:verify -Dsort.verifyFail=STOP'
                     }
                 }
-                stage('Check Maven Plugins') {
+                stage('Lint: Check Maven Plugins') {
                     steps {
-                        sh './mvn -V -B -Dmirror.of.aliyun=central artifact:check-buildplan'
+                        sh './mvnw -V -B -Dmirror.of.aliyun=central artifact:check-buildplan'
                     }
                 }
             }
@@ -28,12 +28,12 @@ pipeline {
         stage('Build') {
             failFast true
             parallel {
-                stage('Maven Verify') {
+                stage('Build: Maven Verify') {
                     steps {
                         sh './mvnw -B -Dmirror.of.aliyun=central clean verify'
                     }
                 }
-                stage('Reproducible') {
+                stage('Build: Reproducible') {
                     when {
                         buildingTag()
                     }
@@ -47,7 +47,7 @@ pipeline {
                             true artifact:compare should not contain warning or error
                             trap 'cat target/build.log' ERR
                             ./mvnw -B -l target/build.log package artifact:compare -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
-                            test 0 = "$(sed -n '/^\[INFO\] --- maven-artifact-plugin:[^:][^:]*:compare/,/^\[INFO\] ---/ p' target/build.log | grep -c '^\[\(WARNING\|ERROR\)\]')"
+                            test 0 = "$(sed -n '/^\\[INFO\\] --- maven-artifact-plugin:[^:][^:]*:compare/,/^\\[INFO\\] ---/ p' target/build.log | grep -c '^\\[\\(WARNING\\|ERROR\\)\\]')"
 
                             true all files should be ok
                             trap 'find . -name "*.buildcompare" -print0 | xargs -0 cat' ERR
