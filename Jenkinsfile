@@ -74,7 +74,7 @@ pipeline {
                 sh '''
                     set -eux
                     test "$(git config --get remote.origin.url)" = "git@adgit.src.corp.qihoo.net:deep-learning/hbox.git"
-                    false ./mvnw -B -Dmirror.of.aliyun=central deploy -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
+                    ./mvnw -B -Dmirror.of.aliyun=central deploy -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
                 '''
             }
         }

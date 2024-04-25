@@ -165,6 +165,28 @@
           </execution>
         </executions>
       </plugin>
+
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>deploy-dist-tgz</id>
+            <goals>
+              <goal>deploy-file</goal>
+            </goals>
+            <phase>deploy</phase>
+            <configuration>
+              <file>${project.build.directory}/hbox-${project.version}-dist.tar.gz</file>
+              <repositoryId>mediav-releases</repositoryId>
+              <url>${project.distributionManagement.repository.url}</url>
+              <groupId>${project.groupId}</groupId>
+              <artifactId>hbox-dist</artifactId>
+              <version>${project.version}</version>
+              <packaging>tar.gz</packaging>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 

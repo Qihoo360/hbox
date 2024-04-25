@@ -343,6 +343,17 @@
     <url>https://adgit.src.corp.qihoo.net/deep-learning/hbox/-/issues</url>
   </issueManagement>
 
+  <distributionManagement>
+    <repository>
+      <id>mediav-releases</id>
+      <name>Releases Repository</name>
+      <url>https://maven.corp.mediav.com/nexus/content/repositories/releases</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </distributionManagement>
+
   <profiles>
     <profile>
       <id>before-jdk9-profile</id>
