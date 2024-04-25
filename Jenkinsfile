@@ -4,6 +4,11 @@ pipeline {
         stage('Lint') {
             failFast true
             parallel {
+	    stage('test') {
+                    steps {
+		    sh 'env && git config --get remote.origin.url'
+		    }
+	    }
                 stage('Lint: ShellCheck') {
                     steps {
                         sh '''
@@ -33,7 +38,7 @@ pipeline {
                         sh './mvnw -B -Dmirror.of.aliyun=central clean verify'
                     }
                 }
-                stage('Build: Reproducible') {
+                stage('Build: Reproducible on tags') {
                     when {
                         buildingTag()
                     }
@@ -60,12 +65,17 @@ pipeline {
                 }
             }
         }
-        stage('Deploy .tar.gz') {
+        stage('Deploy .tar.gz on tags') {
             when {
                 buildingTag()
+                tag pattern: "v\\d+\\.\\d+\.\\d+.*", comparator: "REGEXP"
             }
             steps {
-                sh 'false ./mvnw -B -Dmirror.of.aliyun=central deploy -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false'
+                sh '''
+                    set -eux
+                    test "$(git config --get remote.origin.url)" = "git@adgit.src.corp.qihoo.net:deep-learning/hbox.git"
+                    false ./mvnw -B -Dmirror.of.aliyun=central deploy -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
+                '''
             }
         }
     }
