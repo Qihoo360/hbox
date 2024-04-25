@@ -63,7 +63,7 @@ pipeline {
             when {
                 buildingTag()
                 tag pattern: "v\\d+\\.\\d+\\.\\d+.*", comparator: "REGEXP"
-                environment name: 'GIT_URL', value: 'git@adgit.src.corp.qihoo.net:deep-learning/hbox.git'
+                environment name: 'GIT_URL', value: 'ssh://git@code.geelib.qihoo.net:11022/xt_hadoop/hbox.git'
             }
             steps {
                 sh './mvnw -B -Dmirror.of.aliyun=central deploy -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false'
