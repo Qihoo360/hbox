@@ -26,6 +26,7 @@
   <properties>
     <maven.min-version>3.6.3</maven.min-version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.build.outputTimestamp>2024-01-01T00:00:00Z</project.build.outputTimestamp>
 
     <!-- Supporting Tech Matrix
     ~ Build-time JDK: 8+, select by developer or ci environment, prefer LTS JDKs
@@ -34,10 +35,6 @@
     <project.target.release>8</project.target.release>
 
     <hadoop.version>3.2.1</hadoop.version>
-
-    <hbox.jar.basename>hbox-${project.version}-hadoop${hadoop.version}</hbox.jar.basename>
-    <hbox.jar>${hbox.jar.basename}.jar</hbox.jar>
-
     <sortpom.version>3.4.1</sortpom.version>
     <sort.verifyFail>warn</sort.verifyFail>
   </properties>
@@ -52,6 +49,11 @@
       <dependency>
         <groupId>net.qihoo</groupId>
         <artifactId>hbox-web</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.qihoo</groupId>
+        <artifactId>hbox-history-server</artifactId>
         <version>${project.version}</version>
       </dependency>
       <!-- hadoop -->
@@ -165,7 +167,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.3.0</version>
+          <version>3.4.0</version>
         </plugin>
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
@@ -225,6 +227,11 @@
         <plugin>
           <artifactId>maven-enforcer-plugin</artifactId>
           <version>3.4.1</version>
+        </plugin>
+        <plugin>
+          <groupId>pl.project13.maven</groupId>
+          <artifactId>git-commit-id-plugin</artifactId>
+          <version>4.9.10</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -348,6 +355,50 @@
         <!-- 3.1.0+ dropped support for jdk 8 -->
         <sortpom.version>3.0.1</sortpom.version>
       </properties>
+    </profile>
+    <profile>
+      <id>with-dot-git-profile</id>
+      <activation>
+        <file>
+          <exists>${maven.multiModuleProjectDirectory}/.git</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>pl.project13.maven</groupId>
+            <artifactId>git-commit-id-plugin</artifactId>
+            <dependencies>
+              <!-- update jgit to avoid the bug https://bugs.eclipse.org/bugs/show_bug.cgi?id=579445 -->
+              <dependency>
+                <groupId>org.eclipse.jgit</groupId>
+                <artifactId>org.eclipse.jgit</artifactId>
+                <version>5.13.3.202401111512-r</version>
+              </dependency>
+              <dependency>
+                <groupId>org.eclipse.jgit</groupId>
+                <artifactId>org.eclipse.jgit.ssh.jsch</artifactId>
+                <version>5.13.3.202401111512-r</version>
+              </dependency>
+            </dependencies>
+            <executions>
+              <execution>
+                <id>generate-git-commit-id</id>
+                <goals>
+                  <goal>revision</goal>
+                </goals>
+                <phase>validate</phase>
+                <configuration>
+                  <offline>true</offline>
+                  <skipPoms>false</skipPoms>
+                  <runOnlyOnce>true</runOnlyOnce>
+                  <injectAllReactorProjects>true</injectAllReactorProjects>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 

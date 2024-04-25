@@ -22,9 +22,8 @@
             <fileMode>0755</fileMode>
         </fileSet>
         <fileSet>
-            <directory>conf</directory>
-            <outputDirectory>/conf</outputDirectory>
-            <fileMode>0755</fileMode>
+            <directory>libexec</directory>
+            <outputDirectory>/libexec</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>lib</directory>
@@ -32,9 +31,10 @@
         </fileSet>
         <fileSet>
             <directory>target</directory>
-            <outputDirectory>/lib</outputDirectory>
+            <outputDirectory>/</outputDirectory>
             <includes>
-                <include>${hbox.jar}</include>
+                <include>${project.build.finalName}.jar</include>
+                <include>hbox-history-server-${project.version}.jar</include>
             </includes>
         </fileSet>
     </fileSets>
@@ -46,6 +46,20 @@
             <unpack>false</unpack>
             <scope>runtime</scope>
             <useProjectArtifact>false</useProjectArtifact>
+            <excludes>
+                <!-- use shade -->
+                <exclude>net.qihoo:*</exclude>
+            </excludes>
+        </dependencySet>
+        <dependencySet>
+            <outputDirectory>/</outputDirectory>
+            <useTransitiveDependencies>false</useTransitiveDependencies>
+            <unpack>false</unpack>
+            <scope>runtime</scope>
+            <useProjectArtifact>false</useProjectArtifact>
+            <includes>
+                <include>net.qihoo:hbox-history-server</include>
+            </includes>
         </dependencySet>
     </dependencySets>
 

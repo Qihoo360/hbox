@@ -22,6 +22,7 @@ public class SingleInfoBlock extends HtmlBlock implements AMParams {
         int numContainers = Integer.parseInt($(CONTAINER_NUMBER));
         int numWorkers = Integer.parseInt($(WORKER_NUMBER));
         int workerGcores = Integer.parseInt($("WORKER_GCORES"));
+        boolean injectedHighstockJS = false;
         if (numContainers > 0) {
             TBODY<TABLE<Hamlet>> tbody = html.
                     h2("All Containers:").
@@ -305,9 +306,12 @@ public class SingleInfoBlock extends HtmlBlock implements AMParams {
                 for (int i = 0; i < numWorkers; i++) {
                     if (!$("cpuMemMetrics" + i).equals("") && $("cpuMemMetrics" + i) != null) {
                         html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px").__(String.format($(CONTAINER_ID + i)) + " metrics:").__();
-                        html.script().$src("/proxy/" + $(APP_ID) + "/static/hboxWebApp/jquery-3.1.1.min.js").__();
-                        html.script().$src("/proxy/" + $(APP_ID) + "/static/hboxWebApp/highstock.js").__();
-                        html.script().$src("/proxy/" + $(APP_ID) + "/static/hboxWebApp/exporting.js").__();
+                        if (!injectedHighstockJS) {
+                            html.script().$src("/proxy/" + $(APP_ID) + "/static/hboxWebApp/jquery-3.1.1.min.js").__();
+                            html.script().$src("/proxy/" + $(APP_ID) + "/static/hboxWebApp/highstock.js").__();
+                            html.script().$src("/proxy/" + $(APP_ID) + "/static/hboxWebApp/exporting.js").__();
+                            injectedHighstockJS = true;
+                        }
 
                         String containerGpuMemID = "containerGpuMem" + i;
                         String containerGpuUtilID = "containerGpuUtil" + i;
@@ -513,9 +517,12 @@ public class SingleInfoBlock extends HtmlBlock implements AMParams {
                 for (int i = 0; i < numWorkers; i++) {
                     if (!$("cpuMemMetrics" + i).equals("") && $("cpuMemMetrics" + i) != null) {
                         html.div().$style("margin:20px 2px;font-weight:bold;font-size:12px").__(String.format($(CONTAINER_ID + i)) + " metrics:").__();
-                        html.script().$src("/proxy/" + $(APP_ID) + "/static/hboxWebApp/jquery-3.1.1.min.js").__();
-                        html.script().$src("/proxy/" + $(APP_ID) + "/static/hboxWebApp/highstock.js").__();
-                        html.script().$src("/proxy/" + $(APP_ID) + "/static/hboxWebApp/exporting.js").__();
+                        if (!injectedHighstockJS) {
+                            html.script().$src("/proxy/" + $(APP_ID) + "/static/hboxWebApp/jquery-3.1.1.min.js").__();
+                            html.script().$src("/proxy/" + $(APP_ID) + "/static/hboxWebApp/highstock.js").__();
+                            html.script().$src("/proxy/" + $(APP_ID) + "/static/hboxWebApp/exporting.js").__();
+                            injectedHighstockJS = true;
+                        }
 
                         String containerCpuMemID = "containerCpuMem" + i;
                         String containerCpuUtilID = "containerCpuUtil" + i;

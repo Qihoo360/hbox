@@ -3,11 +3,13 @@
 # Set Hbox-specific common environment variables here, and load hbox-env.sh for the target cluster
 #   JAVACMD - required, path to java binary
 #   HBOX_CLASSPATH - required, classpath to run hbox
+#   HBOX_PRE_CLASSPATH - optional, classpath before main jar, e.g. special hdfs client
 #   HBOX_JARS - required, result array for finding the hbox main jars, may find 0 or multiple ones
 #   HBOX_CLIENT_OPTS - optional, java cli opts to pass to hbox client
 
 unset CLASSPATH
 unset HADOOP_CLASSPATH
+unset HBOX_PRE_CLASSPATH
 
 [[ -d ${HBOX_HOME-} ]] || HBOX_HOME="$(cd -- "$(dirname -- "$0")"/.. && pwd)"
 
@@ -37,7 +39,7 @@ fi
 export HBOX_HOME HBOX_CONF_DIR
 
 # shellcheck source=/dev/null
-[[ ! -f "$HBOX_CONF_DIR"/hbox-env.sh ]] || . "$HBOX_CONF_DIR"/hbox-env.sh
+[[ ! -f "$HBOX_CONF_DIR"/hbox-env.sh ]] || . "$HBOX_CONF_DIR"/hbox-env.sh "$@"
 # hbox-env.sh setups:
 #   JDK for the hbox client, via JAVA_HOME or java on $PATH
 #   'yarn' command are invokable from $PATH
@@ -71,10 +73,7 @@ HBOX_CLASSPATH="$HBOX_CONF_DIR:$HBOX_HOME/conf:$HBOX_HOME/lib/*:$(yarn classpath
 HBOX_CLIENT_OPTS="-Xmx1024m"
 
 # shellcheck disable=SC2034
-readarray -t HBOX_JAR < <(find "$HBOX_HOME/lib" -maxdepth 1 -name "hbox*hadoop*.jar")
-
-#if [ -z $HADOOP_CONF_DIR ];then
-    #export HADOOP_CONF_DIR=$HBOX_HOME/../yarn/etc/hadoop/:$HBOX_HOME/../hadoop/etc/hadoop/
-#fi
-#export HBOX_CONF_DIR=$HBOX_HOME/conf/
-#export HBOX_CLASSPATH="$HBOX_HOME/lib/*.jar:$HBOX_CONF_DIR:$HADOOP_CONF_DIR"
+case "${1-}" in
+(run-submit) readarray -t HBOX_JAR < <(find "$HBOX_HOME" -maxdepth 1 -name "hbox-core-*.jar") ;;
+(run-history-server) readarray -t HBOX_JAR < <(find "$HBOX_HOME" -maxdepth 1 -name "hbox-history-server-*.jar") ;;
+esac

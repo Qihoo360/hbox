@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.util.Clock;
@@ -49,7 +48,6 @@ public class JobHistoryServer extends CompositeService {
     private HistoryClientService clientService;
     private JobHistory jobHistoryService;
     protected JHSDelegationTokenSecretManager jhsDTSecretManager;
-    private AggregatedLogDeletionService aggLogDelService;
     private HistoryServerStateStoreService stateStore;
     private Thread deleteLogManager;
 
@@ -115,20 +113,18 @@ public class JobHistoryServer extends CompositeService {
         historyContext = (HistoryContext) jobHistoryService;
         stateStore = createStateStore(conf);
         this.jhsDTSecretManager = createJHSSecretManager(conf, stateStore);
-        clientService = createHistoryClientService();
-        aggLogDelService = new AggregatedLogDeletionService();
+        clientService = createHistoryClientService(conf);
 
         addService(stateStore);
         addService(new HistoryServerSecretManagerService());
         addService(clientService);
-        addService(aggLogDelService);
         super.serviceInit(config);
     }
 
     @VisibleForTesting
-    protected HistoryClientService createHistoryClientService() {
+    protected HistoryClientService createHistoryClientService(final Configuration conf) {
         return new HistoryClientService(historyContext,
-                this.jhsDTSecretManager);
+                this.jhsDTSecretManager, conf);
     }
 
     protected JHSDelegationTokenSecretManager createJHSSecretManager(
@@ -175,7 +171,7 @@ public class JobHistoryServer extends CompositeService {
         @Override
         public void run() {
             FileSystem fs;
-            Configuration conf = new HboxConfiguration();
+            Configuration conf = getConfig();
             Path historyLog = new Path(conf.get("fs.defaultFS"), conf.get(HboxConfiguration.HBOX_HISTORY_LOG_DIR,
                     HboxConfiguration.DEFAULT_HBOX_HISTORY_LOG_DIR));
             Path eventLog = new Path(conf.get("fs.defaultFS"), conf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
@@ -209,7 +205,7 @@ public class JobHistoryServer extends CompositeService {
 
                     Thread.sleep(monitorInterval);
                 } catch (Exception e) {
-                    LOG.info("HistoryLog delete thread interrupted. " + e);
+                    LOG.info("HistoryLog delete thread interrupted.", e);
                     break;
                 }
             }

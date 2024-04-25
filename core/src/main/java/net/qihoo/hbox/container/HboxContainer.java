@@ -28,12 +28,13 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 
 import java.io.*;
@@ -942,7 +943,7 @@ public class HboxContainer {
         envList.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
         envList.add("PYTHONUNBUFFERED=1");
         envList.add("INDEX=" + this.index);
-        envList.add("HADOOP_VERSION=2.7.2");
+        envList.add("HADOOP_VERSION=" + VersionInfo.getVersion());
         envList.add("HADOOP_CONF_DIR=./:" + System.getenv("HADOOP_CONF_DIR"));
         envList.add("HBOX_CONTAINER_LOG_DIR=" + System.getenv(HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR.toString()));
 
