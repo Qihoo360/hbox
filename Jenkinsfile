@@ -40,12 +40,12 @@ pipeline {
                         sh '''
                             set -eux
                             ./mvnw -B -Dmirror.of.aliyun=central clean install -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
-                            ./mvnw clean
+                            ./mvnw -B -Dmirror.of.aliyun=central clean
                             mkdir -p target
 
                             true artifact:compare should not contain warning or error
                             trap 'cat target/build.log' ERR
-                            ./mvnw -B -l target/build.log package artifact:compare -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
+                            ./mvnw -B -Dmirror.of.aliyun=central -l target/build.log package artifact:compare -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
                             test 0 = "$(sed -n '/^\\[INFO\\] --- maven-artifact-plugin:[^:][^:]*:compare/,/^\\[INFO\\] ---/ p' target/build.log | grep -c '^\\[\\(WARNING\\|ERROR\\)\\]')"
 
                             true all files should be ok
