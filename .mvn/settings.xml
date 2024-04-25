@@ -84,10 +84,10 @@
       <mirrorOf>cloudera</mirrorOf>
     </mirror>
     <mirror>
-      <id>aliyun-mirror</id>
-      <name>Aliyun Mirror Repository</name>
-      <url>https://maven.aliyun.com/nexus/content/groups/public</url>
-      <mirrorOf>${mirror.of.aliyun}</mirrorOf>
+      <id>mediav-proxy</id>
+      <name>Public Maven2 Proxy Repositories</name>
+      <url>http://maven.corp.mediav.com/nexus/content/groups/maven2-proxy/</url>
+      <mirrorOf>${mirror.of.proxy}</mirrorOf>
     </mirror>
   </mirrors>
 
@@ -120,6 +120,17 @@
           </releases>
         </repository>
       </repositories>
+    </profile>
+    <profile>
+      <id>use-mirror-profile</id>
+      <activation>
+        <property>
+          <name>env.JENKINS_URL</name>
+        </property>
+      </activation>
+      <properties>
+        <mirror.of.proxy>central</mirror.of.proxy>
+      </properties>
     </profile>
   </profiles>
 </settings>
