@@ -4,11 +4,6 @@ pipeline {
         stage('Lint') {
             failFast true
             parallel {
-	    stage('test') {
-                    steps {
-		    sh 'env && git config --get remote.origin.url'
-		    }
-	    }
                 stage('Lint: ShellCheck') {
                     steps {
                         sh '''
@@ -31,8 +26,7 @@ pipeline {
             }
         }
         stage('Build') {
-            failFast true
-            parallel {
+            stages {
                 stage('Build: Maven Verify') {
                     steps {
                         sh './mvnw -B -Dmirror.of.aliyun=central clean verify'
@@ -69,13 +63,10 @@ pipeline {
             when {
                 buildingTag()
                 tag pattern: "v\\d+\\.\\d+\\.\\d+.*", comparator: "REGEXP"
+                environment name: 'GIT_URL', value: 'git@adgit.src.corp.qihoo.net:deep-learning/hbox.git'
             }
             steps {
-                sh '''
-                    set -eux
-                    test "$(git config --get remote.origin.url)" = "git@adgit.src.corp.qihoo.net:deep-learning/hbox.git"
-                    ./mvnw -B -Dmirror.of.aliyun=central deploy -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
-                '''
+                sh './mvnw -B -Dmirror.of.aliyun=central deploy -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false'
             }
         }
     }
