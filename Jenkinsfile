@@ -68,7 +68,7 @@ pipeline {
         stage('Deploy .tar.gz on tags') {
             when {
                 buildingTag()
-                tag pattern: "v\\d+\\.\\d+\.\\d+.*", comparator: "REGEXP"
+                tag pattern: "v\\d+\\.\\d+\\.\\d+.*", comparator: "REGEXP"
             }
             steps {
                 sh '''
