@@ -2,7 +2,6 @@ package net.qihoo.hbox.AM;
 
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.gson.Gson;
-import net.qihoo.hbox.AM.ApplicationMasterContext;
 import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.*;
 import net.qihoo.hbox.common.exceptions.HboxExecException;
@@ -1364,6 +1363,7 @@ public class ApplicationMaster extends CompositeService {
                 HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);
         containerEnv.put(HboxConstants.Environment.HADOOP_USER_NAME.toString(), conf.get("hadoop.job.ugi").split(",")[0]);
         containerEnv.put(HboxConstants.Environment.HBOX_TF_ROLE.toString(), role);
+        containerEnv.put(HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR.toString(), ApplicationConstants.LOG_DIR_EXPANSION_VAR);
 
         //containerEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), containerExecType);
         if (psGCores > 0 || workerGCores > 0) {

@@ -47,6 +47,8 @@ import java.util.concurrent.*;
 import java.text.SimpleDateFormat;
 import java.util.zip.GZIPOutputStream;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.YARN_APP_CONTAINER_LOG_DIR;
+
 public class HboxContainer {
 
     private static final Log LOG = LogFactory.getLog(HboxContainer.class);
@@ -942,6 +944,7 @@ public class HboxContainer {
         envList.add("INDEX=" + this.index);
         envList.add("HADOOP_VERSION=2.7.2");
         envList.add("HADOOP_CONF_DIR=./:" + System.getenv("HADOOP_CONF_DIR"));
+        envList.add("HBOX_CONTAINER_LOG_DIR=" + System.getenv(HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR.toString()));
 
         if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) {
             envList.add(HboxConstants.Environment.HBOX_TF_INDEX.toString() + "=" + this.index);
@@ -998,7 +1001,8 @@ public class HboxContainer {
             if (conf.getBoolean(HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR_ENABLE)) {
                 String mpiInstallDir = conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR);
                 ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib");
-                envList.add("OPAL_PREFIX=" + mpiInstallDir);
+                java.nio.file.Path absolutePath = Paths.get(mpiInstallDir).toAbsolutePath();
+                envList.add("OPAL_PREFIX=" + absolutePath);
                 // for rsh agent, will use $HOME as working dir
                 envList.add("HOME=" + this.mpiAppDir);
             }

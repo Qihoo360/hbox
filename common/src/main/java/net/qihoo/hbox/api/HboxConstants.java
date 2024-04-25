@@ -132,7 +132,9 @@ public interface HboxConstants {
 
         APP_ID("APP_ID"),
 
-        APP_ATTEMPTID("APP_ATTEMPTID");
+        APP_ATTEMPTID("APP_ATTEMPTID"),
+
+        HBOX_CONTAINER_LOG_DIR("HBOX_CONTAINER_LOG_DIR");
 
         private final String variable;
 
