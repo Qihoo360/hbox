@@ -42,6 +42,7 @@
     <autoVersionSubmodules>true</autoVersionSubmodules>
     <tagNameFormat>v@{project.version}</tagNameFormat>
     <projectVersionPolicyId>SemVerVersionPolicy</projectVersionPolicyId>
+    <reference.repo>mediav-releases</reference.repo>
     <maven.deploy.skip>true</maven.deploy.skip>
     <maven.deploy.file.skip>snapshots</maven.deploy.file.skip>
   </properties>
