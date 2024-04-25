@@ -4,7 +4,7 @@
 
   <groupId>net.qihoo</groupId>
   <artifactId>hbox-parent</artifactId>
-  <version>1.7.0-alpha6</version>
+  <version>1.7.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>HBox Parent Pom</name>
@@ -26,7 +26,7 @@
   <properties>
     <maven.min-version>3.6.3</maven.min-version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.build.outputTimestamp>2024-04-25T07:52:28Z</project.build.outputTimestamp>
+    <project.build.outputTimestamp>2024-04-25T07:52:45Z</project.build.outputTimestamp>
 
     <!-- Supporting Tech Matrix
     ~ Build-time JDK: 8+, select by developer or ci environment, prefer LTS JDKs
@@ -335,7 +335,7 @@
   <scm>
     <developerConnection>scm:git:ssh://git@code.geelib.qihoo.net:11022/xt_hadoop/hbox.git</developerConnection>
     <url>https://geelib.qihoo.net/geelib/repoOverview?repoId=xt_hadoop/hbox&amp;gitRef=master</url>
-    <tag>v1.7.0-alpha6</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <issueManagement>
