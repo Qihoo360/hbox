@@ -121,16 +121,5 @@
         </repository>
       </repositories>
     </profile>
-    <profile>
-      <id>use-mirror-profile</id>
-      <activation>
-        <property>
-          <name>env.JENKINS_URL</name>
-        </property>
-      </activation>
-      <properties>
-        <mirror.of.proxy>central</mirror.of.proxy>
-      </properties>
-    </profile>
   </profiles>
 </settings>

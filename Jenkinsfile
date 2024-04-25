@@ -15,12 +15,12 @@ pipeline {
                 }
                 stage('Lint: Maven Pom Format') {
                     steps {
-                        sh './mvnw -V -B sortpom:verify -Dsort.verifyFail=STOP'
+                        sh './mvnw -V -B -Dmirror.of.proxy=central sortpom:verify -Dsort.verifyFail=STOP'
                     }
                 }
                 stage('Lint: Check Maven Plugins') {
                     steps {
-                        sh './mvnw -V -B artifact:check-buildplan'
+                        sh './mvnw -V -B -Dmirror.of.proxy=central artifact:check-buildplan'
                     }
                 }
             }
@@ -29,7 +29,7 @@ pipeline {
             stages {
                 stage('Build: Maven Verify') {
                     steps {
-                        sh './mvnw -B clean verify'
+                        sh './mvnw -B -Dmirror.of.proxy=central clean verify'
                     }
                 }
                 stage('Build: Reproducible on tags') {
@@ -39,13 +39,13 @@ pipeline {
                     steps {
                         sh '''
                             set -eux
-                            ./mvnw -B clean install -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
-                            ./mvnw -B clean
+                            ./mvnw -B -Dmirror.of.proxy=central clean install -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
+                            ./mvnw -B -Dmirror.of.proxy=central clean
                             mkdir -p target
 
                             true artifact:compare should not contain warning or error
                             trap 'cat target/build.log' ERR
-                            ./mvnw -B -l target/build.log package artifact:compare -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
+                            ./mvnw -B -Dmirror.of.proxy=central -l target/build.log package artifact:compare -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
                             test 0 = "$(sed -n '/^\\[INFO\\] --- maven-artifact-plugin:[^:][^:]*:compare/,/^\\[INFO\\] ---/ p' target/build.log | grep -c '^\\[\\(WARNING\\|ERROR\\)\\]')"
 
                             true all files should be ok
@@ -67,7 +67,7 @@ pipeline {
             }
             steps {
 	        withCredentials([file(credentialsId: 'maven-deploy-mediav-releases', variable: 'MAVEN_SETTING')]) {
-                    sh './mvnw -B -gs "${MAVEN_SETTING}" deploy -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false'
+                    sh './mvnw -B -Dmirror.of.proxy=central -gs "${MAVEN_SETTING}" deploy -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false'
 		}
             }
         }
