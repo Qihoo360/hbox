@@ -5,7 +5,7 @@
   <parent>
     <groupId>net.qihoo</groupId>
     <artifactId>hbox-parent</artifactId>
-    <version>1.7.0-SNAPSHOT</version>
+    <version>1.7.0-alpha6</version>
   </parent>
 
   <artifactId>hbox-history-server</artifactId>
@@ -261,6 +261,6 @@
 
   <url>https://geelib.qihoo.net/geelib/repoOverview?repoId=xt_hadoop/hbox</url>
   <scm>
-    <tag>HEAD</tag>
+    <tag>v1.7.0-alpha6</tag>
   </scm>
 </project>
