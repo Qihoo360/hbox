@@ -12,31 +12,13 @@ unset HADOOP_CLASSPATH
 unset HBOX_PRE_CLASSPATH
 
 [[ -d ${HBOX_HOME-} ]] || HBOX_HOME="$(cd -- "$(dirname -- "$0")"/.. && pwd)"
-
-if [[ ${HBOX_CONF_DIR-} ]]; then
-  : "[DEBUG] load hbox config at $HBOX_CONF_DIR"
-else
-  # detect target yarn cluster
-  HBOX_TARGET_CLUSTER=hpc-yarn
-  while (( $# > 0 )); do
-    case "${1-}" in
-    (-help|--help) shift ;;
-    (-cluster|--cluster)
-      shift
-      HBOX_TARGET_CLUSTER="${1-"$HBOX_TARGET_CLUSTER"}"
-      shift || :
-      ;;
-    (--*|-*) shift 2 || : ;;
-    (*) break ;;
-    esac
-  done
-  HBOX_CONF_DIR="$HBOX_HOME/conf.$HBOX_TARGET_CLUSTER"
-  : "[DEBUG] load hbox config at $HBOX_CONF_DIR for cluster $HBOX_TARGET_CLUSTER"
-  unset HBOX_TARGET_CLUSTER
-fi
+: "${HBOX_CONF_DIR:="$HBOX_HOME/conf"}"
 
 # export for generating the kill-job command
 export HBOX_HOME HBOX_CONF_DIR
+
+: "[DEBUG] hbox home at $HBOX_HOME"
+: "[DEBUG] load hbox config at $HBOX_CONF_DIR"
 
 # shellcheck source=/dev/null
 [[ ! -f "$HBOX_CONF_DIR"/hbox-env.sh ]] || . "$HBOX_CONF_DIR"/hbox-env.sh "$@"
