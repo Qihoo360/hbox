@@ -4,7 +4,7 @@
 
   <groupId>net.qihoo</groupId>
   <artifactId>hbox-parent</artifactId>
-  <version>1.7-SNAPSHOT</version>
+  <version>1.7.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>HBox Parent Pom</name>
@@ -26,7 +26,7 @@
   <properties>
     <maven.min-version>3.6.3</maven.min-version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.build.outputTimestamp>2024-01-01T00:00:00Z</project.build.outputTimestamp>
+    <project.build.outputTimestamp>2024-04-25T07:52:45Z</project.build.outputTimestamp>
 
     <!-- Supporting Tech Matrix
     ~ Build-time JDK: 8+, select by developer or ci environment, prefer LTS JDKs
@@ -37,6 +37,14 @@
     <hadoop.version>3.2.1</hadoop.version>
     <sortpom.version>3.4.1</sortpom.version>
     <sort.verifyFail>warn</sort.verifyFail>
+
+    <!-- release, only deploy the tgz archive -->
+    <autoVersionSubmodules>true</autoVersionSubmodules>
+    <tagNameFormat>v@{project.version}</tagNameFormat>
+    <projectVersionPolicyId>SemVerVersionPolicy</projectVersionPolicyId>
+    <reference.repo>mediav-releases</reference.repo>
+    <maven.deploy.skip>true</maven.deploy.skip>
+    <maven.deploy.file.skip>snapshots</maven.deploy.file.skip>
   </properties>
 
   <dependencyManagement>
@@ -158,6 +166,10 @@
           <version>3.1.1</version>
         </plugin>
         <plugin>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>3.1.1</version>
+        </plugin>
+        <plugin>
           <artifactId>maven-clean-plugin</artifactId>
           <version>3.3.2</version>
         </plugin>
@@ -167,7 +179,11 @@
         </plugin>
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.4.0</version>
+          <version>3.4.1</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-artifact-plugin</artifactId>
+          <version>3.5.1</version>
         </plugin>
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
@@ -175,7 +191,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.5.2</version>
+          <version>3.5.3</version>
           <configuration>
             <createDependencyReducedPom>false</createDependencyReducedPom>
             <filters combine.children="append">
@@ -215,12 +231,12 @@
               </filter>
             </filters>
             <transformers combine.children="append">
-              <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"></transformer>
-              <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"></transformer>
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer" />
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer" />
               <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
                 <addHeader>false</addHeader>
               </transformer>
-              <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"></transformer>
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
             </transformers>
           </configuration>
         </plugin>
@@ -228,6 +244,11 @@
           <artifactId>maven-enforcer-plugin</artifactId>
           <version>3.4.1</version>
         </plugin>
+        <plugin>
+          <artifactId>maven-release-plugin</artifactId>
+          <version>3.0.1</version>
+        </plugin>
+
         <plugin>
           <groupId>pl.project13.maven</groupId>
           <artifactId>git-commit-id-plugin</artifactId>
@@ -322,6 +343,17 @@
     <!-- not clear where is the issue function in geelib -->
     <url>https://adgit.src.corp.qihoo.net/deep-learning/hbox/-/issues</url>
   </issueManagement>
+
+  <distributionManagement>
+    <repository>
+      <id>mediav-releases</id>
+      <name>Releases Repository</name>
+      <url>https://maven.corp.mediav.com/nexus/content/repositories/releases</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </distributionManagement>
 
   <profiles>
     <profile>

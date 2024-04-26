@@ -5,7 +5,7 @@
   <parent>
     <groupId>net.qihoo</groupId>
     <artifactId>hbox-parent</artifactId>
-    <version>1.7-SNAPSHOT</version>
+    <version>1.7.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>hbox-core</artifactId>
@@ -161,6 +161,28 @@
               <descriptors>
                 <descriptor>src/main/assembly/assembly.xml</descriptor>
               </descriptors>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>deploy-dist-tgz</id>
+            <goals>
+              <goal>deploy-file</goal>
+            </goals>
+            <phase>deploy</phase>
+            <configuration>
+              <file>${project.build.directory}/hbox-${project.version}-dist.tar.gz</file>
+              <repositoryId>mediav-releases</repositoryId>
+              <url>${project.distributionManagement.repository.url}</url>
+              <groupId>${project.groupId}</groupId>
+              <artifactId>hbox-dist</artifactId>
+              <version>${project.version}</version>
+              <packaging>tar.gz</packaging>
             </configuration>
           </execution>
         </executions>
