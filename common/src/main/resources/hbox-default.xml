@@ -118,7 +118,7 @@
     </property>
     <property>
         <name>hbox.container.auto.create.output.dir</name>
-        <value>true</value>
+        <value>false</value>
     </property>
     <property>
         <name>hbox.container.maxFailures.rate</name>

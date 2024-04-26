@@ -16,6 +16,7 @@ import net.qihoo.hbox.webapp.ApplicationWebService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -1589,9 +1590,34 @@ public class ApplicationMaster extends CompositeService {
         File mpiExec = new File(mpiExecDir);
         pb.directory(mpiExec);
 
+        // Prepare for environment variable for mpiexec
         pb.environment().put("PWD", mpiExecDir);
         pb.environment().put("LD_LIBRARY_PATH", ldLibraryPath.toString());
         pb.environment().put("PATH", System.getenv("PATH"));
+
+        // MPI related options
+        // bind-to none option
+        pb.environment().put("OMPI_MCA_hwloc_base_binding_policy", "none");
+        // -mca plm_rsh_agent /bin/echo
+        pb.environment().put("OMPI_MCA_plm_rsh_agent", "/bin/echo");
+        // -mca plm_base_verbose 1
+        pb.environment().put("OMPI_MCA_plm_base_verbose", "1");
+        // --oversubscribe
+        pb.environment().put("OMPI_MCA_rmaps_base_oversubscribe", "1");
+        // --pernode
+        pb.environment().put("OMPI_MCA_rmaps_ppr_pernode", "1");
+
+        if(conf.get(HboxConfiguration.HBOX_MPI_EXTRA_OPTIONS) != null){
+            String extraOptionStr = conf.get(HboxConfiguration.HBOX_MPI_EXTRA_OPTIONS);
+            for(String extraOption: extraOptionStr.split(",")){
+                String[] optionMap = extraOption.split("=");
+                if(optionMap.length == 2){
+                    pb.environment().put(optionMap[0], optionMap[1]);
+                } else {
+                    LOG.warn("[Warning] Invalid hbox.mpi.extra.options for " + extraOption);
+                }
+            }
+        }
 
         mpiExecProcess = pb.start();
 
@@ -1636,7 +1662,8 @@ public class ApplicationMaster extends CompositeService {
 
     /**
      * Extract orted command from mpiexec
-     * For openmpi-1.4.5 version, sample command syntax is "command: /usr/local/openmpinossh/bin/orted --daemonize -mca ess env -mca orte_ess_jobid "<jobid>" -mca orte_ess_vpid <template> -mca orte_ess_num_procs 31 --hnp-uri "<jobid>.0;tcp://xx.xx.xx.xx:xxxx" "
+     * With option -mca plm_rsh_agent /bin/echo -mca plm_base_verbose 1
+     * For openmpinossh version, sample command syntax is "command:-mca ess env -mca orte_ess_jobid "<jobid>" -mca orte_ess_vpid <template> -mca orte_ess_num_procs 31 --hnp-uri "<jobid>.0;tcp://xx.xx.xx.xx:xxxx"
      * For openmpi-3.1.4 version, sample command syntax is "/usr/bin/ssh <template>  orted -mca ess "env" -mca ess_base_jobid "<jobid>" -mca ess_base_vpid "<template>" -mca ess_base_num_procs "2" -mca orte_node_regex "qt[x:x,x]ss@0(2)" -mca orte_hnp_uri "<jobid>.0;tcp://xx.xx.xx.xx:xxxx" -mca plm_base_verbose "1" -mca plm "rsh" -mca pmix "^s1,s2,cray,isolated""
      * @param mpiExecOutput
      * @return
@@ -1646,9 +1673,10 @@ public class ApplicationMaster extends CompositeService {
             LOG.info("Container mpi Command " + mpiExecOutput);
             appendMessage(new Message(LogType.STDERR, mpiExecOutput));
             if (mpiExecOutput.startsWith("command")) {
-                mpiContainerCommand = mpiExecOutput.replaceFirst("command:", "").replace("--daemonize","");
+                // add orted prefix
+                mpiContainerCommand = "orted " + mpiExecOutput.replaceFirst("command:", "").replace("--daemonize","");
             } else {
-                int commandStartIndex = mpiExecOutput.indexOf("orted");
+                int commandStartIndex = mpiExecOutput.indexOf("orted -mca");
                 mpiContainerCommand = mpiExecOutput.substring(commandStartIndex);
             }
             if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
@@ -1667,7 +1695,10 @@ public class ApplicationMaster extends CompositeService {
      * @return
      */
     private static String wrapHboxCommand(String command) {
-        return String.format("exec 1>> %s 2>> %s && %s", MPIConstants.MPI_STD_OUT_FILE, MPIConstants.MPI_STD_ERR_FILE, command);
+
+//        return String.format("exec 1>> %s 2>> %s ; %s", MPIConstants.MPI_STD_OUT_FILE, MPIConstants.MPI_STD_ERR_FILE, "{" + command.replace(" ", ",").replace("\n", ",") + "}");
+//        return String.format("exec 1>> %s 2>> %s && %s", MPIConstants.MPI_STD_OUT_FILE, MPIConstants.MPI_STD_ERR_FILE, command.replace("\n", " "));
+        return String.format("exec 1>> %s 2>> %s && %s", MPIConstants.MPI_STD_OUT_FILE, MPIConstants.MPI_STD_ERR_FILE, command.replace("\n", " "));
     }
 
     //read user horovod config parameter

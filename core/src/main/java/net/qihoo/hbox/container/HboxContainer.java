@@ -1148,10 +1148,15 @@ public class HboxContainer {
         } else if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
             command =  envs.get(HboxConstants.Environment.CONTAINER_COMMAND.toString()).replaceAll("#", "\"");
 
-            // If command not starts with absolute path, should add HBOX_CACHED_MPI_PACKAGE_ALIAS prefix to command
-            if (!command.startsWith("/")
-                    && conf.getBoolean(HboxConfiguration.HBOX_USE_CACHED_MPI_PACKAGE, HboxConfiguration.DEFAULT_HBOX_USE_CACHED_MPI_PACKAGE)) {
-                String mpiInstallDir = envs.get(ApplicationConstants.Environment.PWD.name()) + File.separator + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_ALIAS);
+            String mpiInstallDir = "";
+            if (conf.getBoolean(HboxConfiguration.HBOX_USE_CACHED_MPI_PACKAGE, HboxConfiguration.DEFAULT_HBOX_USE_CACHED_MPI_PACKAGE)) {
+                mpiInstallDir = envs.get("PWD") + File.separator + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_ALIAS);
+            } else if (conf.getBoolean(HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR_ENABLE)) {
+                mpiInstallDir = conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR);
+            }
+
+            // If command not starts with absolute path, should add mpiInstallDir prefix to command
+            if (!command.startsWith("/")) {
                 command = mpiInstallDir + "/bin/" + command;
             }
 

@@ -623,4 +623,6 @@ public class HboxConfiguration extends YarnConfiguration {
 
     public static final String HBOX_CACHED_MPI_PACKAGE_PATH = "hbox.cached.mpi.package.path";
     public static final String HBOX_CACHED_MPI_PACKAGE_ALIAS = "hbox.cached.mpi.package.alias";
+
+    public static final String HBOX_MPI_EXTRA_OPTIONS = "hbox.mpi.extra.options";
 }

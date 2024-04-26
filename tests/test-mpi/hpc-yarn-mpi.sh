@@ -12,7 +12,6 @@ submit_opts+=(--app-type  "TENSORNET")
 submit_opts+=(--worker-num 2)
 submit_opts+=(--worker-cores 2)
 submit_opts+=(--worker-memory 8G)
-submit_opts+=(--jars "$HBOX_HOME/lib/hbox-web-1.7-SNAPSHOT.jar,$HBOX_HOME/lib/hbox-common-1.7-SNAPSHOT.jar")
 
 if [[ ${USE_LOCAL_MPI-} == true ]]; then
   submit_opts+=(--conf hbox.use.cached.mpi.package=false)
