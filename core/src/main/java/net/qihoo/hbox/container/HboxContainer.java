@@ -672,6 +672,37 @@ public class HboxContainer {
         }
     }
 
+    private void linkLogFiles() {
+        try {
+            linkLogFile(MPIConstants.MPI_STD_ERR_FILE);
+            linkLogFile(MPIConstants.MPI_STD_OUT_FILE);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * create a link of logfile under mpi working dir target to container log dir
+     * @param logFile
+     */
+    private void linkLogFile(String logFile) throws IOException {
+        java.nio.file.Path targetPath = Paths.get(envs.get(HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR.toString()), logFile);
+        File targetFile = new File(targetPath.toString());
+
+        if(targetFile.exists()){
+            targetFile.delete();
+        }
+        targetFile.createNewFile();
+
+        java.nio.file.Path linkPath = Paths.get(this.mpiAppDir, logFile);
+        File linkfile = new File(linkPath.toString());
+        if (linkfile.exists()) {
+            linkfile.delete();
+        }
+        Files.createSymbolicLink(linkPath, targetPath);
+        LOG.info("create Symlink " + linkPath + " -> " + targetPath);
+    }
+
     /**
      * build reLinksFiles for cacheFiles and cacheArchives for mpi app
      */
@@ -749,6 +780,7 @@ public class HboxContainer {
         }
 
         if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
+            linkLogFiles();
             reLinksFiles();
         }
 
@@ -999,14 +1031,18 @@ public class HboxContainer {
                 ldLibraryPath.append(mpiExtraLdLibraryPath);
                 LOG.info("add " + ldLibraryPath + " to LD_LIBRARY_PATH");
             }
-            if (conf.getBoolean(HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR_ENABLE)) {
-                String mpiInstallDir = conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR);
+
+            if (conf.getBoolean(HboxConfiguration.HBOX_USE_CACHED_MPI_PACKAGE, HboxConfiguration.DEFAULT_HBOX_USE_CACHED_MPI_PACKAGE)) {
+                String mpiInstallDir = envs.get(ApplicationConstants.Environment.PWD.name()) + File.separator + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_ALIAS);
                 ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib");
-                java.nio.file.Path absolutePath = Paths.get(mpiInstallDir).toAbsolutePath();
-                envList.add("OPAL_PREFIX=" + absolutePath);
+                envList.add("OPAL_PREFIX=" + mpiInstallDir);
                 // for rsh agent, will use $HOME as working dir
                 envList.add("HOME=" + this.mpiAppDir);
+            } else if (conf.getBoolean(HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR_ENABLE)) {
+                String mpiInstallDir = conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR);
+                ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib");
             }
+
             ldLibraryPath.append(":" + System.getenv("LD_LIBRARY_PATH"));
             envList.add("PATH=" + System.getenv("PATH"));
             envList.add("PWD=" + this.mpiAppDir);
@@ -1112,10 +1148,10 @@ public class HboxContainer {
         } else if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
             command =  envs.get(HboxConstants.Environment.CONTAINER_COMMAND.toString()).replaceAll("#", "\"");
 
-            // If command not starts with absolute path, should add MPI_INSTALL_DIR prefix to command
+            // If command not starts with absolute path, should add HBOX_CACHED_MPI_PACKAGE_ALIAS prefix to command
             if (!command.startsWith("/")
-                    && conf.getBoolean(HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR_ENABLE)) {
-                String mpiInstallDir = conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR);
+                    && conf.getBoolean(HboxConfiguration.HBOX_USE_CACHED_MPI_PACKAGE, HboxConfiguration.DEFAULT_HBOX_USE_CACHED_MPI_PACKAGE)) {
+                String mpiInstallDir = envs.get(ApplicationConstants.Environment.PWD.name()) + File.separator + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_ALIAS);
                 command = mpiInstallDir + "/bin/" + command;
             }
 

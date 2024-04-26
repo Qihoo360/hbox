@@ -5,8 +5,8 @@ import com.google.gson.Gson;
 import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.*;
 import net.qihoo.hbox.common.exceptions.HboxExecException;
-import net.qihoo.hbox.conf.HboxConfiguration2;
 import net.qihoo.hbox.conf.HboxConfiguration;
+import net.qihoo.hbox.conf.HboxConfiguration2;
 import net.qihoo.hbox.container.HboxContainer;
 import net.qihoo.hbox.container.HboxContainerId;
 import net.qihoo.hbox.storage.AmazonS3;
@@ -19,9 +19,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapred.InputSplit;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
@@ -36,7 +38,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.RoundingMode;
-import java.net.*;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.URI;
+import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -347,8 +352,7 @@ public class ApplicationMaster extends CompositeService {
         }
 
         if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
-            Path pwd = new Path(envs.get("PWD"));
-            mpiExecDir = pwd.toString();
+            mpiExecDir = envs.get("PWD");
             if (conf.getBoolean(HboxConfiguration.HBOX_MPI_EXEC_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR_ENABLE)) {
                 mpiExecDir = conf.get(HboxConfiguration.HBOX_MPI_EXEC_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR);
             }
@@ -1545,7 +1549,6 @@ public class ApplicationMaster extends CompositeService {
      */
     private void launchMpiExec() throws IOException {
         LOG.info("Launching mpiexec in Application Master");
-        StringBuilder commandBuilder = new StringBuilder();
         StringBuilder ldLibraryPath = new StringBuilder();
 
         String mpiExtraLdLibraryPath = conf.get(HboxConfiguration.HBOX_MPI_EXTRA_LD_LIBRARY_PATH);
@@ -1553,29 +1556,44 @@ public class ApplicationMaster extends CompositeService {
             ldLibraryPath.append(mpiExtraLdLibraryPath);
             LOG.info("add " + ldLibraryPath + " to LD_LIBRARY_PATH");
         }
-        if (conf.getBoolean(HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR_ENABLE)) {
+
+        ProcessBuilder pb = new ProcessBuilder();
+        String mpiExecPrefix = "";
+
+        if (conf.getBoolean(HboxConfiguration.HBOX_USE_CACHED_MPI_PACKAGE, HboxConfiguration.DEFAULT_HBOX_USE_CACHED_MPI_PACKAGE)) {
+            String mpiInstallDir = envs.get("PWD") + File.separator + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_ALIAS);
+            mpiExecPrefix = mpiInstallDir + File.separator+ "bin" + File.separator;
+            ldLibraryPath.append(":").append(mpiInstallDir).append(File.separator).append("lib");
+        } else if (conf.getBoolean(HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR_ENABLE)) {
             String mpiInstallDir = conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR);
-            commandBuilder.append(mpiInstallDir).append(File.separator).append("bin").append(File.separator);
+            mpiExecPrefix = mpiInstallDir + File.separator+ "bin" + File.separator;
             ldLibraryPath.append(":").append(mpiInstallDir).append(File.separator).append("lib");
         }
-        commandBuilder.append("mpiexec --host ");
-        ldLibraryPath.append(":").append(System.getenv("LD_LIBRARY_PATH"));
-        for (Container container : acquiredWorkerContainers) {
-            commandBuilder.append(container.getNodeId().getHost()).append(",");
-        }
-        commandBuilder.deleteCharAt(commandBuilder.length() - 1);
-        commandBuilder.append(" ").append(hboxCommand);
 
-        String[] env = new String[]{
-                "PATH=" + System.getenv("PATH"),
-                "PWD=" + mpiExecDir,
-                "LD_LIBRARY_PATH=" + ldLibraryPath.toString()
-        };
+        ldLibraryPath.append(":").append(System.getenv("LD_LIBRARY_PATH"));
+
+        pb.command().add(mpiExecPrefix + "mpiexec");
+        pb.command().add("--host");
+        StringBuilder hostSb = new StringBuilder();
+        for (Container container : acquiredWorkerContainers) {
+            hostSb.append(container.getNodeId().getHost()).append(",");
+        }
+        hostSb.deleteCharAt(hostSb.length() - 1);
+        pb.command().add(hostSb.toString());
+        pb.command().add("/bin/sh");
+        pb.command().add("-xc");
+        pb.command().add(wrapHboxCommand(hboxCommand));
+        // Final command should be $mpiexecbindir/mpiexec --host hostlist /bin/sh -xc 'exec 1>> mpiout 2>> mpierr && hboxCommand'
+        LOG.info("Executing mpi exec command: " + pb.command().toString());
 
         File mpiExec = new File(mpiExecDir);
-        LOG.info("Executing mpi exec command: " + commandBuilder.toString());
-        LOG.info("Mpi exec Process run in: " + mpiExec.toString());
-        mpiExecProcess = processLaunch.exec(commandBuilder.toString(), env, this.envs, mpiExec);
+        pb.directory(mpiExec);
+
+        pb.environment().put("PWD", mpiExecDir);
+        pb.environment().put("LD_LIBRARY_PATH", ldLibraryPath.toString());
+        pb.environment().put("PATH", System.getenv("PATH"));
+
+        mpiExecProcess = pb.start();
 
         Thread stdinThread = new Thread(new Runnable() {
             @Override
@@ -1585,17 +1603,7 @@ public class ApplicationMaster extends CompositeService {
                     reader = new BufferedReader(new InputStreamReader(mpiExecProcess.getInputStream()));
                     String mpiExecOutput;
                     while ((mpiExecOutput = reader.readLine()) != null) {
-                        if (mpiExecOutput.contains("<template>")) {
-                            LOG.info("Container mpi Command " + mpiExecOutput);
-                            appendMessage(new Message(LogType.STDERR, mpiExecOutput));
-                            mpiContainerCommand = extractMpiCommand(mpiExecOutput);
-                            if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
-                                amContainerStdOut.append(mpiExecOutput);
-                            }
-                        } else {
-                            LOG.info(mpiExecOutput);
-                            appendMessage(new Message(LogType.STDOUT, mpiExecOutput));
-                        }
+                        processMpiExecOutput(mpiExecOutput);
                     }
                 } catch (Exception e) {
                     LOG.warn("Error in mpi exec process stdinThread");
@@ -1628,25 +1636,38 @@ public class ApplicationMaster extends CompositeService {
 
     /**
      * Extract orted command from mpiexec
-     * For openmpi-1.4.5 version, sample command syntax is "orted --daemonize -mca ess env -mca orte_ess_jobid "<jobid>" -mca orte_ess_vpid <template> -mca orte_ess_num_procs 31 --hnp-uri "<jobid>.0;tcp://xx.xx.xx.xx:xxxx" "
+     * For openmpi-1.4.5 version, sample command syntax is "command: /usr/local/openmpinossh/bin/orted --daemonize -mca ess env -mca orte_ess_jobid "<jobid>" -mca orte_ess_vpid <template> -mca orte_ess_num_procs 31 --hnp-uri "<jobid>.0;tcp://xx.xx.xx.xx:xxxx" "
      * For openmpi-3.1.4 version, sample command syntax is "/usr/bin/ssh <template>  orted -mca ess "env" -mca ess_base_jobid "<jobid>" -mca ess_base_vpid "<template>" -mca ess_base_num_procs "2" -mca orte_node_regex "qt[x:x,x]ss@0(2)" -mca orte_hnp_uri "<jobid>.0;tcp://xx.xx.xx.xx:xxxx" -mca plm_base_verbose "1" -mca plm "rsh" -mca pmix "^s1,s2,cray,isolated""
-     * @param input
+     * @param mpiExecOutput
      * @return
      */
-    private static String extractMpiCommand(String input){
+    private void processMpiExecOutput(String mpiExecOutput) {
+        if (mpiExecOutput.startsWith("command") || mpiExecOutput.contains("<template>")) {
+            LOG.info("Container mpi Command " + mpiExecOutput);
+            appendMessage(new Message(LogType.STDERR, mpiExecOutput));
+            if (mpiExecOutput.startsWith("command")) {
+                mpiContainerCommand = mpiExecOutput.replaceFirst("command:", "").replace("--daemonize","");
+            } else {
+                int commandStartIndex = mpiExecOutput.indexOf("orted");
+                mpiContainerCommand = mpiExecOutput.substring(commandStartIndex);
+            }
+            if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                amContainerStdOut.append(mpiExecOutput);
+            }
+        }  else {
+            LOG.info(mpiExecOutput);
+            appendMessage(new Message(LogType.STDOUT, mpiExecOutput));
+        }
+    }
 
-        int commandStartIndex = input.indexOf("orted");
-        String rawCommand = input.substring(commandStartIndex);
-
-        // 生成新的字符串
-        String replacedString = rawCommand.replace("--daemonize","");
-
-        // 输出结果
-        LOG.info("Original String: " + rawCommand);
-        LOG.info("Replaced String: " + replacedString);
-
-        return replacedString;
-
+    /**
+     * Add redirection before MPI COMMAND. To avoid all log info redirected to mpiexec master.
+     * {@link MPIConstants.MPI_STD_OUT_FILE} and {@link MPIConstants.MPI_STD_ERR_FILE} will be created as soft link under container working dir, linking to container log dir
+     * @param command
+     * @return
+     */
+    private static String wrapHboxCommand(String command) {
+        return String.format("exec 1>> %s 2>> %s && %s", MPIConstants.MPI_STD_OUT_FILE, MPIConstants.MPI_STD_ERR_FILE, command);
     }
 
     //read user horovod config parameter

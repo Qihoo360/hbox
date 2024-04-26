@@ -656,6 +656,16 @@ public class Client {
     }
 
     private void assignCacheArchives() throws IOException {
+
+        // append cached mpi package to cacheArchive list
+        if (conf.getBoolean(HboxConfiguration.HBOX_USE_CACHED_MPI_PACKAGE, HboxConfiguration.DEFAULT_HBOX_USE_CACHED_MPI_PACKAGE)){
+            if(conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH) != null && conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_ALIAS) != null){
+                clientArguments.hboxCacheArchives = clientArguments.hboxCacheArchives + "," + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH) + "#" + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_ALIAS);
+            } else {
+                LOG.warn(String.format("[Warning] %s is set to true but %s or %s is not set", HboxConfiguration.HBOX_USE_CACHED_MPI_PACKAGE, HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH, HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_ALIAS));
+            }
+        }
+
         if (conf.getBoolean(HboxConfiguration.HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE, HboxConfiguration.DEFAULT_HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE))
             convertHdfsCommonCacheArchive();
         String[] cacheArchives = StringUtils.split(clientArguments.hboxCacheArchives, ",");
