@@ -39,6 +39,10 @@ public interface HboxConstants {
 
     String S3 = "s3";
 
+    String MPI_STD_ERR_FILE = "mpierr";
+
+    String MPI_STD_OUT_FILE = "mpiout";
+
     enum Environment {
         HADOOP_USER_NAME("HADOOP_USER_NAME"),
 

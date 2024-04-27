@@ -163,13 +163,16 @@ public class ApplicationMaster extends CompositeService {
     private String schedulerContainerId;
     private int outputIndex;
 
+    private String[] extraArgList;
+
     /**
      * Constructor, connect to Resource Manager
      *
      * @throws IOException
      */
-    private ApplicationMaster() {
+    private ApplicationMaster(String[] extraArgList) {
         super(ApplicationMaster.class.getName());
+        this.extraArgList = extraArgList;
         conf = new HboxConfiguration();
         conf.addResource(new Path(HboxConstants.HBOX_JOB_CONFIGURATION));
         outputInfos = new ArrayList<>();
@@ -1583,8 +1586,13 @@ public class ApplicationMaster extends CompositeService {
         pb.command().add(hostSb.toString());
         pb.command().add("/bin/sh");
         pb.command().add("-xc");
-        pb.command().add(wrapHboxCommand(hboxCommand));
-        // Final command should be $mpiexecbindir/mpiexec --host hostlist /bin/sh -xc 'exec 1>> mpiout 2>> mpierr && hboxCommand'
+        pb.command().add(String.format("exec \"$@\" 1>>%s 2>>%s", HboxConstants.MPI_STD_OUT_FILE, HboxConstants.MPI_STD_ERR_FILE));
+        pb.command().add("--");
+
+        for(String comm: this.extraArgList){
+            pb.command().add(comm);
+        }
+
         LOG.info("Executing mpi exec command: " + pb.command().toString());
 
         File mpiExec = new File(mpiExecDir);
@@ -1690,7 +1698,7 @@ public class ApplicationMaster extends CompositeService {
 
     /**
      * Add redirection before MPI COMMAND. To avoid all log info redirected to mpiexec master.
-     * {@link MPIConstants.MPI_STD_OUT_FILE} and {@link MPIConstants.MPI_STD_ERR_FILE} will be created as soft link under container working dir, linking to container log dir
+     * {@link HboxConstants.MPI_STD_OUT_FILE} and {@link HboxConstants.MPI_STD_ERR_FILE} will be created as soft link under container working dir, linking to container log dir
      * @param command
      * @return
      */
@@ -1698,7 +1706,7 @@ public class ApplicationMaster extends CompositeService {
 
 //        return String.format("exec 1>> %s 2>> %s ; %s", MPIConstants.MPI_STD_OUT_FILE, MPIConstants.MPI_STD_ERR_FILE, "{" + command.replace(" ", ",").replace("\n", ",") + "}");
 //        return String.format("exec 1>> %s 2>> %s && %s", MPIConstants.MPI_STD_OUT_FILE, MPIConstants.MPI_STD_ERR_FILE, command.replace("\n", " "));
-        return String.format("exec 1>> %s 2>> %s && %s", MPIConstants.MPI_STD_OUT_FILE, MPIConstants.MPI_STD_ERR_FILE, command.replace("\n", " "));
+        return String.format("exec 1>> %s 2>> %s && %s", HboxConstants.MPI_STD_OUT_FILE, HboxConstants.MPI_STD_ERR_FILE, command.replace("\n", " "));
     }
 
     //read user horovod config parameter
@@ -3437,7 +3445,7 @@ public class ApplicationMaster extends CompositeService {
     public static void main(String[] args) {
         ApplicationMaster appMaster;
         try {
-            appMaster = new ApplicationMaster();
+            appMaster = new ApplicationMaster(args);
             appMaster.init();
             if (appMaster.run()) {
                 LOG.info("Application completed successfully.");

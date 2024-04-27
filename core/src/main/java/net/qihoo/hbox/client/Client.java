@@ -938,24 +938,24 @@ public class Client {
     private List<String> prepareLaunchCommandForAM(Map<String, String> appMasterEnv, ApplicationSubmissionContext applicationContext) {
         LOG.info("Building application master launch command");
         int driverMem = conf.getInt(HboxConfiguration.HBOX_DRIVER_MEMORY, HboxConfiguration.DEFAULT_HBOX_DRIVER_MEMORY);
-        List<String> appMasterArgs = new ArrayList<>(20);
-        appMasterArgs.add("${JAVA_HOME}" + "/bin/java");
-        appMasterArgs.add("-Xms" + Math.min(driverMem, maxContainerMem) + "m");
-        appMasterArgs.add("-Xmx" + Math.min(driverMem, maxContainerMem) + "m");
-        appMasterArgs.add(ApplicationMaster.class.getName());
-        appMasterArgs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
-                + "/" + ApplicationConstants.STDOUT);
-        appMasterArgs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
-                + "/" + ApplicationConstants.STDERR);
 
-        StringBuilder command = new StringBuilder();
-        for (String arg : appMasterArgs) {
-            command.append(arg).append(" ");
+        List<String> appMasterLaunchcommands = new ArrayList<>();
+        appMasterLaunchcommands.add("${JAVA_HOME}" + "/bin/java");
+        appMasterLaunchcommands.add("-Xms" + Math.min(driverMem, maxContainerMem) + "m");
+        appMasterLaunchcommands.add("-Xmx" + Math.min(driverMem, maxContainerMem) + "m");
+        appMasterLaunchcommands.add(ApplicationMaster.class.getName());
+
+        for(String arg: clientArguments.extraArgLists){
+            appMasterLaunchcommands.add(arg);
         }
 
-        LOG.info("Application master launch command: " + command.toString());
-        List<String> appMasterLaunchcommands = new ArrayList<>();
-        appMasterLaunchcommands.add(command.toString());
+        appMasterLaunchcommands.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
+                + "/" + ApplicationConstants.STDOUT);
+        appMasterLaunchcommands.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
+                + "/" + ApplicationConstants.STDERR);
+
+        LOG.info("Application master launch command: " + appMasterLaunchcommands.toString());
+
         Resource capability = Records.newRecord(Resource.class);
         int overHeadMem = (int) Math.max(driverMem * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
                 conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
@@ -1012,15 +1012,15 @@ public class Client {
         appMasterEnv.put(HboxConstants.Environment.HBOX_STAGING_LOCATION.toString(), Utilities
                 .getRemotePath(conf, applicationId, "").toString());
 
-        if (!clientArguments.appType.equals("VPC") && !clientArguments.appType.equals("DIGITS")) {
-            if (clientArguments.hboxCmd != null && !clientArguments.hboxCmd.equals("")) {
-                appMasterEnv.put(HboxConstants.Environment.HBOX_EXEC_CMD.toString(), clientArguments.hboxCmd);
-            } else if (clientArguments.launchCmd != null && !clientArguments.launchCmd.equals("")) {
-                appMasterEnv.put(HboxConstants.Environment.HBOX_EXEC_CMD.toString(), clientArguments.launchCmd);
-            } else {
-                throw new IllegalArgumentException("Invalid hbox cmd for the application");
-            }
-        }
+//        if (!clientArguments.appType.equals("VPC") && !clientArguments.appType.equals("DIGITS")) {
+//            if (clientArguments.hboxCmd != null && !clientArguments.hboxCmd.equals("")) {
+//                appMasterEnv.put(HboxConstants.Environment.HBOX_EXEC_CMD.toString(), clientArguments.hboxCmd);
+//            } else if (clientArguments.launchCmd != null && !clientArguments.launchCmd.equals("")) {
+//                appMasterEnv.put(HboxConstants.Environment.HBOX_EXEC_CMD.toString(), clientArguments.launchCmd);
+//            } else {
+//                throw new IllegalArgumentException("Invalid hbox cmd for the application");
+//            }
+//        }
         //HBOX specific one worker to upload output dir
         if (clientArguments.outputIndex >= 0) {
             appMasterEnv.put(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString(), String.valueOf(clientArguments.outputIndex));

@@ -68,10 +68,15 @@ class ClientArguments {
     public Boolean tfEvaluator;
     Properties confs;
     int outputIndex;
+    public String[] extraArgLists;
 
     public ClientArguments(String[] args) throws IOException, ParseException, ClassNotFoundException {
         this.init();
-        this.cliParser(args);
+        this.extraArgLists = this.cliParser(args);
+
+        if(extraArgLists == null || extraArgLists.length == 0){
+            throw new IllegalArgumentException("No Hbox Command found. use position arguments: hbox-submit [options] command args...");
+        }
     }
 
     private void init() {
@@ -168,8 +173,8 @@ class ClientArguments {
         allOptions.addOption("jars", "jars", true,
                 "Location of the hbox lib jars used in container");
 
-        allOptions.addOption("hboxCmd", "hbox-cmd", true, "Cmd for hbox program");
-        allOptions.addOption("launchCmd", "launch-cmd", true, "Cmd for hbox program");
+        allOptions.addOption("hboxCmd", "hbox-cmd", true, "(Deprecated) Cmd for hbox program, use position arguments: hbox-submit [options] command args...");
+        allOptions.addOption("launchCmd", "launch-cmd", true, "(Deprecated) Cmd for hbox program, use position arguments: hbox-submit [options] command args...");
         allOptions.addOption("userPath", "user-path", true,
                 "add the user set PATH");
         allOptions.addOption("cacheFile", "cacheFile", true,
@@ -280,7 +285,7 @@ class ClientArguments {
 
     }
 
-    private void cliParser(String[] args) throws ParseException, IOException, ClassNotFoundException {
+    private String[] cliParser(String[] args) throws ParseException, IOException, ClassNotFoundException {
         CommandLine cliParser = new BasicParser().parse(allOptions, args);
         if (cliParser.getOptions().length == 0 || cliParser.hasOption("help")) {
             printUsage(allOptions);
@@ -534,6 +539,8 @@ class ClientArguments {
         }
         appMasterJar = JobConf.findContainingJar(ApplicationMaster.class);
         LOG.info("Application Master's jar is " + appMasterJar);
+
+        return cliParser.getArgs();
     }
 
     private void printUsage(Options opts) {

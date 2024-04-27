@@ -674,8 +674,8 @@ public class HboxContainer {
 
     private void linkLogFiles() {
         try {
-            linkLogFile(MPIConstants.MPI_STD_ERR_FILE);
-            linkLogFile(MPIConstants.MPI_STD_OUT_FILE);
+            linkLogFile(HboxConstants.MPI_STD_ERR_FILE);
+            linkLogFile(HboxConstants.MPI_STD_OUT_FILE);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
