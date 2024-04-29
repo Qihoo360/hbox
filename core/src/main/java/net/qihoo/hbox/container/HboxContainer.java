@@ -720,7 +720,7 @@ public class HboxContainer {
         return Long.toString(pid);
     }
 
-    private Boolean run() throws IOException {
+    private Boolean run(String args[]) throws IOException {
         try {
             if (conf.getBoolean(HboxConfiguration.HBOX_TF_INPUT_PS_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_INPUT_PS_ENABLE)) {
                 prepareInputFiles();
@@ -1068,7 +1068,6 @@ public class HboxContainer {
             }
         }
 
-        String command;
         //String containerType = conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE).toUpperCase();
         if (hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS")) {
             String dockerPort = envs.get("DOCKER_PORT");
@@ -1078,9 +1077,9 @@ public class HboxContainer {
             String duration = this.conf.get(HboxConfiguration.HBOX_VPC_DURATION, HboxConfiguration.DEFAULT_HBOX_VPC_DURATION);
             if (hboxAppType.equals("VPC")) {
                 if (duration.equals("0")) {
-                    command = "sleep 32767d";
+                    args = new String[] { "sleep", "32767d" };
                 } else {
-                    command = "sleep " + duration;
+                    args = new String[] { "sleep", duration };
                 }
             } else {
                 int digitsPort = reservedSocket.getLocalPort();
@@ -1099,10 +1098,8 @@ public class HboxContainer {
                 writer.println(digitsServerCmd);
                 writer.println(digitsSleepCmd);
                 writer.close();
-                command = "sh " + digitsShellname;
+                args = new String[] { "/bin/sh", digitsShellname };
             }
-        } else if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
-            command = envs.get(HboxConstants.Environment.CONTAINER_COMMAND.toString()).replaceAll("#", "\"");
         } else {
             if (containerExecType.equals("DOCKER")) {
                 String dockerPort = envs.get("DOCKER_PORT");
@@ -1110,9 +1107,8 @@ public class HboxContainer {
                 String vpcCommandAndPasswd = "root@" + envs.get(ApplicationConstants.Environment.NM_HOST.toString()) + " -p " + dockerPort + ":" + password;
                 amClient.reportVPCCommandAndPasswd(containerId, vpcCommandAndPasswd);
             }
-            command = envs.get(HboxConstants.Environment.HBOX_EXEC_CMD.toString());
         }
-        LOG.info("Executing command: " + command);
+        LOG.info("Executing command: " + String.join(" ", args));
 
         Runtime rt = Runtime.getRuntime();
 
@@ -1123,8 +1119,7 @@ public class HboxContainer {
         if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
             dir = new File(this.mpiAppDir);
         }
-        final Process hboxProcess;
-        hboxProcess = containerLaunch.exec(command, env, envs, dir);
+        final Process hboxProcess = containerLaunch.exec(args, env, envs, dir);
 
         Date now = new Date();
         heartbeatThread.setContainersStartTime(now.toString());
@@ -1667,7 +1662,7 @@ public class HboxContainer {
         HboxContainer container = new HboxContainer();
         try {
             container.init();
-            if (container.run()) {
+            if (container.run(args)) {
                 LOG.info("HboxContainer " + container.getContainerId().toString() + " finish successfully");
                 container.reportSucceededAndExit();
             } else {
