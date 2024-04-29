@@ -1799,6 +1799,7 @@ public class ApplicationMaster extends CompositeService {
             String containerMpiCommand = mpiContainerCommand.replace("<template>", String.valueOf(index));
             LOG.info("Container mpi command is: " + containerMpiCommand);
 
+            containerLaunchcommands = new ArrayList(containerLaunchcommands);
             for (final String arg : containerMpiCommand.split("\\s+")) {
                 // escape for bash -c "..arg.." in launch_container.sh
                 containerLaunchcommands.add(ShellEscapeUtils.escapeContainerLaunch(arg));
