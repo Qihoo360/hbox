@@ -112,8 +112,6 @@ public interface HboxConstants {
 
         HBOX_JOB_CONF_LOCATION("HBOX_JOB_CONF_LOCATION"),
 
-        HBOX_EXEC_CMD("HBOX_EXEC_CMD"),
-
         USER_PATH("USER_PATH"),
 
         HBOX_OUTPUTS("HBOX_OUTPUTS"),
@@ -123,8 +121,6 @@ public interface HboxConstants {
         HBOX_INPUTS("HBOX_INPUTS"),
 
         HBOX_S3_INPUTS("HBOX_S3_INPUTS"),
-
-        CONTAINER_COMMAND("CONTAINER_COMMAND"),
 
         MPI_EXEC_DIR("MPI_EXEC_DIR"),
 

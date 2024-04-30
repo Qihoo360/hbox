@@ -34,8 +34,7 @@ class ClientArguments {
     String duration;
     String[] hboxFiles;
     String[] libJars;
-    String hboxCmd;
-    String launchCmd;
+    String[] hboxCommandArgs;
     String inputStrategy;
     String outputStrategy;
     Properties inputs;
@@ -68,15 +67,10 @@ class ClientArguments {
     public Boolean tfEvaluator;
     Properties confs;
     int outputIndex;
-    public String[] extraArgLists;
 
     public ClientArguments(String[] args) throws IOException, ParseException, ClassNotFoundException {
         this.init();
-        this.extraArgLists = this.cliParser(args);
-
-        if(extraArgLists == null || extraArgLists.length == 0){
-            throw new IllegalArgumentException("No Hbox Command found. use position arguments: hbox-submit [options] command args...");
-        }
+        this.cliParser(args);
     }
 
     private void init() {
@@ -97,8 +91,6 @@ class ClientArguments {
         psNum = HboxConfiguration.DEFAULT_HBOX_PS_NUM;
         hboxFiles = null;
         libJars = null;
-        hboxCmd = "";
-        launchCmd = "";
         hboxCacheFiles = "";
         hboxCacheArchives = "";
         appMasterJar = "";
@@ -285,8 +277,8 @@ class ClientArguments {
 
     }
 
-    private String[] cliParser(String[] args) throws ParseException, IOException, ClassNotFoundException {
-        CommandLine cliParser = new BasicParser().parse(allOptions, args);
+    private void cliParser(String[] args) throws ParseException, IOException, ClassNotFoundException {
+        CommandLine cliParser = new BasicParser().parse(allOptions, args, true);
         if (cliParser.getOptions().length == 0 || cliParser.hasOption("help")) {
             printUsage(allOptions);
             System.exit(0);
@@ -433,11 +425,26 @@ class ClientArguments {
         }
 
         if (cliParser.hasOption("hbox-cmd")) {
-            hboxCmd = cliParser.getOptionValue("hbox-cmd");
+            final String hboxCmd = cliParser.getOptionValue("hbox-cmd");
+            LOG.warn("--hbox-cmd is deprecated, pass user command like: hbox-submit [options] " + hboxCmd);
+            // same parse method with https://docs.oracle.com/javase/8/docs/api/java/util/StringTokenizer.html
+            hboxCommandArgs = hboxCmd.split("\\s+");
         }
 
         if (cliParser.hasOption("launch-cmd")) {
-            launchCmd = cliParser.getOptionValue("launch-cmd");
+            final String launchCmd = cliParser.getOptionValue("launch-cmd");
+            LOG.warn("--launch-cmd is deprecated, pass user command like: hbox-submit [options] " + launchCmd);
+            hboxCommandArgs = launchCmd.split("\\s+");
+        }
+
+        if (null != cliParser.getArgs()) {
+            final String posArgs[] = cliParser.getArgs();
+            if (posArgs.length > 0 && null != hboxCommandArgs) {
+                LOG.warn("the command via --hbox-cmd or --launch-cmd is ignored");
+            }
+            if (posArgs.length > 0) {
+                hboxCommandArgs = posArgs;
+            }
         }
 
         if (cliParser.hasOption("isRenameInputFile")) {
@@ -539,8 +546,6 @@ class ClientArguments {
         }
         appMasterJar = JobConf.findContainingJar(ApplicationMaster.class);
         LOG.info("Application Master's jar is " + appMasterJar);
-
-        return cliParser.getArgs();
     }
 
     private void printUsage(Options opts) {

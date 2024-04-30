@@ -10,11 +10,11 @@ import net.qihoo.hbox.common.exceptions.RequestOverLimitException;
 import net.qihoo.hbox.conf.HboxConfiguration2;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.util.Utilities;
+import net.qihoo.hbox.util.ShellEscapeUtils;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -658,11 +658,17 @@ public class Client {
     private void assignCacheArchives() throws IOException {
 
         // append cached mpi package to cacheArchive list
-        if (conf.getBoolean(HboxConfiguration.HBOX_USE_CACHED_MPI_PACKAGE, HboxConfiguration.DEFAULT_HBOX_USE_CACHED_MPI_PACKAGE)){
-            if(conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH) != null && conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_ALIAS) != null){
-                clientArguments.hboxCacheArchives = clientArguments.hboxCacheArchives + "," + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH) + "#" + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_ALIAS);
+        if (conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH) != null) {
+            String mpiPackagePath = conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH);
+            if(mpiPackagePath.contains("#")){
+                String[] mpiPackagePathArr = mpiPackagePath.split("#");
+                conf.set(HboxConfiguration.HBOX_MPI_INSTALL_DIR, mpiPackagePathArr[1]);
+                clientArguments.hboxCacheArchives = clientArguments.hboxCacheArchives + "," + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH);
             } else {
-                LOG.warn(String.format("[Warning] %s is set to true but %s or %s is not set", HboxConfiguration.HBOX_USE_CACHED_MPI_PACKAGE, HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH, HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_ALIAS));
+                URI uri = URI.create(mpiPackagePath);
+                String fileName = java.nio.file.Paths.get(uri).getFileName().toString();
+                conf.set(HboxConfiguration.HBOX_MPI_INSTALL_DIR, fileName);
+                clientArguments.hboxCacheArchives = clientArguments.hboxCacheArchives + "," + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH) + "#" + fileName;
             }
         }
 
@@ -939,22 +945,20 @@ public class Client {
         LOG.info("Building application master launch command");
         int driverMem = conf.getInt(HboxConfiguration.HBOX_DRIVER_MEMORY, HboxConfiguration.DEFAULT_HBOX_DRIVER_MEMORY);
 
-        List<String> appMasterLaunchcommands = new ArrayList<>();
-        appMasterLaunchcommands.add("${JAVA_HOME}" + "/bin/java");
-        appMasterLaunchcommands.add("-Xms" + Math.min(driverMem, maxContainerMem) + "m");
-        appMasterLaunchcommands.add("-Xmx" + Math.min(driverMem, maxContainerMem) + "m");
-        appMasterLaunchcommands.add(ApplicationMaster.class.getName());
+        List<String> appMasterArgs = new ArrayList<>(20);
+        appMasterArgs.add("exec");
+        appMasterArgs.add(ShellEscapeUtils.escapeInDoubleQuotes("\"${JAVA_HOME}/bin/java\"")); // expand in the inner bash
+        appMasterArgs.add("-Xms" + Math.min(driverMem, maxContainerMem) + "m");
+        appMasterArgs.add("-Xmx" + Math.min(driverMem, maxContainerMem) + "m");
+        appMasterArgs.add(ShellEscapeUtils.escapeContainerLaunch(ApplicationMaster.class.getName()));
 
-        for(String arg: clientArguments.extraArgLists){
-            appMasterLaunchcommands.add(arg);
+        for (final String arg : clientArguments.hboxCommandArgs) {
+            // escape for bash -c "..arg.." in launch_container.sh
+            appMasterArgs.add(ShellEscapeUtils.escapeContainerLaunch(arg));
         }
 
-        appMasterLaunchcommands.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
-                + "/" + ApplicationConstants.STDOUT);
-        appMasterLaunchcommands.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
-                + "/" + ApplicationConstants.STDERR);
-
-        LOG.info("Application master launch command: " + appMasterLaunchcommands.toString());
+        appMasterArgs.add("1>>'" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "'/" + ApplicationConstants.STDOUT);
+        appMasterArgs.add("2>>'" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "'/" + ApplicationConstants.STDERR);
 
         Resource capability = Records.newRecord(Resource.class);
         int overHeadMem = (int) Math.max(driverMem * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
@@ -966,7 +970,9 @@ public class Client {
         applicationContext.setResource(capability);
         appMasterEnv.put("DOCKER_CONTAINER_MEMORY", driverMem + "");
         appMasterEnv.put("DOCKER_CONTAINER_CPU", driverCores + "");
-        return appMasterLaunchcommands;
+
+        LOG.info("Application master launch command: " + String.join(" ", appMasterArgs));
+        return appMasterArgs;
     }
 
     private void prepareOtherEnvsForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
@@ -1012,15 +1018,12 @@ public class Client {
         appMasterEnv.put(HboxConstants.Environment.HBOX_STAGING_LOCATION.toString(), Utilities
                 .getRemotePath(conf, applicationId, "").toString());
 
-//        if (!clientArguments.appType.equals("VPC") && !clientArguments.appType.equals("DIGITS")) {
-//            if (clientArguments.hboxCmd != null && !clientArguments.hboxCmd.equals("")) {
-//                appMasterEnv.put(HboxConstants.Environment.HBOX_EXEC_CMD.toString(), clientArguments.hboxCmd);
-//            } else if (clientArguments.launchCmd != null && !clientArguments.launchCmd.equals("")) {
-//                appMasterEnv.put(HboxConstants.Environment.HBOX_EXEC_CMD.toString(), clientArguments.launchCmd);
-//            } else {
-//                throw new IllegalArgumentException("Invalid hbox cmd for the application");
-//            }
-//        }
+        if (!clientArguments.appType.equals("VPC") && !clientArguments.appType.equals("DIGITS")) {
+            if (null == clientArguments.hboxCommandArgs || 0 == clientArguments.hboxCommandArgs.length) {
+                throw new IllegalArgumentException("No hbox cmd for the application!");
+            }
+        }
+
         //HBOX specific one worker to upload output dir
         if (clientArguments.outputIndex >= 0) {
             appMasterEnv.put(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString(), String.valueOf(clientArguments.outputIndex));
@@ -1119,11 +1122,11 @@ public class Client {
         final String hboxHome = System.getenv("HBOX_HOME");
         final String hboxConf = System.getenv("HBOX_CONF_DIR");
         final String killCmd = null == hboxConf
-            ? String.format("%s/bin/hbox-kill %s", StringEscapeUtils.escapeXSI(hboxHome), StringEscapeUtils.escapeXSI(applicationId.toString()))
-            : String.format("HBOX_CONF_DIR=%s %s/bin/hbox-kill %s", StringEscapeUtils.escapeXSI(hboxConf), StringEscapeUtils.escapeXSI(hboxHome), StringEscapeUtils.escapeXSI(applicationId.toString()));
+            ? String.format("%s/bin/hbox-kill %s", ShellEscapeUtils.escapePlain(hboxHome), ShellEscapeUtils.escapePlain(applicationId.toString()))
+            : String.format("HBOX_CONF_DIR=%s %s/bin/hbox-kill %s", ShellEscapeUtils.escapePlain(hboxConf), ShellEscapeUtils.escapePlain(hboxHome), ShellEscapeUtils.escapePlain(applicationId.toString()));
         final String logsCmd = null == hboxConf
-            ? String.format("%s/bin/hbox-logs %s", StringEscapeUtils.escapeXSI(hboxHome), StringEscapeUtils.escapeXSI(applicationId.toString()))
-            : String.format("HBOX_CONF_DIR=%s %s/bin/hbox-logs -applicationId %s", StringEscapeUtils.escapeXSI(hboxConf), StringEscapeUtils.escapeXSI(hboxHome), StringEscapeUtils.escapeXSI(applicationId.toString()));
+            ? String.format("%s/bin/hbox-logs %s", ShellEscapeUtils.escapePlain(hboxHome), ShellEscapeUtils.escapePlain(applicationId.toString()))
+            : String.format("HBOX_CONF_DIR=%s %s/bin/hbox-logs -applicationId %s", ShellEscapeUtils.escapePlain(hboxConf), ShellEscapeUtils.escapePlain(hboxHome), ShellEscapeUtils.escapePlain(applicationId.toString()));
         LOG.info("To kill this job: " + killCmd);
         LOG.info("To view job logs: " + logsCmd);
 

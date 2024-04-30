@@ -89,15 +89,7 @@
         <value>/home/yarn/software/anaconda3/bin</value>
     </property>
     <property>
-        <name>hbox.use.cached.mpi.package</name>
-        <value>true</value>
-    </property>
-    <property>
         <name>hbox.cached.mpi.package.path</name>
         <value>viewfs://ss-hadoop/user/jiangxinglei/cache/am_mpi_env.tar.gz</value>
-    </property>
-    <property>
-        <name>hbox.cached.mpi.package.alias</name>
-        <value>am_mpi_env</value>
     </property>
 </configuration>

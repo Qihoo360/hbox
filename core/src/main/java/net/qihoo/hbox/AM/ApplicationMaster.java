@@ -11,6 +11,7 @@ import net.qihoo.hbox.container.HboxContainer;
 import net.qihoo.hbox.container.HboxContainerId;
 import net.qihoo.hbox.storage.AmazonS3;
 import net.qihoo.hbox.storage.S3File;
+import net.qihoo.hbox.util.ShellEscapeUtils;
 import net.qihoo.hbox.util.Utilities;
 import net.qihoo.hbox.webapp.ApplicationWebService;
 import org.apache.commons.lang3.StringUtils;
@@ -43,6 +44,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -91,7 +93,7 @@ public class ApplicationMaster extends CompositeService {
     private String appCacheFilesRemoteLocation;
     // location of cacheArchive on HDFS
     private String appCacheArchivesRemoteLocation;
-    private String hboxCommand;
+    final private String[] hboxCommandArgs;
     private String dmlcPsRootUri;
     private int dmlcPsRootPort;
     private String dmlcTrackerUri;
@@ -135,7 +137,7 @@ public class ApplicationMaster extends CompositeService {
 
     private String mpiExecDir;
     private Process mpiExecProcess;
-    private String mpiContainerCommand;
+    private volatile String mpiContainerCommand;
     private StringBuilder reLinkFiles;
     private int mpiExitCode;
 
@@ -170,7 +172,8 @@ public class ApplicationMaster extends CompositeService {
      *
      * @throws IOException
      */
-    private ApplicationMaster(String[] extraArgList) {
+
+    private ApplicationMaster(final String[] args) {
         super(ApplicationMaster.class.getName());
         this.extraArgList = extraArgList;
         conf = new HboxConfiguration();
@@ -342,10 +345,8 @@ public class ApplicationMaster extends CompositeService {
         appConfRemoteLocation = new Path(envs.get(HboxConstants.Environment.HBOX_JOB_CONF_LOCATION.toString()));
         LOG.info("Application conf location: " + appConfRemoteLocation);
 
-        if (envs.containsKey(HboxConstants.Environment.HBOX_EXEC_CMD.toString())) {
-            hboxCommand = envs.get(HboxConstants.Environment.HBOX_EXEC_CMD.toString());
-            LOG.info("Hbox exec command: " + hboxCommand);
-        }
+        hboxCommandArgs = args;
+        LOG.info("Hbox exec command: " + String.join(" ", hboxCommandArgs));
 
         if (envs.containsKey(HboxConstants.Environment.HBOX_APP_TYPE.toString())) {
             hboxAppType = envs.get(HboxConstants.Environment.HBOX_APP_TYPE.toString()).toUpperCase();
@@ -1423,9 +1424,6 @@ public class ApplicationMaster extends CompositeService {
             LOG.info("Docker image name: " + imageName);
         }
 
-        if (!hboxAppType.equals("VPC") && !hboxAppType.equals("DIGITS")) {
-            containerEnv.put(HboxConstants.Environment.HBOX_EXEC_CMD.toString(), hboxCommand);
-        }
         containerEnv.put(HboxConstants.Environment.HBOX_APP_TYPE.toString(), hboxAppType);
         if (hboxAppType.equals("MXNET") && !singleMx) {
             containerEnv.put(HboxConstants.Environment.HBOX_DMLC_WORKER_NUM.toString(), String.valueOf(workerNum));
@@ -1521,31 +1519,36 @@ public class ApplicationMaster extends CompositeService {
     }
 
     private List<String> buildContainerLaunchCommand(final String role, final int containerMemory) {
-        List<String> containerLaunchcommands = new ArrayList<>();
+        List<String> vargs = new ArrayList<>();
         LOG.info("Setting up container command for the role of " + role);
-        Vector<CharSequence> vargs = new Vector<>(10);
         int jvmContainerMem = (int) Math.max(containerMemory * conf.getDouble(HboxConfiguration.HBOX_CONTAINER_JVM_MEMORY_FRACTION, HboxConfiguration.DEFAULT_HBOX_CONTAINER_JVM_MEMORY_FRACTION),
                 conf.getInt(HboxConfiguration.HBOX_CONTAINER_JVM_MEMORY_MINIMUM, HboxConfiguration.DEFAULT_HBOX_CONTAINER_JVM_MEMORY_MINIMUM));
         if (jvmContainerMem > containerMemory)
             jvmContainerMem = containerMemory;
-        vargs.add("${JAVA_HOME}" + "/bin/java");
+        vargs.add("exec");
+        vargs.add(ShellEscapeUtils.escapeInDoubleQuotes("\"${JAVA_HOME}/bin/java\"")); // expand in the inner bash
         vargs.add("-Xmx" + jvmContainerMem + "m");
         vargs.add("-Xms" + jvmContainerMem + "m");
         String javaOpts = conf.get(HboxConfiguration.HBOX_CONTAINER_EXTRA_JAVA_OPTS, HboxConfiguration.DEFAULT_HBOX_CONTAINER_JAVA_OPTS_EXCEPT_MEMORY);
         if (!StringUtils.isBlank(javaOpts)) {
-            vargs.add(javaOpts);
+            vargs.add(ShellEscapeUtils.escapeContainerLaunch(javaOpts)); // java opts should not contain env variables
         }
-        vargs.add(HboxContainer.class.getName());
-        vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/" + ApplicationConstants.STDOUT);
-        vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/" + ApplicationConstants.STDERR);
+        vargs.add(ShellEscapeUtils.escapeContainerLaunch(HboxContainer.class.getName()));
 
-        StringBuilder containerCmd = new StringBuilder();
-        for (CharSequence str : vargs) {
-            containerCmd.append(str).append(" ");
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+            // mpiContainerCommand is appended in launchContainer() after replacing '<template>' with the index
+        } else if (!hboxAppType.equals("VPC") && !hboxAppType.equals("DIGITS")) {
+            for (final String arg : hboxCommandArgs) {
+                // escape for bash -c "..arg.." in launch_container.sh
+                vargs.add(ShellEscapeUtils.escapeContainerLaunch(arg));
+            }
         }
-        containerLaunchcommands.add(containerCmd.toString());
-        LOG.info("Container launch command of the " + role + " role: " + containerLaunchcommands.toString());
-        return containerLaunchcommands;
+
+        vargs.add("1>>'" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "'/" + ApplicationConstants.STDOUT);
+        vargs.add("2>>'" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "'/" + ApplicationConstants.STDERR);
+
+        LOG.info("Container launch command of the " + role + " role: " + String.join(" ", vargs));
+        return vargs;
     }
 
     /**
@@ -1553,81 +1556,81 @@ public class ApplicationMaster extends CompositeService {
      */
     private void launchMpiExec() throws IOException {
         LOG.info("Launching mpiexec in Application Master");
-        StringBuilder ldLibraryPath = new StringBuilder();
 
-        String mpiExtraLdLibraryPath = conf.get(HboxConfiguration.HBOX_MPI_EXTRA_LD_LIBRARY_PATH);
+        final List<String> mpiexecArgs = new ArrayList<>(20);
+        final StringBuilder mpiexec = new StringBuilder();
+        final StringBuilder nodes = new StringBuilder();
+        final StringBuilder ldLibraryPath = new StringBuilder();
+        final String mpiExtraLdLibraryPath = conf.get(HboxConfiguration.HBOX_MPI_EXTRA_LD_LIBRARY_PATH);
+
         if (mpiExtraLdLibraryPath != null) {
             ldLibraryPath.append(mpiExtraLdLibraryPath);
             LOG.info("add " + ldLibraryPath + " to LD_LIBRARY_PATH");
         }
 
-        ProcessBuilder pb = new ProcessBuilder();
-        String mpiExecPrefix = "";
+        String mpiInstallDir = Paths.get(conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR)).toAbsolutePath().toString();
+        ldLibraryPath.append(":").append(mpiInstallDir).append(File.separator).append("lib");
 
-        if (conf.getBoolean(HboxConfiguration.HBOX_USE_CACHED_MPI_PACKAGE, HboxConfiguration.DEFAULT_HBOX_USE_CACHED_MPI_PACKAGE)) {
-            String mpiInstallDir = envs.get("PWD") + File.separator + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_ALIAS);
-            mpiExecPrefix = mpiInstallDir + File.separator+ "bin" + File.separator;
-            ldLibraryPath.append(":").append(mpiInstallDir).append(File.separator).append("lib");
-        } else if (conf.getBoolean(HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR_ENABLE)) {
-            String mpiInstallDir = conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR);
-            mpiExecPrefix = mpiInstallDir + File.separator+ "bin" + File.separator;
-            ldLibraryPath.append(":").append(mpiInstallDir).append(File.separator).append("lib");
+        mpiexec.append(mpiInstallDir).append(File.separator).append("bin").append(File.separator);
+        mpiexec.append("mpiexec");
+        mpiexecArgs.add(mpiexec.toString());
+        mpiexecArgs.add("--host");
+        for (Container container : acquiredWorkerContainers) {
+            nodes.append(container.getNodeId().getHost()).append(",");
+        }
+        nodes.deleteCharAt(nodes.length() - 1);
+        mpiexecArgs.add(nodes.toString());
+
+        // mpiexecArgs is run directly on AM(not by a shell), so no escaping is needed.
+        // The user command appended is transfered to from mpiexec to the orted process on the work
+        // container as an argv array. To redirect stdout/stderr of the user command as a subprocess
+        // of orted, we can insert a shell like this:
+        //   /bin/sh -xc 'exec "$@" 1>>stdout 2>>stderr' -- hboxCommandArgs
+        // The command is not processed by yarn nm service, so <LOG_DIR> cannot be replaced by yarn.
+        // This command is also executed directly by execv syscall, so add them here as raw string:
+        mpiexecArgs.add("/bin/sh");
+        mpiexecArgs.add("-xc");
+        mpiexecArgs.add(String.format("exec \"$@\" 1>>%s 2>>%s", HboxConstants.MPI_STD_ERR_FILE, HboxConstants.MPI_STD_OUT_FILE)); // envs are expanded by /bin/sh
+        mpiexecArgs.add("--");
+        for (final String arg : hboxCommandArgs) {
+            mpiexecArgs.add(arg);
         }
 
         ldLibraryPath.append(":").append(System.getenv("LD_LIBRARY_PATH"));
 
-        pb.command().add(mpiExecPrefix + "mpiexec");
-        pb.command().add("--host");
-        StringBuilder hostSb = new StringBuilder();
-        for (Container container : acquiredWorkerContainers) {
-            hostSb.append(container.getNodeId().getHost()).append(",");
-        }
-        hostSb.deleteCharAt(hostSb.length() - 1);
-        pb.command().add(hostSb.toString());
-        pb.command().add("/bin/sh");
-        pb.command().add("-xc");
-        pb.command().add(String.format("exec \"$@\" 1>>%s 2>>%s", HboxConstants.MPI_STD_OUT_FILE, HboxConstants.MPI_STD_ERR_FILE));
-        pb.command().add("--");
+        List<String> envLists = new ArrayList<>();
 
-        for(String comm: this.extraArgList){
-            pb.command().add(comm);
-        }
-
-        LOG.info("Executing mpi exec command: " + pb.command().toString());
-
-        File mpiExec = new File(mpiExecDir);
-        pb.directory(mpiExec);
-
-        // Prepare for environment variable for mpiexec
-        pb.environment().put("PWD", mpiExecDir);
-        pb.environment().put("LD_LIBRARY_PATH", ldLibraryPath.toString());
-        pb.environment().put("PATH", System.getenv("PATH"));
+        envLists.add("PATH=" + System.getenv("PATH"));
+        envLists.add("PWD=" + mpiExecDir);
+        envLists.add("LD_LIBRARY_PATH=" + ldLibraryPath.toString());
 
         // MPI related options
         // bind-to none option
-        pb.environment().put("OMPI_MCA_hwloc_base_binding_policy", "none");
+        envLists.add("OMPI_MCA_hwloc_base_binding_policy=none");
         // -mca plm_rsh_agent /bin/echo
-        pb.environment().put("OMPI_MCA_plm_rsh_agent", "/bin/echo");
+        envLists.add("OMPI_MCA_plm_rsh_agent=/bin/echo");
         // -mca plm_base_verbose 1
-        pb.environment().put("OMPI_MCA_plm_base_verbose", "1");
+        envLists.add("OMPI_MCA_plm_base_verbose=1");
         // --oversubscribe
-        pb.environment().put("OMPI_MCA_rmaps_base_oversubscribe", "1");
+        envLists.add("OMPI_MCA_rmaps_base_oversubscribe=1");
         // --pernode
-        pb.environment().put("OMPI_MCA_rmaps_ppr_pernode", "1");
+        envLists.add("OMPI_MCA_rmaps_ppr_pernode=1");
 
         if(conf.get(HboxConfiguration.HBOX_MPI_EXTRA_OPTIONS) != null){
             String extraOptionStr = conf.get(HboxConfiguration.HBOX_MPI_EXTRA_OPTIONS);
             for(String extraOption: extraOptionStr.split(",")){
                 String[] optionMap = extraOption.split("=");
                 if(optionMap.length == 2){
-                    pb.environment().put(optionMap[0], optionMap[1]);
+                    envLists.add(extraOption);
                 } else {
                     LOG.warn("[Warning] Invalid hbox.mpi.extra.options for " + extraOption);
                 }
             }
         }
 
-        mpiExecProcess = pb.start();
+        LOG.info("Executing mpi exec command: " + String.join(" ", mpiexecArgs));
+        LOG.info("Mpi exec Process run in: " + mpiExecDir);
+        mpiExecProcess = processLaunch.exec(mpiexecArgs.toArray(new String[0]), envLists.toArray(new String[envLists.size()]), this.envs, new File(mpiExecDir));
 
         Thread stdinThread = new Thread(new Runnable() {
             @Override
@@ -1768,7 +1771,7 @@ public class ApplicationMaster extends CompositeService {
         else
             commandBuilder.append(" ").append(readHorovodConfig()).append(" ");
         commandBuilder.append("-bind-to none -map-by slot -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH -mca pml ob1 -mca btl ^openib -mca btl_tcp_if_include \"10.0.0.0/8\" ");
-        commandBuilder.append(hboxCommand);
+        commandBuilder.append(String.join(" ", hboxCommandArgs));
 
         List<String> env = new ArrayList<>(20);
         Map<String, String> userEnv = new HashMap<>();
@@ -1856,14 +1859,18 @@ public class ApplicationMaster extends CompositeService {
                                  Map<String, String> containerEnv,
                                  List<String> containerLaunchcommands,
                                  Container container, int index) throws IOException {
-        LOG.info("Setting up launch context for containerid="
-                + container.getId());
-        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
-            String containerMpiCommand = mpiContainerCommand.replace("<template>",
-                    String.valueOf(index)).replaceAll("\"", "#");
+        LOG.info("Setting up launch context for containerid=" + container.getId());
 
-            containerEnv.put(HboxConstants.Environment.CONTAINER_COMMAND.toString(), containerMpiCommand);
-            LOG.info("Container mpi command is:" + containerMpiCommand);
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+            // mpiContainerCommand must be ready, and this openmpi generated orted command sould be splitted by spaces
+            String containerMpiCommand = mpiContainerCommand.replace("<template>", String.valueOf(index));
+            LOG.info("Container mpi command is: " + containerMpiCommand);
+
+            containerLaunchcommands = new ArrayList<>(containerLaunchcommands);
+            for (final String arg : containerMpiCommand.split("\\s+")) {
+                // escape for bash -c "..arg.." in launch_container.sh
+                containerLaunchcommands.add(ShellEscapeUtils.escapeContainerLaunch(arg));
+            }
         }
         containerEnv.put(HboxConstants.Environment.HBOX_TF_INDEX.toString(), String.valueOf(index));
         ContainerLaunchContext ctx = ContainerLaunchContext.newInstance(
@@ -2314,7 +2321,7 @@ public class ApplicationMaster extends CompositeService {
             schedulerEnv.add(HboxConstants.Environment.HBOX_DMLC_SERVER_NUM.toString() + "=" + psNum);
             schedulerEnv.add("PYTHONUNBUFFERED=1");
 
-            LOG.info("Executing command:" + hboxCommand);
+            LOG.info("Executing command:" + String.join(" ", hboxCommandArgs));
             LOG.info("DMLC_PS_ROOT_URI is " + dmlcPsRootUri);
             LOG.info("DMLC_PS_ROOT_PORT is " + dmlcPsRootPort);
             LOG.info(HboxConstants.Environment.HBOX_DMLC_WORKER_NUM.toString() + "=" + workerNum);
@@ -2322,7 +2329,7 @@ public class ApplicationMaster extends CompositeService {
 
             try {
                 schedulerReservedSocket.close();
-                final Process mxnetSchedulerProcess = processLaunch.exec(hboxCommand, schedulerEnv.toArray(new String[schedulerEnv.size()]), this.envs, null);
+                final Process mxnetSchedulerProcess = processLaunch.exec(hboxCommandArgs, schedulerEnv.toArray(new String[schedulerEnv.size()]), this.envs, null);
                 LOG.info("Starting thread to redirect stdout of mxnet scheduler process");
                 Thread mxnetSchedulerRedirectThread = new Thread(new Runnable() {
                     @Override
@@ -2540,7 +2547,7 @@ public class ApplicationMaster extends CompositeService {
             schedulerEnv.add(HboxConstants.Environment.HBOX_DMLC_SERVER_NUM.toString() + "=" + psNum);
             schedulerEnv.add("PYTHONUNBUFFERED=1");
 
-            LOG.info("Executing command:" + hboxCommand);
+            LOG.info("Executing command: " + String.join(" ", hboxCommandArgs));
             LOG.info("DMLC_PS_ROOT_URI is " + dmlcPsRootUri);
             LOG.info("DMLC_PS_ROOT_PORT is " + dmlcPsRootPort);
             LOG.info(HboxConstants.Environment.HBOX_DMLC_WORKER_NUM.toString() + "=" + workerNum);
@@ -2548,7 +2555,7 @@ public class ApplicationMaster extends CompositeService {
 
             try {
                 schedulerReservedSocket.close();
-                final Process xflowSchedulerProcess = processLaunch.exec(hboxCommand, schedulerEnv.toArray(new String[schedulerEnv.size()]), this.envs, null);
+                final Process xflowSchedulerProcess = processLaunch.exec(hboxCommandArgs, schedulerEnv.toArray(new String[schedulerEnv.size()]), this.envs, null);
                 LOG.info("Starting thread to redirect stdout of xflow scheduler process");
                 Thread xflowSchedulerRedirectThread = new Thread(new Runnable() {
                     @Override
@@ -3442,10 +3449,9 @@ public class ApplicationMaster extends CompositeService {
     /**
      * @param args Command line args
      */
-    public static void main(String[] args) {
-        ApplicationMaster appMaster;
+    public static void main(final String[] args) {
         try {
-            appMaster = new ApplicationMaster(args);
+            final ApplicationMaster appMaster = new ApplicationMaster(args);
             appMaster.init();
             if (appMaster.run()) {
                 LOG.info("Application completed successfully.");
