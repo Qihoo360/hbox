@@ -666,37 +666,6 @@ public class HboxContainer {
         }
     }
 
-    private void linkLogFiles() {
-        try {
-            linkLogFile(HboxConstants.MPI_STD_ERR_FILE);
-            linkLogFile(HboxConstants.MPI_STD_OUT_FILE);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * create a link of logfile under mpi working dir target to container log dir
-     * @param logFile
-     */
-    private void linkLogFile(String logFile) throws IOException {
-        java.nio.file.Path targetPath = Paths.get(envs.get(HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR.toString()), logFile);
-        File targetFile = new File(targetPath.toString());
-
-        if(targetFile.exists()){
-            targetFile.delete();
-        }
-        targetFile.createNewFile();
-
-        java.nio.file.Path linkPath = Paths.get(this.mpiAppDir, logFile);
-        File linkfile = new File(linkPath.toString());
-        if (linkfile.exists()) {
-            linkfile.delete();
-        }
-        Files.createSymbolicLink(linkPath, targetPath);
-        LOG.info("create Symlink " + linkPath + " -> " + targetPath);
-    }
-
     /**
      * build reLinksFiles for cacheFiles and cacheArchives for mpi app
      */
@@ -774,7 +743,6 @@ public class HboxContainer {
         }
 
         if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
-            linkLogFiles();
             reLinksFiles();
         }
 
