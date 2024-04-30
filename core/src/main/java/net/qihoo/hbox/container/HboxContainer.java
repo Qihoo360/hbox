@@ -1,13 +1,7 @@
 package net.qihoo.hbox.container;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
+import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import net.qihoo.hbox.api.ApplicationContainerProtocol;
 import net.qihoo.hbox.api.HboxConstants;
@@ -31,7 +25,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -40,15 +33,16 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
-import java.net.*;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
-import java.text.SimpleDateFormat;
 import java.util.zip.GZIPOutputStream;
-
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.YARN_APP_CONTAINER_LOG_DIR;
 
 public class HboxContainer {
 
@@ -755,7 +749,6 @@ public class HboxContainer {
     }
 
     private Boolean run(String args[]) throws IOException {
-        LOG.info("Container entrance is: " + String.join(" ", args));
         try {
             if (conf.getBoolean(HboxConfiguration.HBOX_TF_INPUT_PS_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_INPUT_PS_ENABLE)) {
                 prepareInputFiles();

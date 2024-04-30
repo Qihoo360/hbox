@@ -17,7 +17,6 @@ import net.qihoo.hbox.webapp.ApplicationWebService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -1694,19 +1693,6 @@ public class ApplicationMaster extends CompositeService {
             LOG.info(mpiExecOutput);
             appendMessage(new Message(LogType.STDOUT, mpiExecOutput));
         }
-    }
-
-    /**
-     * Add redirection before MPI COMMAND. To avoid all log info redirected to mpiexec master.
-     * {@link HboxConstants.MPI_STD_OUT_FILE} and {@link HboxConstants.MPI_STD_ERR_FILE} will be created as soft link under container working dir, linking to container log dir
-     * @param command
-     * @return
-     */
-    private static String wrapHboxCommand(String command) {
-
-//        return String.format("exec 1>> %s 2>> %s ; %s", MPIConstants.MPI_STD_OUT_FILE, MPIConstants.MPI_STD_ERR_FILE, "{" + command.replace(" ", ",").replace("\n", ",") + "}");
-//        return String.format("exec 1>> %s 2>> %s && %s", MPIConstants.MPI_STD_OUT_FILE, MPIConstants.MPI_STD_ERR_FILE, command.replace("\n", " "));
-        return String.format("exec 1>> %s 2>> %s && %s", HboxConstants.MPI_STD_OUT_FILE, HboxConstants.MPI_STD_ERR_FILE, command.replace("\n", " "));
     }
 
     //read user horovod config parameter
