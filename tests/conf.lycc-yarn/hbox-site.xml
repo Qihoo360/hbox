@@ -116,7 +116,7 @@
     </property>
 
     <property>
-        <name>hbox.cached.mpi.package.path</name>
+        <name>hbox.cached.mpi.package.remote.path</name>
         <value>/home/hdp-ads-algo/jiangxinglei/am_mpi_env.tar.gz</value>
     </property>
 

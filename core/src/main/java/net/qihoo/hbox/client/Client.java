@@ -665,8 +665,7 @@ public class Client {
                 conf.set(HboxConfiguration.HBOX_MPI_INSTALL_DIR, mpiPackagePathArr[1]);
                 clientArguments.hboxCacheArchives = clientArguments.hboxCacheArchives + "," + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH);
             } else {
-                URI uri = URI.create(mpiPackagePath);
-                String fileName = java.nio.file.Paths.get(uri).getFileName().toString();
+                String fileName = java.nio.file.Paths.get(mpiPackagePath).getFileName().toString();
                 conf.set(HboxConfiguration.HBOX_MPI_INSTALL_DIR, fileName);
                 clientArguments.hboxCacheArchives = clientArguments.hboxCacheArchives + "," + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH) + "#" + fileName;
             }
