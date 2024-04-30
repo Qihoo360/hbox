@@ -165,8 +165,6 @@ public class ApplicationMaster extends CompositeService {
     private String schedulerContainerId;
     private int outputIndex;
 
-    private String[] extraArgList;
-
     /**
      * Constructor, connect to Resource Manager
      *
@@ -175,7 +173,6 @@ public class ApplicationMaster extends CompositeService {
 
     private ApplicationMaster(final String[] args) {
         super(ApplicationMaster.class.getName());
-        this.extraArgList = extraArgList;
         conf = new HboxConfiguration();
         conf.addResource(new Path(HboxConstants.HBOX_JOB_CONFIGURATION));
         outputInfos = new ArrayList<>();
@@ -1865,8 +1862,7 @@ public class ApplicationMaster extends CompositeService {
             // mpiContainerCommand must be ready, and this openmpi generated orted command sould be splitted by spaces
             String containerMpiCommand = mpiContainerCommand.replace("<template>", String.valueOf(index));
             LOG.info("Container mpi command is: " + containerMpiCommand);
-
-            containerLaunchcommands = new ArrayList<>(containerLaunchcommands);
+            containerLaunchcommands = new ArrayList(containerLaunchcommands);
             for (final String arg : containerMpiCommand.split("\\s+")) {
                 // escape for bash -c "..arg.." in launch_container.sh
                 containerLaunchcommands.add(ShellEscapeUtils.escapeContainerLaunch(arg));
