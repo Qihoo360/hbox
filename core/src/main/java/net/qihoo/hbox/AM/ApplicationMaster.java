@@ -1612,17 +1612,19 @@ public class ApplicationMaster extends CompositeService {
         // --pernode
         envLists.add("OMPI_MCA_rmaps_ppr_pernode=1");
 
-        if(conf.get(HboxConfiguration.HBOX_MPI_EXTRA_OPTIONS) != null){
-            String extraOptionStr = conf.get(HboxConfiguration.HBOX_MPI_EXTRA_OPTIONS);
-            for(String extraOption: extraOptionStr.split(",")){
-                String[] optionMap = extraOption.split("=");
-                if(optionMap.length == 2){
-                    envLists.add(extraOption);
-                } else {
-                    LOG.warn("[Warning] Invalid hbox.mpi.extra.options for " + extraOption);
+        // append all hbox.am.env prefix config to exec env list
+        conf.forEach(entry -> {
+            final String key = entry.getKey();
+            final String value = entry.getValue();
+            if (null != key && null != value) {
+                if (key.startsWith(HboxConstants.AM_ENV_PREFIX)) {
+                    final String envName = key.substring(HboxConstants.AM_ENV_PREFIX.length()).trim();
+                    if (!envName.isEmpty()) {
+                        envLists.add(envName + "=" + value);
+                    }
                 }
             }
-        }
+        });
 
         LOG.info("Executing mpi exec command: " + String.join(" ", mpiexecArgs));
         LOG.info("Mpi exec Process run in: " + mpiExecDir);

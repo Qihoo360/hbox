@@ -619,6 +619,4 @@ public class HboxConfiguration extends YarnConfiguration {
     public static final boolean DEFAULT_HBOX_LOG_SAMPLING = true;
 
     public static final String HBOX_CACHED_MPI_PACKAGE_PATH = "hbox.cached.mpi.package.remote.path";
-
-    public static final String HBOX_MPI_EXTRA_OPTIONS = "hbox.mpi.extra.options";
 }
