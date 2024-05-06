@@ -3,7 +3,7 @@
 set -euo pipefail
 [[ ${DEBUG-} != true ]] || set -x
 
-: "${HBOX_HOME:="$(dirname -- "$0")"/../../hbox-1.7-SNAPSHOT}"
+: "${HBOX_HOME:="$(dirname -- "$0")"/../../hbox-1.7.0-SNAPSHOT}"
 : "${HBOX_CONF_DIR:="$(dirname -- "$0")"/../conf.hpc-yarn}"
 export HBOX_CONF_DIR
 
@@ -15,6 +15,6 @@ submit_opts+=(--worker-memory 8G)
 
 # command run on containers
 submit_opts+=(--hbox-cmd)
-submit_opts+=("/bin/sh -xc hostname;pwd;whoami;{ls,-l,.,tmp};{ps,f};cat<launch_container.sh;{which,hadoop};env")
+submit_opts+=("/bin/sh -xc hostname;pwd;whoami;cat<launch_container.sh;env")
 
 exec "$HBOX_HOME"/bin/hbox-submit "${submit_opts[@]}"
