@@ -3,7 +3,7 @@
 set -euo pipefail
 [[ ${DEBUG-} != true ]] || set -x
 
-: "${HBOX_HOME:="$(dirname -- "$0")"/../../hbox-1.7-SNAPSHOT}"
+: "${HBOX_HOME:="$(dirname -- "$0")"/../../hbox-1.7.0-SNAPSHOT}"
 : "${HBOX_CONF_DIR:="$(dirname -- "$0")"/../conf.hpc-yarn}"
 export HBOX_CONF_DIR
 

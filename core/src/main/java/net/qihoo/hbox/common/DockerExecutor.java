@@ -28,6 +28,11 @@ public class DockerExecutor implements ILaunch {
     }
 
     @Override
+    public Process exec(String[] commandArgs, String[] envp, Map<String, String> envs, File dir) throws IOException {
+        return exec(String.join(" ", commandArgs), envp, envs, dir);
+    }
+
+    @Override
     /**
      * @para envp 作业的相关环境变量，包括index，rolo，path作业的一些参数等
      * @pare envs 当前系统的环境变量，本机的本地环境

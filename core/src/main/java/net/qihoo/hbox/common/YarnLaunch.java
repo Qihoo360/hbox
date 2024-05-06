@@ -25,4 +25,11 @@ public class YarnLaunch implements ILaunch {
         hboxProcess = rt.exec(command, envp, dir);
         return hboxProcess;
     }
+
+    @Override
+    public Process exec(String[] commandArgs, String[] envp, Map<String, String> envs, File dir) throws IOException {
+        final Runtime rt = Runtime.getRuntime();
+        hboxProcess = rt.exec(commandArgs, envp, dir);
+        return hboxProcess;
+    }
 }
