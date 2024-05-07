@@ -90,6 +90,6 @@
     </property>
     <property>
         <name>hbox.cached.mpi.package.remote.path</name>
-        <value>viewfs://ss-hadoop/user/jiangxinglei/cache/am_mpi_env.tar.gz</value>
+        <value>viewfs://ss-hadoop/data/hbox/packages/openmpi-3.1.4-dev.tar.gz</value>
     </property>
 </configuration>

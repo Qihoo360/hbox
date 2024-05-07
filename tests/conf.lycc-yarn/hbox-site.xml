@@ -117,7 +117,7 @@
 
     <property>
         <name>hbox.cached.mpi.package.remote.path</name>
-        <value>/home/hdp-ads-algo/jiangxinglei/am_mpi_env.tar.gz</value>
+        <value>/home/yarn/hbox/packages/openmpi-3.1.4-dev.tar.gz</value>
     </property>
 
 </configuration>
