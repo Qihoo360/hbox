@@ -1141,11 +1141,7 @@ public class ApplicationMaster extends CompositeService {
                 outputInfo.setOutputType(type);
                 outputInfo.setDfsLocation(pathRemote);
                 String pathLocal;
-                if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
-                    pathLocal = mpiExecDir + File.separator + outputPathTuple[1];
-                } else {
-                    pathLocal = outputPathTuple[1];
-                }
+                pathLocal = outputPathTuple[1];
                 outputInfo.setLocalLocation(pathLocal);
                 outputInfos.add(outputInfo);
                 LOG.info("Application output: " + pathRemote + "#" + pathLocal + "  Output type is: "
@@ -1586,7 +1582,7 @@ public class ApplicationMaster extends CompositeService {
         // This command is also executed directly by execv syscall, so add them here as raw string:
         mpiexecArgs.add("/bin/sh");
         mpiexecArgs.add("-xc");
-        mpiexecArgs.add(String.format("exec \"$@\" 1>> \"$%s\"/%s 2>>\"$%s\"/%s", HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_ERR_FILE, HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_OUT_FILE)); // envs are expanded by /bin/sh
+        mpiexecArgs.add(String.format("exec \"$@\" 1>> \"$%s\"/%s 2>>\"$%s\"/%s", HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_OUT_FILE, HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_ERR_FILE)); // envs are expanded by /bin/sh
         mpiexecArgs.add("--");
         for (final String arg : hboxCommandArgs) {
             mpiexecArgs.add(arg);

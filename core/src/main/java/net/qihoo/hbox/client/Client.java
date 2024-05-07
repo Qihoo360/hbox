@@ -658,7 +658,8 @@ public class Client {
     private void assignCacheArchives() throws IOException {
 
         // append cached mpi package to cacheArchive list
-        if (conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH) != null) {
+        if ((clientArguments.appType.equals("MPI") || clientArguments.appType.equals("TENSORNET")  || clientArguments.appType.equals("HOROVOD"))
+                && conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH) != null) {
             String mpiPackagePath = conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH);
             if(mpiPackagePath.contains("#")){
                 String[] mpiPackagePathArr = mpiPackagePath.split("#");
