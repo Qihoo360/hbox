@@ -617,4 +617,6 @@ public class HboxConfiguration extends YarnConfiguration {
     public static final String DEFAULT_HBOX_CUSTOM_EXIT = "exit.code";
     public static final String HBOX_LOG_SAMPLING = "hbox.log.sampling";
     public static final boolean DEFAULT_HBOX_LOG_SAMPLING = true;
+
+    public static final String HBOX_CACHED_MPI_PACKAGE_PATH = "hbox.cached.mpi.package.remote.path";
 }

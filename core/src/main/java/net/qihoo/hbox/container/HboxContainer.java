@@ -1,13 +1,7 @@
 package net.qihoo.hbox.container;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
+import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import net.qihoo.hbox.api.ApplicationContainerProtocol;
 import net.qihoo.hbox.api.HboxConstants;
@@ -31,7 +25,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -40,12 +33,15 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
-import java.net.*;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
-import java.text.SimpleDateFormat;
 import java.util.zip.GZIPOutputStream;
 
 public class HboxContainer {
@@ -169,11 +165,12 @@ public class HboxContainer {
             LOG.info("Current index is:" + this.index);
         }
         if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
-            if (this.envs.containsKey(HboxConstants.Environment.MPI_EXEC_DIR.toString())) {
-                this.mpiAppDir = envs.get(HboxConstants.Environment.MPI_EXEC_DIR.toString());
-            } else {
-                this.mpiAppDir = envs.get(ApplicationConstants.Environment.PWD.name());
+            this.mpiAppDir = envs.get(ApplicationConstants.Environment.PWD.name());
+
+            if (conf.getBoolean(HboxConfiguration.HBOX_MPI_EXEC_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR_ENABLE)) {
+                this.mpiAppDir = conf.get(HboxConfiguration.HBOX_MPI_EXEC_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR);
             }
+
             LOG.info(hboxAppType.toLowerCase() + " app dir is:" + this.mpiAppDir);
             LOG.info(hboxAppType.toLowerCase() + " container index is: " + this.index);
         }
@@ -942,6 +939,7 @@ public class HboxContainer {
         envList.add("INDEX=" + this.index);
         envList.add("HADOOP_VERSION=" + VersionInfo.getVersion());
         envList.add("HADOOP_CONF_DIR=./:" + System.getenv("HADOOP_CONF_DIR"));
+        envList.add("HBOX_CONTAINER_LOG_DIR=" + System.getenv(HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR.toString()));
 
         if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) {
             envList.add(HboxConstants.Environment.HBOX_TF_INDEX.toString() + "=" + this.index);
@@ -995,10 +993,17 @@ public class HboxContainer {
                 ldLibraryPath.append(mpiExtraLdLibraryPath);
                 LOG.info("add " + ldLibraryPath + " to LD_LIBRARY_PATH");
             }
-            if (conf.getBoolean(HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR_ENABLE)) {
-                String mpiInstallDir = conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR);
-                ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib");
-            }
+
+            String mpiInstallDir = Paths.get(conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR)).toAbsolutePath().toString();
+
+            ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib");
+            ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib/openmpi");
+            ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib/pmix");
+
+            envList.add("OPAL_PREFIX=" + mpiInstallDir);
+            // for rsh agent, will use $HOME as working dir
+            envList.add("HOME=" + this.mpiAppDir);
+
             ldLibraryPath.append(":" + System.getenv("LD_LIBRARY_PATH"));
             envList.add("PATH=" + System.getenv("PATH"));
             envList.add("PWD=" + this.mpiAppDir);
@@ -1100,6 +1105,15 @@ public class HboxContainer {
                 writer.close();
                 args = new String[] { "/bin/sh", digitsShellname };
             }
+        } else if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
+
+            String mpiInstallDir = Paths.get(conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR)).toAbsolutePath().toString();
+
+            // If command not starts with absolute path, should add mpiInstallDir prefix to command
+            if(args.length > 0 && !args[0].startsWith("/")){
+                args[0] = mpiInstallDir + File.separator + "bin" + File.separator + args[0];
+            }
+
         } else {
             if (containerExecType.equals("DOCKER")) {
                 String dockerPort = envs.get("DOCKER_PORT");
