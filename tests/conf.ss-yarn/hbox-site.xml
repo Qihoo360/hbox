@@ -69,14 +69,6 @@
         <value>harbor.docker.qihoo.net:5000/ai/digits:v1.6</value>
     </property>
     <property>
-        <name>hbox.mpi.install.dir.enable</name>
-        <value>true</value>
-    </property>
-    <property>
-        <name>hbox.mpi.install.dir</name>
-        <value>/usr/local/openmpinossh/</value>
-    </property>
-    <property>
         <name>safe-lycc.conf.path</name>
         <value>/usr/bin/hadoop/software/hbox/conf-safe-lycc/yarn-site.xml,/usr/bin/hadoop/software/hbox/conf-safe-lycc/yarn-site.xml</value>
     </property>
@@ -95,5 +87,9 @@
     <property>
         <name>hbox.python.home</name>
         <value>/home/yarn/software/anaconda3/bin</value>
+    </property>
+    <property>
+        <name>hbox.cached.mpi.package.remote.path</name>
+        <value>viewfs://ss-hadoop/data/hbox/packages/openmpi-3.1.4-dev.tar.gz</value>
     </property>
 </configuration>

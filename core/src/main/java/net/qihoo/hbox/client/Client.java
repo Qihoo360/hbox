@@ -656,6 +656,22 @@ public class Client {
     }
 
     private void assignCacheArchives() throws IOException {
+
+        // append cached mpi package to cacheArchive list
+        if ((clientArguments.appType.equals("MPI") || clientArguments.appType.equals("TENSORNET")  || clientArguments.appType.equals("HOROVOD"))
+                && conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH) != null) {
+            String mpiPackagePath = conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH);
+            if(mpiPackagePath.contains("#")){
+                String[] mpiPackagePathArr = mpiPackagePath.split("#");
+                conf.set(HboxConfiguration.HBOX_MPI_INSTALL_DIR, mpiPackagePathArr[1]);
+                clientArguments.hboxCacheArchives = clientArguments.hboxCacheArchives + "," + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH);
+            } else {
+                String fileName = java.nio.file.Paths.get(mpiPackagePath).getFileName().toString();
+                conf.set(HboxConfiguration.HBOX_MPI_INSTALL_DIR, fileName);
+                clientArguments.hboxCacheArchives = clientArguments.hboxCacheArchives + "," + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH) + "#" + fileName;
+            }
+        }
+
         if (conf.getBoolean(HboxConfiguration.HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE, HboxConfiguration.DEFAULT_HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE))
             convertHdfsCommonCacheArchive();
         String[] cacheArchives = StringUtils.split(clientArguments.hboxCacheArchives, ",");
@@ -765,7 +781,9 @@ public class Client {
         appMasterEnv.put(HboxConstants.Environment.HBOX_CACHE_FILE_LOCATION.toString(), clientArguments.hboxCacheFiles);
         if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
                 || clientArguments.appType.equals("DISTXGBOOST") || clientArguments.appType.equals("XFLOW")
-                || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
+                || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))
+                || clientArguments.appType.equals("TENSORNET")
+                || clientArguments.appType.equals("MPI")) {
             URI defaultUri = new Path(conf.get("fs.defaultFS")).toUri();
             LOG.info("default URI is " + defaultUri.toString());
             String appCacheFilesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_CACHE_FILE_LOCATION.toString());
@@ -803,7 +821,9 @@ public class Client {
         appMasterEnv.put(HboxConstants.Environment.HBOX_CACHE_ARCHIVE_LOCATION.toString(), clientArguments.hboxCacheArchives);
         if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
                 || clientArguments.appType.equals("DISTXGBOOST") || clientArguments.appType.equals("XFLOW")
-                || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
+                || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))
+                || clientArguments.appType.equals("TENSORNET")
+                || clientArguments.appType.equals("MPI")) {
             URI defaultUri = new Path(conf.get("fs.defaultFS")).toUri();
             String appCacheArchivesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_CACHE_ARCHIVE_LOCATION.toString());
             String[] cacheArchives = StringUtils.split(appCacheArchivesRemoteLocation, ",");
@@ -924,6 +944,7 @@ public class Client {
     private List<String> prepareLaunchCommandForAM(Map<String, String> appMasterEnv, ApplicationSubmissionContext applicationContext) {
         LOG.info("Building application master launch command");
         int driverMem = conf.getInt(HboxConfiguration.HBOX_DRIVER_MEMORY, HboxConfiguration.DEFAULT_HBOX_DRIVER_MEMORY);
+
         List<String> appMasterArgs = new ArrayList<>(20);
         appMasterArgs.add("exec");
         appMasterArgs.add(ShellEscapeUtils.escapeInDoubleQuotes("\"${JAVA_HOME}/bin/java\"")); // expand in the inner bash
@@ -1002,6 +1023,7 @@ public class Client {
                 throw new IllegalArgumentException("No hbox cmd for the application!");
             }
         }
+
         //HBOX specific one worker to upload output dir
         if (clientArguments.outputIndex >= 0) {
             appMasterEnv.put(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString(), String.valueOf(clientArguments.outputIndex));
