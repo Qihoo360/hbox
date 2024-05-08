@@ -3,7 +3,7 @@
 set -euo pipefail
 [[ ${DEBUG-} != true ]] || set -x
 
-[[ -d ${HBOX_HOME-} ]] || HBOX_HOME="$(cd -- "$(dirname -- "$0")"/.. && pwd)"
+[[ ${HBOX_HOME-} ]] || HBOX_HOME="$(cd -- "$(dirname -- "$0")"/.. && pwd)"
 
 # shellcheck source-path=SCRIPTDIR/..
 . "$HBOX_HOME/libexec/hbox-common-env.sh"
