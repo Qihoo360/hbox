@@ -11,7 +11,7 @@ unset CLASSPATH
 unset HADOOP_CLASSPATH
 unset HBOX_PRE_CLASSPATH
 
-[[ -d ${HBOX_HOME-} ]] || HBOX_HOME="$(cd -- "$(dirname -- "$0")"/.. && pwd)"
+[[ ${HBOX_HOME-} ]] || HBOX_HOME="$(cd -- "$(dirname -- "$0")"/.. && pwd)"
 : "${HBOX_CONF_DIR:="$HBOX_HOME/conf"}"
 
 # export for generating the kill-job command
@@ -56,6 +56,6 @@ HBOX_CLIENT_OPTS="-Xmx1024m"
 
 # shellcheck disable=SC2034
 case "${1-}" in
-(run-submit) readarray -t HBOX_JAR < <(find "$HBOX_HOME" -maxdepth 1 -name "hbox-core-*.jar") ;;
-(run-history-server) readarray -t HBOX_JAR < <(find "$HBOX_HOME" -maxdepth 1 -name "hbox-history-server-*.jar") ;;
+(run-submit) readarray -t HBOX_JAR < <(find "$HBOX_HOME/" -maxdepth 1 -name "hbox-core-*.jar") ;;
+(run-history-server) readarray -t HBOX_JAR < <(find "$HBOX_HOME/" -maxdepth 1 -name "hbox-history-server-*.jar") ;;
 esac
