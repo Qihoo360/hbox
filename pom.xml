@@ -42,8 +42,8 @@
     <autoVersionSubmodules>true</autoVersionSubmodules>
     <tagNameFormat>v@{project.version}</tagNameFormat>
     <projectVersionPolicyId>SemVerVersionPolicy</projectVersionPolicyId>
-    <preparationGoals>-pl . sortpom:sort resources:copy-resources@update-ver-for-tests scm:add -Dincludes=${project.basedir}/tests/ver.sh</preparationGoals>
-    <completionGoals>-pl . sortpom:sort resources:copy-resources@update-ver-for-tests scm:add -Dincludes=${project.basedir}/tests/ver.sh</completionGoals>
+    <preparationGoals>-pl . sortpom:sort resources:copy-resources@update-ver-for-tests scm:add -Dincludes=tests/ver.sh</preparationGoals>
+    <completionGoals>-pl . sortpom:sort resources:copy-resources@update-ver-for-tests scm:add -Dincludes=tests/ver.sh</completionGoals>
     <checkModificationExcludeList>${project.basedir}/tests/ver.sh</checkModificationExcludeList>
     <reference.repo>mediav-releases</reference.repo>
     <maven.deploy.skip>true</maven.deploy.skip>
@@ -276,6 +276,10 @@
         <plugin>
           <artifactId>maven-scm-plugin</artifactId>
           <version>2.1.0</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <version>3.1.0</version>
         </plugin>
 
         <plugin>
