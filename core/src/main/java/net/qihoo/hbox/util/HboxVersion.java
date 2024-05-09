@@ -1,6 +1,7 @@
 package net.qihoo.hbox.util;
 
 import java.net.URL;
+import java.util.Enumeration;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import org.apache.commons.logging.Log;
@@ -13,17 +14,26 @@ public final class HboxVersion {
     public static String GIT_REV;
 
     private static Attributes getJarAttributes() {
-        final URL manifestPath = HboxVersion.class.getResource("/META-INF/MANIFEST.MF");
-        if (manifestPath == null){
-            LOG.warn("/META-INF/MANIFEST.MF does not exist!");
-        } else {
-            try {
-                final Manifest manifest = new Manifest(manifestPath.openStream());
-                return manifest.getMainAttributes();
-            } catch (final Throwable e) {
-                LOG.warn("parser manifest error:", e);
+        try {
+            for (final Enumeration<URL> urls = HboxVersion.class.getClassLoader().getResources("META-INF/MANIFEST.MF"); urls.hasMoreElements();) {
+                final URL url = urls.nextElement();
+                if (null == url) {
+                    continue;
+                }
+                try {
+                    final Manifest manifest = new Manifest(url.openStream());
+                    final String title = manifest.getMainAttributes().getValue("Implementation-Title");
+                    if ("HBox Yarn Application".equals(title)) {
+                        return manifest.getMainAttributes();
+                    }
+                } catch (final Throwable e) {
+                    LOG.warn("parser manifest error:", e);
+                }
             }
+        } catch (final Throwable e) {
+            LOG.warn("failed to search /META-INF/MANIFEST.MF", e);
         }
+        LOG.warn("/META-INF/MANIFEST.MF does not exist!");
         return null;
     }
 

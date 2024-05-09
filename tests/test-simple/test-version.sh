@@ -7,10 +7,10 @@ unset HBOX_HOME
 # shellcheck disable=SC1091
 . "$(dirname -- "$0")/../ver.sh" # set HBOX_VERSION
 HBOX_HOME="$(dirname -- "$0")/../../hbox-$HBOX_VERSION"
-ln -s "$HBOX_HOME" "$(dirname -- "$0")/hbox"
-HBOX_HOME="$(dirname -- "$0")/hbox"
 
-# shellcheck disable=SC2064
-trap "rm \"$(dirname -- "$0")/hbox\"" EXIT
+ver=$( "$HBOX_HOME"/bin/hbox-submit --version 2>/dev/null | grep 'hbox version' | cut -d ' '  -f3 )
 
-"$(dirname -- "$0")"/hpc-yarn.sh
+if [[ $ver != "$HBOX_VERSION" ]]; then
+  echo "[ERROR] expect version $HBOX_VERSION, but get $ver" >&2
+  exit 1
+fi
