@@ -2,8 +2,9 @@ package net.qihoo.hbox.client;
 
 import net.qihoo.hbox.AM.ApplicationMaster;
 import net.qihoo.hbox.common.JobPriority;
-import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.conf.HboxConfiguration2;
+import net.qihoo.hbox.conf.HboxConfiguration;
+import net.qihoo.hbox.util.HboxVersion;
 import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -226,6 +227,7 @@ class ClientArguments {
                 "Setting the index of worker which to upload the output, default uploading the output of all the workers.");
 
         allOptions.addOption("help", "help", false, "Print usage");
+        allOptions.addOption("version", "version", false, "Print version");
 
         OptionBuilder.withArgName("property=value");
         OptionBuilder.hasArgs(Integer.MAX_VALUE);
@@ -281,6 +283,10 @@ class ClientArguments {
         CommandLine cliParser = new BasicParser().parse(allOptions, args, true);
         if (cliParser.getOptions().length == 0 || cliParser.hasOption("help")) {
             printUsage(allOptions);
+            System.exit(0);
+        }
+        if (cliParser.hasOption("version")) {
+            printVersion();
             System.exit(0);
         }
 
@@ -552,6 +558,12 @@ class ClientArguments {
         final HelpFormatter formatter = new HelpFormatter();
         formatter.setWidth(120);
         formatter.printHelp("Client", opts);
+    }
+
+    private void printVersion() {
+        System.out.println("hbox version " + HboxVersion.VERSION);
+        System.out.println("git branch " + HboxVersion.GIT_BRANCH);
+        System.out.println("git rev " + HboxVersion.GIT_REV);
     }
 
     private int getNormalizedMem(String rawMem) {

@@ -42,6 +42,9 @@
     <autoVersionSubmodules>true</autoVersionSubmodules>
     <tagNameFormat>v@{project.version}</tagNameFormat>
     <projectVersionPolicyId>SemVerVersionPolicy</projectVersionPolicyId>
+    <preparationGoals>-pl . sortpom:sort resources:copy-resources@update-ver-for-tests scm:add -Dincludes=tests/ver.sh</preparationGoals>
+    <completionGoals>-pl . sortpom:sort resources:copy-resources@update-ver-for-tests scm:add -Dincludes=tests/ver.sh</completionGoals>
+    <checkModificationExcludeList>${project.basedir}/tests/ver.sh</checkModificationExcludeList>
     <reference.repo>mediav-releases</reference.repo>
     <maven.deploy.skip>true</maven.deploy.skip>
     <maven.deploy.file.skip>snapshots</maven.deploy.file.skip>
@@ -144,7 +147,7 @@
       <plugins>
         <plugin>
           <artifactId>maven-site-plugin</artifactId>
-          <version>4.0.0-M13</version>
+          <version>4.0.0-M14</version>
         </plugin>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
@@ -160,14 +163,36 @@
           <configuration>
             <propertiesEncoding>${project.build.sourceEncoding}</propertiesEncoding>
           </configuration>
+          <executions>
+            <execution>
+              <id>update-ver-for-tests</id>
+              <goals>
+                <goal>copy-resources</goal>
+              </goals>
+              <phase>ONLY-FOR-CLI</phase>
+              <inherited>false</inherited>
+              <configuration>
+                <outputDirectory>${project.basedir}/tests</outputDirectory>
+                <resources>
+                  <resource>
+                    <directory>src/test/resources</directory>
+                    <includes>
+                      <include>ver.sh</include>
+                    </includes>
+                    <filtering>true</filtering>
+                  </resource>
+                </resources>
+              </configuration>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <artifactId>maven-install-plugin</artifactId>
-          <version>3.1.1</version>
+          <version>3.1.2</version>
         </plugin>
         <plugin>
           <artifactId>maven-deploy-plugin</artifactId>
-          <version>3.1.1</version>
+          <version>3.1.2</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
@@ -231,12 +256,12 @@
               </filter>
             </filters>
             <transformers combine.children="append">
-              <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer" />
-              <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer" />
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"></transformer>
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"></transformer>
               <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
                 <addHeader>false</addHeader>
               </transformer>
-              <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"></transformer>
             </transformers>
           </configuration>
         </plugin>
@@ -247,6 +272,14 @@
         <plugin>
           <artifactId>maven-release-plugin</artifactId>
           <version>3.0.1</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-scm-plugin</artifactId>
+          <version>2.1.0</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <version>3.1.0</version>
         </plugin>
 
         <plugin>

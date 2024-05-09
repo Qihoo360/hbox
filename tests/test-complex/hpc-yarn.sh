@@ -3,7 +3,12 @@
 set -euo pipefail
 [[ ${DEBUG-} != true ]] || set -x
 
-: "${HBOX_HOME:="$(dirname -- "$0")"/../../hbox-1.7.0-SNAPSHOT}"
+if [[ ! ${HBOX_HOME-} ]]; then
+  # shellcheck disable=SC1091
+  . "$(dirname -- "$0")"/../ver.sh # set HBOX_VERSION
+  HBOX_HOME="$(dirname -- "$0")/../../hbox-$HBOX_VERSION"
+fi
+
 : "${HBOX_CONF_DIR:="$(dirname -- "$0")"/../conf.hpc-yarn}"
 export HBOX_CONF_DIR
 

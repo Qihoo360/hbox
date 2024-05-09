@@ -5,8 +5,6 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 public class HboxConfiguration extends YarnConfiguration {
-    public static final String VERSION = "1.5.0";
-
     private static final String HBOX_DEFAULT_XML_FILE = "hbox-default.xml";
 
     private static final String HBOX_SITE_XML_FILE = "hbox-site.xml";
