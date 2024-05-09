@@ -22,7 +22,7 @@ Release Steps
 # run on gateways
 
 # 3. prepare release version, git tag and next version
-./mvnw release:clean release:prepare -DpreparationGoals="clean validate"
+./mvnw release:clean release:prepare
 
 # 4. cleanup
 ./mvnw release:clean
