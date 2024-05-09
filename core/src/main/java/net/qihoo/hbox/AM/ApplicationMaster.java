@@ -13,6 +13,7 @@ import net.qihoo.hbox.storage.AmazonS3;
 import net.qihoo.hbox.storage.S3File;
 import net.qihoo.hbox.util.ShellEscapeUtils;
 import net.qihoo.hbox.util.Utilities;
+import net.qihoo.hbox.util.HboxVersion;
 import net.qihoo.hbox.webapp.ApplicationWebService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -712,7 +713,7 @@ public class ApplicationMaster extends CompositeService {
                     logMessage.put("psNums", Arrays.asList(String.valueOf(psNum)));
                     logMessage.put("psVCores", Arrays.asList(String.valueOf(psVCores)));
                     logMessage.put("psMemory", Arrays.asList(String.format("%.2f", psMemory / 1024.0)));
-                    logMessage.put("hboxVersion", Arrays.asList("1.5"));
+                    logMessage.put("hboxVersion", Arrays.asList(HboxVersion.VERSION));
                     logMessage.put("queue", Arrays.asList(conf.get(HboxConfiguration.HBOX_APP_QUEUE, HboxConfiguration.DEFAULT_HBOX_APP_QUEUE)));
                     logMessage.put("user", Arrays.asList(conf.get("hadoop.job.ugi").split(",")[0]));
                     if (chiefWorker) {
@@ -1899,7 +1900,7 @@ public class ApplicationMaster extends CompositeService {
         registerApplicationMaster();
 
         LOG.info("Application submit hbox client is: " + conf.get(HboxConfiguration.HBOX_CLIENT_HOSTNAME, HboxConfiguration.DEFAULT_HBOX_CLIENT_HOSTNAME));
-        LOG.info("HBox release version: " + HboxConfiguration.VERSION);
+        LOG.info("HBox release version: " + HboxVersion.VERSION);
         if (conf.getBoolean(HboxConfiguration.HBOX_AM_CMD_ENABLE, HboxConfiguration.DEFAULT_HBOX_AM_ENABLE)) {
             String cmd = conf.get(HboxConfiguration.HBOX_AM_CMD, HboxConfiguration.DEDAULT_HBOX_AM_CMD);
             if (cmd != null && !cmd.equals("")) {
