@@ -44,12 +44,11 @@ fi
 
 # classpath order:
 #   target cluster conf
-#   hbox common conf
 #   hbox jars
 #   yarn system conf
 #   yarn system jars
 # shellcheck disable=SC2034
-HBOX_CLASSPATH="$HBOX_CONF_DIR:$HBOX_HOME/conf:$HBOX_HOME/lib/*:$(yarn classpath)"
+HBOX_CLASSPATH="$HBOX_CONF_DIR:$HBOX_HOME/lib/*:$(yarn classpath)"
 
 # shellcheck disable=SC2034
 HBOX_CLIENT_OPTS="-Xmx1024m"
