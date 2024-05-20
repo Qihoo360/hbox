@@ -14,7 +14,7 @@
     </property>
     <property>
         <name>hbox.execute.node.limit</name>
-        <value>100</value>
+        <value>1000</value>
     </property>
     <property>
         <name>hbox.container.maxFailures.rate</name>
@@ -22,7 +22,7 @@
     </property>
     <property>
         <name>hbox.history.webapp.address</name>
-        <value>qt1ss.prod.mediav.com:19966</value>
+        <value>rm3ss.prod.mediav.com:19966</value>
     </property>
     <property>
         <name>hbox.history.webapp.port</name>
@@ -38,7 +38,7 @@
     </property>
     <property>
         <name>hbox.history.address</name>
-        <value>qt1ss.prod.mediav.com:10121</value>
+        <value>rm3ss.prod.mediav.com:10121</value>
     </property>
     <property>
         <name>hbox.hisotory.port</name>
@@ -46,7 +46,7 @@
     </property>
     <property>
         <name>hbox.history.webapp.https.addresss</name>
-        <value>qt1ss.prod.mediav.com:19967</value>
+        <value>rm3ss.prod.mediav.com:19967</value>
     </property>
     <property>
         <name>hbox.history.webapp.https.port</name>
