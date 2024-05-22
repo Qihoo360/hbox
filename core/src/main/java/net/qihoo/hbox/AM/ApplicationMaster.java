@@ -1581,9 +1581,10 @@ public class ApplicationMaster extends CompositeService {
         //   /bin/sh -xc 'exec "$@" 1>>stdout 2>>stderr' -- hboxCommandArgs
         // The command is not processed by yarn nm service, so <LOG_DIR> cannot be replaced by yarn.
         // This command is also executed directly by execv syscall, so add them here as raw string:
+        // For rank 0 (within this code which TF_INDEX is 1 for mpi), logs will be directed to both console and stdout
         mpiexecArgs.add("/bin/sh");
-        mpiexecArgs.add("-xc");
-        mpiexecArgs.add(String.format("[ \"$TF_INDEX\" != 1 ] && exec \"$@\" 1>> \"$%s\"/%s 2>> \"$%s\"/%s; \"$@\" 2>&1 | tee -a \"$%s\"/%s", HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_OUT_FILE, HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_ERR_FILE, HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_OUT_FILE)); // envs are expanded by /bin/sh
+        mpiexecArgs.add("-c");
+        mpiexecArgs.add(String.format("[ \"$%s\" != 1 ] && exec \"$@\" 1>> \"$%s\"/%s 2>> \"$%s\"/%s; \"$@\" 2>&1 | tee -a \"$%s\"/%s", HboxConstants.Environment.HBOX_TF_INDEX, HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_OUT_FILE, HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_ERR_FILE, HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_OUT_FILE)); // envs are expanded by /bin/sh
         mpiexecArgs.add("--");
         for (final String arg : hboxCommandArgs) {
             mpiexecArgs.add(arg);
