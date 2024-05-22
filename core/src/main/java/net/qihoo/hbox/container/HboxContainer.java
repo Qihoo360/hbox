@@ -1007,6 +1007,7 @@ public class HboxContainer {
             ldLibraryPath.append(":" + System.getenv("LD_LIBRARY_PATH"));
             envList.add("PATH=" + System.getenv("PATH"));
             envList.add("PWD=" + this.mpiAppDir);
+            envList.add(HboxConstants.Environment.HBOX_TF_INDEX + "=" + this.index);
             envList.add("HBOX_CUSTOM_EXIT=" + conf.get(HboxConfiguration.HBOX_CUSTOM_EXIT, HboxConfiguration.DEFAULT_HBOX_CUSTOM_EXIT));
             envList.add("LD_LIBRARY_PATH=" + ldLibraryPath.toString());
         } else if (hboxAppType.equals("XFLOW")) {
