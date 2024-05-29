@@ -27,9 +27,10 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.*;
-import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -64,6 +65,7 @@ public class ApplicationMaster extends CompositeService {
     private NMClientAsync nmAsync;
     private ApplicationAttemptId applicationAttemptID;
     private String applicationMasterHostname;
+    private String applicationMasterHttpPortString;
     private String applicationMasterTrackingUrl;
     private String applicationHistoryUrl;
     private int workerMemory;
@@ -116,6 +118,7 @@ public class ApplicationMaster extends CompositeService {
     private ApplicationContainerListener containerListener;
     private int statusUpdateInterval;
     private final ApplicationMasterContext applicationContext;
+    private RegisterApplicationMasterResponse regResp;
     private RMCallbackHandler rmCallbackHandler;
     private ContainerRequest workerContainerRequest;
     private ContainerRequest psContainerRequest;
@@ -365,6 +368,8 @@ public class ApplicationMaster extends CompositeService {
             applicationMasterHostname = envs.get(ApplicationConstants.Environment.NM_HOST.toString());
         }
 
+        applicationMasterHttpPortString = System.getenv(ApplicationConstants.Environment.NM_HTTP_PORT.toString());
+
         // force disable protocol check
         conf.set("hadoop.security.authorization", "false");
 
@@ -401,7 +406,7 @@ public class ApplicationMaster extends CompositeService {
             throw new RuntimeException("Error start application services!", e);
         }
 
-        applicationMasterTrackingUrl = applicationMasterHostname + ":" + this.webService.getHttpPort();
+        applicationMasterTrackingUrl = "http://" + applicationMasterHostname + ":" + this.webService.getHttpPort();
         String historyWebappAddress = conf.get(HboxConfiguration.HBOX_HISTORY_WEBAPP_ADDRESS,
                 HboxConfiguration.DEFAULT_HBOX_HISTORY_WEBAPP_ADDRESS);
         String cluster = conf.get(HboxConfiguration.HBOX_CLUSTER_NAME, HboxConfiguration.DEFAULT_HBOX_CLUSTER_NAME);
@@ -414,9 +419,9 @@ public class ApplicationMaster extends CompositeService {
                 LOG.info("History webApp address has updated! ");
             }
         }
-        applicationHistoryUrl = historyWebappAddress + "/jobhistory/job/"
+        applicationHistoryUrl = "http://" + historyWebappAddress + "/jobhistory/job/"
                 + applicationAttemptID.getApplicationId();
-        LOG.info("master tracking url:" + applicationMasterTrackingUrl);
+        LOG.info("master tracking url: " + applicationMasterTrackingUrl);
         LOG.info("history url: " + applicationHistoryUrl);
 
         cleanApplication = new Thread(new Runnable() {
@@ -721,6 +726,24 @@ public class ApplicationMaster extends CompositeService {
                     }
                     if (tfEvaluator) {
                         logMessage.put("evaluatorWorkerMemory", Arrays.asList(String.format("%.2f", evaluatorWorkerMemory / 1024.0)));
+                    }
+
+                    // application master logs
+                    final List<String> amLogUrls = new ArrayList<>();
+                    if (null != regResp && null != regResp.getContainersFromPreviousAttempts()) {
+                        for (final Container container : regResp.getContainersFromPreviousAttempts()) {
+                            amLogUrls.add(String.format("http://%s/node/containerlogs/%s/%s",
+                                    container.getNodeHttpAddress(),
+                                    container.getId().toString(),
+                                    userName));
+                        }
+                    }
+                    if (null != applicationMasterHostname && null != applicationMasterHttpPortString) {
+                        amLogUrls.add(String.format("http://%s:%s/node/containerlogs/%s/%s",
+                                                applicationMasterHostname, applicationMasterHttpPortString, amContainerId, userName));
+                    }
+                    if (amLogUrls.size() > 0) {
+                        logMessage.put("applicationMaster", amLogUrls);
                     }
 
                     out.writeBytes(new Gson().toJson(logMessage));
@@ -1164,9 +1187,9 @@ public class ApplicationMaster extends CompositeService {
         }
     }
 
-    private void registerApplicationMaster() {
+    private RegisterApplicationMasterResponse registerApplicationMaster() {
         try {
-            amrmAsync.registerApplicationMaster(this.messageService.getServerAddress().getHostName(),
+            return amrmAsync.registerApplicationMaster(this.messageService.getServerAddress().getHostName(),
                     this.messageService.getServerAddress().getPort(), applicationMasterTrackingUrl);
         } catch (Exception e) {
             throw new RuntimeException("Registering application master failed,", e);
@@ -1898,7 +1921,7 @@ public class ApplicationMaster extends CompositeService {
     @SuppressWarnings("deprecation")
     private boolean run() throws IOException, NoSuchAlgorithmException, RuntimeException {
         LOG.info("ApplicationMaster Starting ...");
-        registerApplicationMaster();
+        regResp = registerApplicationMaster();
 
         LOG.info("Application submit hbox client is: " + conf.get(HboxConfiguration.HBOX_CLIENT_HOSTNAME, HboxConfiguration.DEFAULT_HBOX_CLIENT_HOSTNAME));
         LOG.info("HBox release version: " + HboxVersion.VERSION);
