@@ -79,6 +79,7 @@ public class HsController extends Controller implements AMParams {
             set("chiefWorkerMemory", "");
             set("evaluatorWorkerMemory", "");
             set("USAGED_INFO", "false");
+            set("AM_NUM", "0");
             if (readLog.keySet().contains("hboxVersion")) {
                 set("VERSION", readLog.get("hboxVersion").get(0));
                 int i = 0;
@@ -379,6 +380,12 @@ public class HsController extends Controller implements AMParams {
                         set("chiefWorkerMemory", readLog.get(info).get(0));
                     } else if (info.equals("evaluatorWorkerMemory")) {
                         set("evaluatorWorkerMemory", readLog.get(info).get(0));
+                    } else if (info.equals("applicationMaster")) {
+                        final int attemptNum = readLog.get(info).size();
+                        set("AM_NUM", String.valueOf(attemptNum));
+                        for (int attempt = 1; attempt <= attemptNum; ++attempt) {
+                          set("AM_" + attempt, readLog.get(info).get(attempt - 1));
+                        }
                     }
                 }
                 set(CONTAINER_NUMBER, String.valueOf(i));

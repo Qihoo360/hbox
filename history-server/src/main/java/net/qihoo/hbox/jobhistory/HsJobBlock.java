@@ -27,7 +27,33 @@ public class HsJobBlock extends HtmlBlock implements AMParams {
     @Override
     protected void render(Block html) {
         int numContainers = Integer.parseInt($(CONTAINER_NUMBER));
+        int numAMattempt = Integer.parseInt($("AM_NUM"));
         String version = $("VERSION");
+        if (numAMattempt > 0) {
+            Hamlet.TBODY<Hamlet.TABLE<Hamlet>> tbody = html.
+                    h2("ApplicationMaster").
+                    table("#AMContainers").
+                    thead("ui-widget-header").
+                    tr().
+                    th("ui-state-default", "Attempt Number").
+                    th("ui-state-default", "Logs").
+                    __(). // close tr
+                    __(). // close thead
+                    tbody("ui-widget-content");
+            for (int i = 1; i <= numAMattempt; i++) {
+                tbody.
+                tr().
+                $style("text-align:center;").
+                td(String.valueOf(i)).
+                td().
+                a($("AM_"+i), "logs").
+                __(). // close td
+                __(); // close tr
+            }
+            tbody.
+            __(). // close tbody
+            __(); // close table
+        }
         if (numContainers > 0) {
             Hamlet.TBODY<Hamlet.TABLE<Hamlet>> tbody = html.
                     h2("All Containers:").
