@@ -12,10 +12,10 @@ For example, if there is not the tensorflow module on the node of the cluster, u
 - set the environment variable for program: `export PYTHONPATH=./:$PYTHONPATH`  
 
 ### 2. How to view the progress of the execution?
-In order to view the progress of the execution both at the XLearning client and the application web interface, user need to print the progress to standard error as the format of `"report:progress:<float type>"` in the execution program.  
+In order to view the progress of the execution both at the Hbox client and the application web interface, user need to print the progress to standard error as the format of `"report:progress:<float type>"` in the execution program.  
 
-### 3. What distributed deep learning frameworks XLearning supports, how to distinguish between standalone mode ?    
-XLearning support the distributed deep learning framworks such as TensorFlow, MXNet, XGBoost, LightGBM.  
+### 3. What distributed deep learning frameworks Hbox supports, how to distinguish between standalone mode ?    
+Hbox support the distributed deep learning framworks such as TensorFlow, MXNet, XGBoost, LightGBM.  
 - TensorFlow: Set the `--app-type` as `TensorFlow`, and distinguish stand-alone and distributed mode by the number of ps applied.   
 - MXNet：Set the `--app-type` as `MXNet`, and distinguish stand-alone and distributed mode by the number of ps applied.   
 - XGBoost： Set the `--app-type` as `distxgboost`.  
@@ -24,7 +24,7 @@ XLearning support the distributed deep learning framworks such as TensorFlow, MX
 - XFlow： Set the `--app-type` as `XFlow`, and distinguish stand-alone and distributed mode by the number of ps applied.
 
 ### 4. How to define the ClusterSpec in the distributed mode of TensorFlow application ?  
-In the distributed mode of TensorFlow application, ClusterSpec is defined by setting the host and port of ps and worker preliminarily. XLearning implements the automatic construction of the ClusterSpec. User can get the information of ClusterSpec, job\_name, task\_index from the environment variables TF\_CLUSTER\_DEF, TF\_ROLE, TF\_INDEX, such as:  
+In the distributed mode of TensorFlow application, ClusterSpec is defined by setting the host and port of ps and worker preliminarily. Hbox implements the automatic construction of the ClusterSpec. User can get the information of ClusterSpec, job\_name, task\_index from the environment variables TF\_CLUSTER\_DEF, TF\_ROLE, TF\_INDEX, such as:  
 
     import os
     import json
@@ -46,7 +46,7 @@ Default that the `yarn.application.classpath` setted in the `yarn-site.xml` not 
 ### 6. The mnist data set used in the example.  
 
 ### 7. How to set the number of the machines and local port on the distribute LightGBM application ?  
-User can get the information of the number of machines and local port from the environment variables and write into the configuration file on the distribute LightGBM application (More details in $XLEARNING_HOME/examples/distLightGBM ). Note that it is necessary to copy the configuration file at current directory to avoid the more containers modify the same file when they are at one machine, like :   
+User can get the information of the number of machines and local port from the environment variables and write into the configuration file on the distribute LightGBM application (More details in $HBOX_HOME/examples/distLightGBM ). Note that it is necessary to copy the configuration file at current directory to avoid the more containers modify the same file when they are at one machine, like :   
 
     cp train.conf train_real.conf
     chmod 777 train_real.conf
@@ -55,13 +55,13 @@ User can get the information of the number of machines and local port from the e
     ./LightGBM/lightgbm config=train_real.conf
 
 
-Also, user need to set the machine list file at the configuration which XLearning named as `lightGBMlist.txt` generated at the executive directory of each worker, like :  
+Also, user need to set the machine list file at the configuration which Hbox named as `lightGBMlist.txt` generated at the executive directory of each worker, like :  
 
     machine_list_file = lightGBMlist.txt
 
 
 ### 8. How to set the environment varibale TF_CONFIG in the Tensorflow application ?  
-Example of TF_CONFIG for chief training in the distributed mode of Tensorflow estimator application (More details in $XLEARNING_HOME/examples/tfEstimator):    
+Example of TF_CONFIG for chief training in the distributed mode of Tensorflow estimator application (More details in $HBOX_HOME/examples/tfEstimator):    
 
     import os
     import json
@@ -99,24 +99,24 @@ Example of TF_CONFIG for chief training in the distributed mode of Tensorflow es
 Because of loading the required js files for CPU Metrix functionality is based on the WebApp build method which is not achieved in the hadoop version lower than 2.6.4, there is the other method to display the cpu metrics if necessary.   
 - add the necessary resources to the package of `hadoop-yarn-common-xxx.jar` on the cluster, more details:  
 1) unpackage the hadoop-yarn-common-xxx.jar  
-2) copy the folder `src\main\resources\xlWebApp` at the source code of XLearning to the directory `webapps/static` which generated after unpackaging the `hadoop-yarn-common-xxx.jar`  
+2) copy the folder `src\main\resources\xlWebApp` at the source code of Hbox to the directory `webapps/static` which generated after unpackaging the `hadoop-yarn-common-xxx.jar`  
 3) re-package hadoop-yarn-common-xxx.jar  
 4) replace the hadoop-yarn-common-xxx.jar on the cluster without restart the nodemanager and resource manager. Also can use the `--jars` to load the jar when submit the application.  
-- display the cpu matrix in the XLearning JobHistory [Optional]  
-XLearning JobHistory is relay on the jars in the directory `$XLEARNING_HOME/lib` which generated after unpackaging the XLearning dist. Follow the above method to replace the hadoop-yarn-common-xxx.jar, then restart service.  
+- display the cpu matrix in the Hbox JobHistory [Optional]  
+Hbox JobHistory is relay on the jars in the directory `$HBOX_HOME/lib` which generated after unpackaging the Hbox dist. Follow the above method to replace the hadoop-yarn-common-xxx.jar, then restart service.  
 
 
 ### 10. How to set the memory scale ratio when the application retry after failed ?  
-XLearning1.1 support the application retry and memory auto scaled after failed by setting the configuration:  
-- xlearning.app.max.attempts  
-- xlearning.worker.mem.autoscale  
-- xlearning.ps.mem.autoscale  
+Hbox1.1 support the application retry and memory auto scaled after failed by setting the configuration:  
+- hbox.app.max.attempts  
+- hbox.worker.mem.autoscale  
+- hbox.ps.mem.autoscale  
 Note that the information of AM connected error which reported at the client when application retry can ignore. 
 
 ### 11. Report the error：" java.io.IOException: Cannot run program "tensorboard": error=2, No such file or directory" after submit the application.       
-When the XLearning client submits a job, the --user-path "/root/anaconda2/lib/python2.7/site-packages/tensorboard" is added to specify the tensorboard path.
+When the Hbox client submits a job, the --user-path "/root/anaconda2/lib/python2.7/site-packages/tensorboard" is added to specify the tensorboard path.
 
-### 12. How to get the input file list for each worker container when setting the `--conf xlearning.input.strategy` or `--input-strategy` as `PLACEHOLDER` ?
+### 12. How to get the input file list for each worker container when setting the `--conf hbox.input.strategy` or `--input-strategy` as `PLACEHOLDER` ?
 With the input strategy setted as the `PLACEHOLDER`, worker containers get the assigned input file list to the program by the way of the environment `INPUT_FILE_LIST` as `json` format with the `key` of the input local path and the `value` of the list of the hdfs file name. However, there is the error when the length of the environment is too long to execute the user program. In this situation, the content of the environment `INPUT_FILE_LIST` would be written to the local file `inputFileList.txt` at the current path.
 User can get the file list like this:
 
@@ -136,22 +136,22 @@ Upload the files using the `--files` to each container. Load the related path to
 
 ### 14. Recommended to directly operate the hdfs data for input and model output if use the TensorFlow Estimator advanced API.  
 
-### 15. YARN greater than or equal to 2.6 support node label expressions, XLearning support to configure `xlearning.am.nodeLabelException`、`xlearning.worker.nodeLabelExpression`、`xlearning.ps.nodeLabelExpression` to define the scheduled node.  
+### 15. YARN greater than or equal to 2.6 support node label expressions, Hbox support to configure `hbox.am.nodeLabelException`、`hbox.worker.nodeLabelExpression`、`hbox.ps.nodeLabelExpression` to define the scheduled node.  
 
-### 16. TensorFlow support various distribution strategy not limited the ps/worker, but getting the cluster information is still necessary. According to set the `--conf xlearning.tf.distribution.strategy=true` , XLearning build the cluster information for application which use the advanced api for TensorFlow distribution strategy.  
+### 16. TensorFlow support various distribution strategy not limited the ps/worker, but getting the cluster information is still necessary. According to set the `--conf hbox.tf.distribution.strategy=true` , Hbox build the cluster information for application which use the advanced api for TensorFlow distribution strategy.  
 
 ### 17. The following is the required for MPI job,  
-1) Unzip the version 3.1.1 of openmpi package to `/usr/local` as `/usr/local/openmpinossh` which provided by XLearning under the `examples/mpi/`;  
-2）Configure the install dir to the xlearning-site.xml:  
+1) Unzip the version 3.1.1 of openmpi package to `/usr/local` as `/usr/local/openmpinossh` which provided by Hbox under the `examples/mpi/`;  
+2）Configure the install dir to the hbox-site.xml:  
 
     <property>
-        <name>xlearning.mpi.install.dir</name>
+        <name>hbox.mpi.install.dir</name>
         <value>/usr/local/openmpinossh/</value>
     </property>
 
 
 ### 18. How to execute application in the docker?
-1）Set the container type as docker: `--conf xlearning.container.type=docker`；  
-2）Assign the docker image, such as `--conf xlearning.docker.image=tensorflow/tensorflow:devel-gpu`;   
-3）Define the working dir `--conf xlearning.docker.worker.dir=/work`;  
+1）Set the container type as docker: `--conf hbox.container.type=docker`；  
+2）Assign the docker image, such as `--conf hbox.docker.image=tensorflow/tensorflow:devel-gpu`;   
+3）Define the working dir `--conf hbox.docker.worker.dir=/work`;  
 

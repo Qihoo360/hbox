@@ -1,4 +1,4 @@
-$XLEARNING_HOME/bin/xl-submit \
+$HBOX_HOME/bin/xl-submit \
    --app-type "distxgboost" \
    --worker-memory 20G \
    --worker-num 2 \
@@ -10,4 +10,4 @@ $XLEARNING_HOME/bin/xl-submit \
    --output /tmp/xgboost_dist_output#model \
    --app-name "distxgboost_demo" \
    --queue default \
-   --conf xlearning.container.env.PYTHONPATH=xgboost/python-package \
+   --conf hbox.container.env.PYTHONPATH=xgboost/python-package \

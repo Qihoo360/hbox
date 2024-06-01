@@ -1,9 +1,9 @@
 #!/bin/sh
-$XLEARNING_HOME/bin/xl-submit \
+$HBOX_HOME/bin/xl-submit \
    --app-type "tensorflow" \
    --app-name "tf-estimator-demo" \
    --files demo.py \
-   --launch-cmd "python demo.py --data_path=hdfs://xlearning.test.host1:9000/tmp/data/tfEstimator --model_path=hdfs://xlearning.test.host1:9000/tmp/estimatorDemoModel" \
+   --launch-cmd "python demo.py --data_path=hdfs://hbox.test.host1:9000/tmp/data/tfEstimator --model_path=hdfs://hbox.test.host1:9000/tmp/estimatorDemoModel" \
    --worker-memory 2G \
    --worker-num 3 \
    --worker-cores 2 \

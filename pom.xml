@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>net.qihoo</groupId>
-    <artifactId>xlearning</artifactId>
+    <artifactId>hbox</artifactId>
     <version>1.4</version>
 
 
@@ -14,8 +14,8 @@
         <junit.version>4.11</junit.version>
         <jdk.version>1.7</jdk.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <xlearning.jar.basename>xlearning-${project.version}-hadoop${hadoop2.version}</xlearning.jar.basename>
-        <xlearning.jar>${xlearning.jar.basename}.jar</xlearning.jar>
+        <hbox.jar.basename>hbox-${project.version}-hadoop${hadoop2.version}</hbox.jar.basename>
+        <hbox.jar>${hbox.jar.basename}.jar</hbox.jar>
     </properties>
 
     <dependencies>
@@ -122,7 +122,7 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>2.4</version>
                 <configuration>
-                    <finalName>${xlearning.jar.basename}</finalName>
+                    <finalName>${hbox.jar.basename}</finalName>
                     <archive>
                         <manifestFile>src/main/resources/META-INF/MANIFEST.MF</manifestFile>
                     </archive>

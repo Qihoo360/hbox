@@ -1,4 +1,4 @@
-$XLEARNING_HOME/bin/xl-submit \
+$HBOX_HOME/bin/xl-submit \
    --app-type "mxnet" \
    --worker-memory 10G \
    --worker-num 1 \

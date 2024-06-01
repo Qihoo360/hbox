@@ -1,5 +1,5 @@
 #!/bin/sh
-$XLEARNING_HOME/bin/xl-submit \
+$HBOX_HOME/bin/xl-submit \
    --app-type "caffe" \
    --app-name "caffe_demo" \
    --input /tmp/data/caffe/mnist_train_lmdb#mnist_train_lmdb \

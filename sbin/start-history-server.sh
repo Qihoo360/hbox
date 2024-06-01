@@ -18,9 +18,9 @@
 #
 set -e
 
-export XLEARNING_HOME="$(cd "`dirname "$0"`"/..; pwd)"
+export HBOX_HOME="$(cd "`dirname "$0"`"/..; pwd)"
 
-. "$XLEARNING_HOME"/conf/xlearning-env.sh
+. "$HBOX_HOME"/conf/hbox-env.sh
 
 # Find the java binary
 if [ -n "${JAVA_HOME}" ]; then
@@ -34,27 +34,30 @@ else
   fi
 fi
 
-XLEARNING_LIB_DIR=$XLEARNING_HOME/lib
+HBOX_LIB_DIR=$HBOX_HOME/lib
 
-num_jars="$(ls -1 "$XLEARNING_LIB_DIR" | grep "^xlearning.*hadoop.*\.jar$" | wc -l)"
+num_jars="$(ls -1 "$HBOX_LIB_DIR" | grep "^hbox.*hadoop.*\.jar$" | wc -l)"
 if [ "$num_jars" -eq "0" ]; then
-  echo "Failed to find XLearning jar in $XLEARNING_LIB_DIR." 1>&2
+  echo "Failed to find Hbox jar in $HBOX_LIB_DIR." 1>&2
   exit 1
 fi
-XLEARNING_JARS="$(ls -1 "$XLEARNING_LIB_DIR" | grep "^xlearning.*hadoop.*\.jar$" || true)"
+HBOX_JARS="$(ls -1 "$HBOX_LIB_DIR" | grep "^hbox.*hadoop.*\.jar$" || true)"
 if [ "$num_jars" -gt "1" ]; then
-  echo "Found multiple XLearning jars in $XLEARNING_LIB_DIR:" 1>&2
-  echo "$XLEARNING_LIB_DIR" 1>&2
+  echo "Found multiple Hbox jars in $HBOX_LIB_DIR:" 1>&2
+  echo "$HBOX_LIB_DIR" 1>&2
   echo "Please remove all but one jar." 1>&2
   exit 1
 fi
 
-XLEARNING_JAR="${XLEARNING_LIB_DIR}/${XLEARNING_JARS}"
-LAUNCH_CLASSPATH=$XLEARNING_CLASSPATH
+HBOX_JAR="${HBOX_LIB_DIR}/${HBOX_JARS}"
+LAUNCH_CLASSPATH=$HBOX_CLASSPATH
+#LAUNCH_CLASSPATH=$HBOX_JARS:$HBOX_CLASSPATH
 
-if [ ! -d "$XLEARNING_HOME/log" ]; then
-  mkdir $XLEARNING_HOME/log
-fi
+# an array that will be used to exec the final command.
+CMD=()
 
-nohup "$RUNNER" -cp "$LAUNCH_CLASSPATH" "net.qihoo.xlearning.jobhistory.JobHistoryServer" "$@" >"$XLEARNING_HOME/log/XLearning-history-$USER-$HOSTNAME.out" 2>&1 &
-sleep 1
+while IFS= read -d '' -r ARG; do
+  CMD+=("$ARG")
+
+
+done < <(nohup "$RUNNER" -cp "$LAUNCH_CLASSPATH" "net.qihoo.hbox.jobhistory.JobHistoryServer" "$@"  2>&1 &)

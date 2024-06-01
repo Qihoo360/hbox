@@ -45,7 +45,7 @@
             <directory>target</directory>
             <outputDirectory>/lib</outputDirectory>
             <includes>
-                <include>${xlearning.jar}</include>
+                <include>${hbox.jar}</include>
             </includes>
         </fileSet>
         <fileSet>

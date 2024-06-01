@@ -1,4 +1,4 @@
-$XLEARNING_HOME/bin/xl-submit \
+$HBOX_HOME/bin/xl-submit \
   --app-type "distlightgbm" \
   --app-name "distLightGBM-demo" \
   --files train.conf,demo.sh \

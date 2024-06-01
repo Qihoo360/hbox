@@ -1,5 +1,5 @@
 #!/bin/sh
-$XLEARNING_HOME/bin/xl-submit \
+$HBOX_HOME/bin/xl-submit \
    --app-type "lightlda" \
    --files demo.sh \
    --worker-memory 15G \
@@ -13,4 +13,4 @@ $XLEARNING_HOME/bin/xl-submit \
    --output /tmp/lightLDA_output#output \
    --app-name "lightLDA_demo" \
    --queue default \
-   --conf xlearning.container.env.LD_LIBRARY_PATH=lightLDA/multiverso/third_party/lib \
+   --conf hbox.container.env.LD_LIBRARY_PATH=lightLDA/multiverso/third_party/lib \

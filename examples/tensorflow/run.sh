@@ -1,5 +1,5 @@
 #!/bin/sh
-$XLEARNING_HOME/bin/xl-submit \
+$HBOX_HOME/bin/xl-submit \
    --app-type "tensorflow" \
    --app-name "tf-demo" \
    --input /tmp/data/tensorflow#data \
