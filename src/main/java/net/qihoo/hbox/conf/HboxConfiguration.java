@@ -266,7 +266,7 @@ public class HboxConfiguration extends YarnConfiguration {
     public static final String HBOX_TF_INPUT_PS_ENABLE = "hbox.tf.input.ps.enable";
     public static final Boolean DEFAULT_HBOX_TF_INPUT_PS_ENABLE = false;
     public static final String HBOX_TF_BOARD_HISTORY_DIR = "hbox.tf.board.history.dir";
-    public static final String DEFAULT_HBOX_TF_BOARD_HISTORY_DIR = "/home/yarn/hbox/eventLog";
+    public static final String DEFAULT_HBOX_TF_BOARD_HISTORY_DIR = "/tmp/hbox/eventLog";
     public static final String HBOX_BOARD_MODELPB = "hbox.board.modelpb";
     public static final String DEFAULT_HBOX_BOARD_MODELPB = "";
     public static final String HBOX_BOARD_CACHE_TIMEOUT = "hbox.board.cache.timeout";
@@ -417,7 +417,7 @@ public class HboxConfiguration extends YarnConfiguration {
      */
     public static final String HBOX_HISTORY_LOG_DIR = "hbox.history.log.dir";
 
-    public static final String DEFAULT_HBOX_HISTORY_LOG_DIR = "/home/yarn/hbox/history";
+    public static final String DEFAULT_HBOX_HISTORY_LOG_DIR = "/tmp/hbox/history";
 
     public static final String HBOX_HISTORY_LOG_DELETE_MONITOR_TIME_INTERVAL = "hbox.history.log.delete-monitor-time-interval";
 

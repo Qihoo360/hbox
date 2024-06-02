@@ -1028,7 +1028,7 @@ public class Client {
         /*TODO
          *  hbox-kill command use the HBOX_HOME/
          * */
-        LOG.info("To kill this job: /usr/bin/hadoop/software/hbox/bin/hbox-kill " + applicationId.toString());
+        LOG.info("To kill this job: ${HBOX_HOME}/bin/hbox-kill " + applicationId.toString());
         boolean isApplicationSucceed = waitCompleted();
         return isApplicationSucceed;
     }
