@@ -37,6 +37,9 @@ import org.apache.hadoop.yarn.util.SystemClock;
 
 public class JobHistoryServer extends CompositeService {
 
+    /**
+     * Priority of the JobHistoryServer shutdown hook.
+     */
     public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
     public static final long historyServerTimeStamp = System.currentTimeMillis();
@@ -50,6 +53,8 @@ public class JobHistoryServer extends CompositeService {
     private HistoryServerStateStoreService stateStore;
     private Thread deleteLogManager;
 
+    // utility class to start and stop secret manager as part of service
+    // framework and implement state recovery for secret manager on startup
     private class HistoryServerSecretManagerService
             extends AbstractService {
 
@@ -95,7 +100,7 @@ public class JobHistoryServer extends CompositeService {
     protected void serviceInit(Configuration conf) throws Exception {
         Configuration config = new HboxConfiguration(conf);
 
-        config.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
+        //config.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
 
         // This is required for WebApps to use https if enabled.
         HboxWebAppUtil.initialize(getConfig());
@@ -171,9 +176,9 @@ public class JobHistoryServer extends CompositeService {
         public void run() {
             FileSystem fs;
             Configuration conf = new HboxConfiguration();
-            Path historyLog = new Path(conf.get(HboxConfiguration.HBOX_HISTORY_LOG_DIR,
+            Path historyLog = new Path(conf.get("fs.defaultFS"), conf.get(HboxConfiguration.HBOX_HISTORY_LOG_DIR,
                     HboxConfiguration.DEFAULT_HBOX_HISTORY_LOG_DIR));
-            Path eventLog = new Path(conf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
+            Path eventLog = new Path(conf.get("fs.defaultFS"), conf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
                     HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR));
             int monitorInterval = conf.getInt(HboxConfiguration.HBOX_HISTORY_LOG_DELETE_MONITOR_TIME_INTERVAL,
                     HboxConfiguration.DEFAULT_HBOX_HISTORY_LOG_DELETE_MONITOR_TIME_INTERVAL);
@@ -193,9 +198,9 @@ public class JobHistoryServer extends CompositeService {
                             fs.delete(historyLogPer.getPath());
                         }
                     }
-                    FileStatus[] allEventLog = fs.listStatus(eventLog);
+                    FileStatus[] allEvetnLog = fs.listStatus(eventLog);
                     LOG.info("eventLog:" + eventLog);
-                    for (FileStatus eventLogPer : allEventLog) {
+                    for (FileStatus eventLogPer : allEvetnLog) {
                         LOG.info(eventLogPer.getPath() + ":" + String.valueOf(currentClock - eventLogPer.getModificationTime()));
                         if ((currentClock - eventLogPer.getModificationTime()) > logMaxAge) {
                             fs.delete(eventLogPer.getPath());

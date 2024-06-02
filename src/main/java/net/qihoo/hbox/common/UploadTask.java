@@ -9,6 +9,9 @@ import org.apache.hadoop.fs.Path;
 
 import java.io.IOException;
 
+/**
+ * Created by jiarunying-it on 2019/2/20.
+ */
 public class UploadTask implements Runnable {
 
     private static final Log LOG = LogFactory.getLog(UploadTask.class);

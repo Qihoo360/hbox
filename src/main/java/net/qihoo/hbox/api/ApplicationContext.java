@@ -9,26 +9,29 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.mapred.InputSplit;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingDeque;
-
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public interface ApplicationContext {
 
     ApplicationId getApplicationID();
 
+    String getAppType();
+
+    String getAppUser();
+
     int getWorkerNum();
 
     int getPsNum();
 
+    int getWorkerGcores();
+
+    int getPsGcores();
+
     int getWorkerMemory();
-
-    int getChiefWorkerMemory();
-
-    int getEvaluatorWorkerMemory();
 
     int getPsMemory();
 
@@ -36,13 +39,21 @@ public interface ApplicationContext {
 
     int getPsVCores();
 
+    int getChiefWorkerMemory();
+
+    int getEvaluatorWorkerMemory();
+
     List<Container> getWorkerContainers();
 
     List<Container> getPsContainers();
 
     HboxContainerStatus getContainerStatus(HboxContainerId containerId);
 
+    String getContainerGPUDevice(HboxContainerId containerId);
+
     List<InputInfo> getInputs(HboxContainerId containerId);
+
+    Map<String, InputInfo> getWholeInputs();
 
     List<InputSplit> getStreamInputs(HboxContainerId containerId);
 
@@ -52,6 +63,10 @@ public interface ApplicationContext {
 
     String getTensorBoardUrl();
 
+    Map<HboxContainerId, String> getVPCCommandAndPasswdMap();
+
+    Map<HboxContainerId, String> getDigitsUrlMap();
+
     Map<HboxContainerId, String> getReporterProgress();
 
     Map<HboxContainerId, String> getContainersAppStartTime();
@@ -60,7 +75,15 @@ public interface ApplicationContext {
 
     Map<HboxContainerId, String> getMapedTaskID();
 
+    Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuMemMetrics();
+
+    Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuUtilMetrics();
+
     Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics();
+
+    Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> getContainersGpuMemStatistics();
+
+    Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> getContainersGpuUtilStatistics();
 
     Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> getContainersCpuStatistics();
 
@@ -74,12 +97,26 @@ public interface ApplicationContext {
 
     Boolean getLastSavingStatus();
 
+    String getLastInterSavingPath();
+
     List<Long> getModelSavingList();
+
+    Boolean getContainerStarted();
 
     String getTfEvaluatorId();
 
     String getChiefWorkerId();
 
+    String getSchedulerId();
+
     Boolean getChiefWorker();
+
+    String getAMContainerID();
+
+    String getContainerStdOut(HboxContainerId cid);
+
+    String getContainerStdErr(HboxContainerId cid);
+
+    void sendSignal(int sid);
 
 }

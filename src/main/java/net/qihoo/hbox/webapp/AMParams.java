@@ -7,51 +7,31 @@ public interface AMParams {
 
     public static final String USER_NAME = "user.name";
 
-    public static final String WORKER_NUMBER = "worker.number";
-
-    public static final String PS_NUMBER = "ps.number";
-
-    public static final String WORKER_VCORES = "worker.vcores";
-
-    public static final String PS_VCORES = "ps.vcores";
-
-    public static final String WORKER_MEMORY = "worker.memory";
-
-    public static final String CHIEF_WORKER_MEMORY = "chief.worker.memory";
-
-    public static final String EVALUATOR_WORKER_MEMORY = "evaluator.worker.memory";
-
-    public static final String PS_MEMORY = "ps.memory";
-
     public static final String CONTAINER_HTTP_ADDRESS = "container.address";
 
     public static final String CONTAINER_ID = "container.id";
 
     public static final String CONTAINER_NUMBER = "container.number";
 
+    public static final String WORKER_NUMBER = "worker.number";
+
+    public static final String PS_NUMBER = "ps.number";
+
+    public static final String WORKER_MEMORY = "worker.memory";
+
+    public static final String PS_MEMORY = "ps.memory";
+
+    public static final String WORKER_VCORES = "worker.vcores";
+
+    public static final String PS_VCORES = "ps.vcores";
+
     public static final String CONTAINER_STATUS = "container.status";
 
     public static final String CONTAINER_ROLE = "container.role";
 
+    public static final String CONTAINER_GPU_DEVICE = "container.gpu.device";
+
     public static final String CONTAINER_LOG_ADDRESS = "container.log.address";
-
-    public static final String CONTAINER_CPU_METRICS_ENABLE = "container.cpu.metrics.enable";
-
-    public static final String CONTAINER_CPU_METRICS = "container.cpu.metrics";
-
-    public static final String CONTAINER_CPU_STATISTICS = "container.cpu.statistics";
-
-    public static final String CONTAINER_CPU_USAGE = "container.cpu.usage";
-
-    public static final String CONTAINER_CPU_USAGE_WARN_MEM = CONTAINER_CPU_USAGE + ".warn.mem";
-
-    public static final String CONTAINER_CPU_STATISTICS_MEM = CONTAINER_CPU_STATISTICS + ".mem";
-
-    public static final String CONTAINER_CPU_STATISTICS_UTIL = CONTAINER_CPU_STATISTICS + ".util";
-
-    public static final String USAGE_AVG = "Avg";
-
-    public static final String USAGE_MAX = "Max";
 
     public static final String BOARD_INFO = "board.info";
 
@@ -78,5 +58,23 @@ public interface AMParams {
     public static final String CONTAINER_START_TIME = "container.start.time";
 
     public static final String CONTAINER_FINISH_TIME = "container.finish.time";
+
+    public static final String CONTAINER_MEM_USAGE = "container.mem.usage";
+
+    public static final String CONTAINER_UTIL_USAGE = "container.util.usage";
+
+    public static final String CONTAINER_MEM_USAGE_WARN = CONTAINER_MEM_USAGE + ".warn";
+
+    public static final String CONTAINER_MEM_USAGE_STATISTICS = CONTAINER_MEM_USAGE + ".statistics";
+
+    public static final String CONTAINER_UTIL_USAGE_STATISTICS = CONTAINER_UTIL_USAGE + ".statistics";
+
+    public static final String GPU_USAGE_TYPE = "GPU";
+
+    public static final String CPU_USAGE_TYPE = "CPU";
+
+    public static final String USAGE_AVG = "Avg";
+
+    public static final String USAGE_MAX = "Max";
 
 }

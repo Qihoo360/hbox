@@ -10,7 +10,7 @@ public interface ApplicationMessageProtocol extends VersionedProtocol {
 
     public static final long versionID = 1L;
 
-    /**
+    /*
      * Fetch application from ApplicationMaster.
      */
     Message[] fetchApplicationMessages();

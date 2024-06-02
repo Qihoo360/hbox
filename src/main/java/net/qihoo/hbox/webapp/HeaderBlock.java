@@ -13,6 +13,12 @@ public class HeaderBlock extends HtmlBlock implements AMParams {
             loggedIn = "Logged in as: " + this.request().getRemoteUser();
         }
 
-        ((DIV) ((DIV) html.div("#header.ui-widget").div("#user")._(new Object[]{loggedIn})._()).div("#logo").img("/proxy/" + $(APP_ID) + "/static/xlWebApp/logo.png")._()).h1(this.$("title"))._();
+        html.
+                div("#header.ui-widget").
+                div("#user").
+                __(loggedIn).__().
+                div("#logo").
+                img("/proxy/" + $(APP_ID) + "/static/hboxWebApp/logo.png").__().
+                h1($(TITLE)).__();
     }
 }

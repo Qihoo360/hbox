@@ -1,3 +1,6 @@
+/**
+ *
+ */
 package net.qihoo.hbox.AM;
 
 import net.qihoo.hbox.api.ApplicationContext;

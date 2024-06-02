@@ -41,7 +41,7 @@ public class HeartbeatResponse implements Writable {
             isHboxTrainCompleted.write(dataOutput);
             interResultTimeStamp.write(dataOutput);
         } catch (IOException e) {
-            LOG.error("containerStatus write error: " + e);
+            LOG.info("containerStatus write error: " + e);
         }
     }
 
@@ -51,7 +51,7 @@ public class HeartbeatResponse implements Writable {
             isHboxTrainCompleted.readFields(dataInput);
             interResultTimeStamp.readFields(dataInput);
         } catch (IOException e) {
-            LOG.error("containerStatus read error:" + e);
+            LOG.info("containerStatus read error:" + e);
         }
     }
 }

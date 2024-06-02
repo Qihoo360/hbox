@@ -1,3 +1,6 @@
+/**
+ *
+ */
 package net.qihoo.hbox.AM;
 
 import org.apache.commons.logging.Log;
@@ -26,7 +29,7 @@ public class NMCallbackHandler implements CallbackHandler {
 
     @Override
     public void onContainerStopped(ContainerId containerId) {
-        LOG.info("Container " + containerId.toString() + " stopped");
+        LOG.info("Container " + containerId.toString() + " stoped");
     }
 
     @Override

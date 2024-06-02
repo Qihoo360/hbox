@@ -1,7 +1,6 @@
 package net.qihoo.hbox.jobhistory;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
@@ -14,8 +13,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -41,15 +40,18 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.webapp.WebApp;
-import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebAppException;
-
-import org.mortbay.jetty.servlet.DefaultServlet;
-import org.mortbay.jetty.servlet.FilterHolder;
-import org.mortbay.jetty.webapp.WebAppContext;
+import org.apache.hadoop.yarn.webapp.WebApps;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.webapp.WebAppContext;
 
+/**
+ * This module is responsible for talking to the
+ * JobClient (user facing).
+ */
 public class HistoryClientService extends AbstractService {
 
     private static final Log LOG = LogFactory.getLog(HistoryClientService.class);
@@ -107,50 +109,42 @@ public class HistoryClientService extends AbstractService {
         webApp = new HsWebApp(history);
         InetSocketAddress bindAddress = HboxWebAppUtil.getJHSWebBindAddress(conf);
         // NOTE: there should be a .at(InetSocketAddress)
+        WebApps
+                .$for("jobhistory", HistoryClientService.class, this, "ws")
+                .with(conf)
+                .withHttpSpnegoKeytabKey(
+                        HboxConfiguration.HBOX_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
+                .withHttpSpnegoPrincipalKey(
+                        HboxConfiguration.HBOX_WEBAPP_SPNEGO_USER_NAME_KEY)
+                .at(NetUtils.getHostPortString(bindAddress)).build(webApp);
 
-        try {
-            Method webAppBuild = WebApps.Builder.class.getMethod("build", WebApp.class);
-            webAppBuild.invoke(WebApps.$for("jobhistory", HistoryClientService.class, this, "ws").with(conf).withHttpSpnegoKeytabKey(HboxConfiguration.HBOX_WEBAPP_SPNEGO_KEYTAB_FILE_KEY).withHttpSpnegoPrincipalKey(HboxConfiguration.HBOX_WEBAPP_SPNEGO_USER_NAME_KEY).at(NetUtils.getHostPortString(bindAddress)), webApp);
-            HttpServer2 httpServer = webApp.httpServer();
-            WebAppContext webAppContext = httpServer.getWebAppContext();
-            WebAppContext appWebAppContext = new WebAppContext();
-            appWebAppContext.setContextPath("/static/xlWebApp");
-            String appDir = getClass().getClassLoader().getResource("xlWebApp").toString();
-            appWebAppContext.setResourceBase(appDir);
-            appWebAppContext.addServlet(DefaultServlet.class, "/*");
-            final String[] ALL_URLS = {"/*"};
-            FilterHolder[] filterHolders =
-                    webAppContext.getServletHandler().getFilters();
-            for (FilterHolder filterHolder : filterHolders) {
-                if (!"guice".equals(filterHolder.getName())) {
-                    HttpServer2.defineFilter(appWebAppContext, filterHolder.getName(),
-                            filterHolder.getClassName(), filterHolder.getInitParameters(),
-                            ALL_URLS);
-                }
+        HttpServer2 httpServer = webApp.httpServer();
+
+        WebAppContext webAppContext = httpServer.getWebAppContext();
+        WebAppContext appWebAppContext = new WebAppContext();
+        appWebAppContext.setContextPath("/static/hboxWebApp");
+        String appDir = getClass().getClassLoader().getResource("hboxWebApp").toString();
+        appWebAppContext.setResourceBase(appDir);
+        //appWebAppContext.addServlet(DefaultServlet.class, "/*");
+        final String[] ALL_URLS = {"/*"};
+        FilterHolder[] filterHolders =
+                webAppContext.getServletHandler().getFilters();
+        for (FilterHolder filterHolder : filterHolders) {
+            if (!"guice".equals(filterHolder.getName())) {
+                HttpServer2.defineFilter(appWebAppContext, filterHolder.getName(),
+                        filterHolder.getClassName(), filterHolder.getInitParameters(),
+                        ALL_URLS);
             }
-            httpServer.addContext(appWebAppContext, true);
-            try {
-                httpServer.start();
-                LOG.info("Web app " + webApp.name() + " started at "
-                        + httpServer.getConnectorAddress(0).getPort());
-            } catch (IOException e) {
-                throw new WebAppException("Error starting http server", e);
-            }
-        } catch (NoSuchMethodException e) {
-            LOG.debug("current hadoop version don't have the method build of Class " + WebApps.class.toString() + ". For More Detail: " + e);
-            WebApps
-                    .$for("jobhistory", HistoryClientService.class, this, "ws")
-                    .with(conf)
-                    .withHttpSpnegoKeytabKey(
-                            HboxConfiguration.HBOX_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
-                    .withHttpSpnegoPrincipalKey(
-                            HboxConfiguration.HBOX_WEBAPP_SPNEGO_USER_NAME_KEY)
-                    .at(NetUtils.getHostPortString(bindAddress)).start(webApp);
-        } catch (WebAppException e) {
-            throw new WebAppException("Error starting http server", e);
-        } catch (Exception e) {
-            throw new WebAppException("Error start http server. For more detail", e);
         }
+        httpServer.addHandlerAtFront(appWebAppContext);
+        try {
+            httpServer.start();
+            LOG.info("Web app " + webApp.name() + " started at "
+                    + httpServer.getConnectorAddress(0).getPort());
+        } catch (IOException e) {
+            throw new WebAppException("Error starting http server", e);
+        }
+
         String connectHost = HboxWebAppUtil.getJHSWebappURLWithoutScheme(conf).split(":")[0];
         HboxWebAppUtil.setJHSWebappURLWithoutScheme(conf,
                 connectHost + ":" + webApp.getListenerAddress().getPort());

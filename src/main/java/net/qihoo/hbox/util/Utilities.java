@@ -1,10 +1,7 @@
 package net.qihoo.hbox.util;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-
 import net.qihoo.hbox.conf.HboxConfiguration;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
@@ -19,13 +16,13 @@ import org.apache.hadoop.yarn.util.Records;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+
 
 public final class Utilities {
     private static Log LOG = LogFactory.getLog(Utilities.class);
@@ -79,7 +76,10 @@ public final class Utilities {
         String pathSuffix = appId.toString() + "/" + fileName;
         Path remotePath = new Path(conf.get(HboxConfiguration.HBOX_STAGING_DIR, HboxConfiguration.DEFAULT_HBOX_STAGING_DIR),
                 pathSuffix);
-        remotePath = new Path(conf.get("fs.defaultFS"), remotePath);
+
+        if (Boolean.parseBoolean(conf.get(HboxConfiguration.HBOX_APPEND_DEFAULTFS_ENABLE, String.valueOf(HboxConfiguration.DEFAULT_HBOX_APPEND_DEFAULTFS_ENABLE)))) {
+            remotePath = new Path(conf.get("fs.defaultFS"), remotePath);
+        }
         LOG.debug("Got remote path of " + fileName + " is " + remotePath.toString());
         return remotePath;
     }
@@ -91,7 +91,7 @@ public final class Utilities {
             return;
         }
         if (!file.setExecutable(true)) {
-            LOG.error("Failed to set executable for " + path);
+            LOG.error("Faile to set executable for " + path);
         }
 
         if (file.isDirectory()) {
@@ -137,23 +137,68 @@ public final class Utilities {
         return dir.exists() || dir.mkdirs();
     }
 
+    public static boolean isSubPath(FileSystem fs, Path parent, Path sub) {
+        if (parent == null || sub == null) {
+            return false;
+        } else {
+            try {
+                if (fs.exists(parent) && fs.exists(sub)) {
+                    if (parent.equals(sub)) {
+                        return true;
+                    } else {
+                        Path subParent = sub.getParent();
+                        while (!parent.equals(subParent) && subParent != null) {
+                            subParent = subParent.getParent();
+                        }
+                        if (subParent != null) {
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    }
+                } else {
+                    return false;
+                }
+            } catch (Exception e) {
+                LOG.error("Check whether the path " + sub.toString() + " is the sub path of the path " + parent.toString() + ". Exception : " + e);
+                return false;
+            }
+        }
+    }
+
     public static LocalResource createApplicationResource(FileSystem fs, Path path, LocalResourceType type)
             throws IOException {
         LocalResource localResource = Records.newRecord(LocalResource.class);
         FileStatus fileStatus = fs.getFileStatus(path);
+        if (!fs.getConf().get(HboxConfiguration.HBOX_REMOTE_DEFAULTFS, HboxConfiguration.DEFAULT_HBOX_REMOTE_DEFAULTFS).equals("")) {
+            path = new Path(fs.getConf().get(HboxConfiguration.HBOX_REMOTE_DEFAULTFS), path);
+        }
         localResource.setResource(ConverterUtils.getYarnUrlFromPath(path));
         localResource.setSize(fileStatus.getLen());
         localResource.setTimestamp(fileStatus.getModificationTime());
         localResource.setType(type);
-        localResource.setVisibility(LocalResourceVisibility.APPLICATION);
+        switch (fs.getConf().get(HboxConfiguration.HBOX_LOCAL_RESOURCE_VISIBILITY, HboxConfiguration.DEFAULT_HBOX_LOCAL_RESOURCE_VISIBILITY).toUpperCase()) {
+            case "PUBLIC":
+                localResource.setVisibility(LocalResourceVisibility.PUBLIC);
+                break;
+            case "APPLICATION":
+                localResource.setVisibility(LocalResourceVisibility.APPLICATION);
+                break;
+            case "PRIVATE":
+                localResource.setVisibility(LocalResourceVisibility.PRIVATE);
+                break;
+            default:
+                localResource.setVisibility(LocalResourceVisibility.PUBLIC);
+                break;
+        }
         return localResource;
     }
 
     public static void addPathToEnvironment(Map<String, String> env, String userEnvKey, String userEnvValue) {
         if (env.containsKey(userEnvKey)) {
-            env.put(userEnvKey, userEnvValue + System.getProperty("path.separator") + env.get(userEnvKey));
+            env.put(userEnvKey, userEnvValue + System.getProperty("path.separator") + env.get(userEnvKey) + System.getProperty("path.separator") + System.getenv(userEnvKey));
         } else {
-            env.put(userEnvKey, userEnvValue);
+            env.put(userEnvKey, userEnvValue + System.getProperty("path.separator") + System.getenv(userEnvKey));
         }
     }
 
@@ -174,51 +219,4 @@ public final class Utilities {
         }
         throw new IOException("couldn't allocate a unused port");
     }
-
-    public static boolean isDockerAlive(String containerName) {
-        boolean isAlive = false;
-        Runtime runtime = Runtime.getRuntime();
-        Process process;
-        try {
-            process = runtime.exec(
-                    new String[]{"/bin/bash", "-c", "docker ps --filter name=" + containerName + " | wc -l"});
-            InputStream is = process.getInputStream();
-            InputStreamReader isr = new InputStreamReader(is);
-            BufferedReader br = new BufferedReader(isr);
-            String line = null;
-            StringBuffer sb = new StringBuffer();
-            while ((line = br.readLine()) != null) {
-                sb.append(line);
-            }
-            int result = Integer.parseInt(sb.toString());
-            LOG.info("Docker running count:" + sb.toString());
-            is.close();
-            isr.close();
-            br.close();
-            if (result >= 2) {
-                isAlive = true;
-            }
-        } catch (IOException e) {
-            LOG.error("Docker check error:", e);
-        }
-        return isAlive;
-    }
-
-    public static boolean isProcessAlive(Process processid) {
-        try {
-            Method isAliveMethod = processid.getClass().getMethod("isAlive");
-            Boolean isAlive = (Boolean) isAliveMethod.invoke(processid);
-            return isAlive;
-        } catch (NoSuchMethodException e) {
-            try {
-                processid.exitValue();
-                return false;
-            } catch (IllegalThreadStateException e1) {
-                return true;
-            }
-        } catch (Exception et) {
-            return true;
-        }
-    }
-
 }

@@ -2,10 +2,11 @@ package net.qihoo.hbox.container;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import net.qihoo.hbox.api.ApplicationContainerProtocol;
+import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.*;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.util.Utilities;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -45,18 +46,22 @@ public class Heartbeat extends Thread {
 
     private Boolean IsHboxTrainCompleted;
 
-    private int outputIndex;
+    private String containerStdOut;
 
-    private int index;
-
-    private String role;
+    private String containerStdErr;
 
     private int downloadRetry;
 
     private int uploadTimeOut;
 
+    private String role;
+
+    private int index;
+
+    private int outputIndex;
+
     public Heartbeat(ApplicationContainerProtocol protocol, Configuration conf,
-                     HboxContainerId hboxContainerId, int outputIndex, int index, String role) {
+                     HboxContainerId hboxContainerId, String role, int index, int outputIndex) {
         this.protocol = protocol;
         this.conf = conf;
         this.containerId = hboxContainerId;
@@ -67,11 +72,13 @@ public class Heartbeat extends Thread {
         this.IsHboxTrainCompleted = false;
         this.heartbeatInterval = this.conf.getInt(HboxConfiguration.HBOX_CONTAINER_HEARTBEAT_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_HEARTBEAT_INTERVAL);
         this.heartbeatRetryMax = this.conf.getInt(HboxConfiguration.HBOX_CONTAINER_HEARTBEAT_RETRY, HboxConfiguration.DEFAULT_HBOX_CONTAINER_HEARTBEAT_RETRY);
-        this.downloadRetry = this.conf.getInt(HboxConfiguration.HBOX_DOWNLOAD_FILE_RETRY, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_RETRY);
-        this.uploadTimeOut = this.conf.getInt(HboxConfiguration.HBOX_INTERRESULT_UPLOAD_TIMEOUT, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_UPLOAD_TIMEOUT);
-        this.outputIndex = outputIndex;
-        this.index = index;
+        this.containerStdOut = "";
+        this.containerStdErr = "";
+        this.downloadRetry = conf.getInt(HboxConfiguration.HBOX_DOWNLOAD_FILE_RETRY, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_RETRY);
+        this.uploadTimeOut = conf.getInt(HboxConfiguration.HBOX_INTERRESULT_UPLOAD_TIMEOUT, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_UPLOAD_TIMEOUT);
         this.role = role;
+        this.index = index;
+        this.outputIndex = outputIndex;
     }
 
     @SuppressWarnings("static-access")
@@ -103,6 +110,14 @@ public class Heartbeat extends Thread {
         this.heartbeatRequest.setContainersFinishTime(finishTime);
     }
 
+    public void appendContainerStdOut(String stdOut) {
+        this.heartbeatRequest.appendContainerStdOut(stdOut);
+    }
+
+    public void appendContainerStdErr(String stdErr) {
+        this.heartbeatRequest.appendContainerStdErr(stdErr);
+    }
+
     public Boolean isHboxTrainCompleted() {
         return this.IsHboxTrainCompleted;
     }
@@ -113,14 +128,18 @@ public class Heartbeat extends Thread {
             try {
                 heartbeatResponse = protocol.heartbeat(containerId, heartbeatRequest);
                 LOG.debug("Send HeartBeat to ApplicationMaster");
+                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                    heartbeatRequest.clearContainerStdOut();
+                    heartbeatRequest.clearContainerStdErr();
+                }
                 return heartbeatResponse;
             } catch (Exception e) {
                 retry++;
                 if (retry <= heartbeatRetryMax) {
-                    LOG.warn("Send heartbeat to ApplicationMaster failed in retry " + retry);
+                    LOG.info("Send heartbeat to ApplicationMaster failed in retry " + retry);
                     Utilities.sleep(heartbeatInterval);
                 } else {
-                    LOG.warn("Send heartbeat to ApplicationMaster failed in retry " + retry
+                    LOG.info("Send heartbeat to ApplicationMaster failed in retry " + retry
                             + ", container will suicide!", e);
                     System.exit(1);
                 }
@@ -149,9 +168,19 @@ public class Heartbeat extends Thread {
                         FileSystem localFs = FileSystem.getLocal(conf);
                         Path localPath = new Path(outputs.getLocalLocation());
                         Path remotePath = new Path(outputs.getDfsLocation()
-                                + conf.get(HboxConfiguration.HBOX_INTERREAULST_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
+                                + conf.get(HboxConfiguration.HBOX_INTERRESULT_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
                                 + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date(lastInnerModelTimeStamp))
                                 + "/" + containerId.toString());
+                        if(this.outputIndex >= 0){
+                            if(this.role.equals(HboxConstants.WORKER) && this.index == this.outputIndex){
+                                remotePath = new Path(outputs.getDfsLocation()
+                                        + conf.get(HboxConfiguration.HBOX_INTERRESULT_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
+                                        + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date(lastInnerModelTimeStamp))
+                                        + "/" + localPath);
+                            }
+                            else
+                                break;
+                        }
                         LOG.info("InnerModel path:" + remotePath);
                         FileSystem dfs = remotePath.getFileSystem(conf);
                         if (dfs.exists(remotePath)) {
@@ -169,7 +198,7 @@ public class Heartbeat extends Thread {
                             List<FileStatus> uploadFiles = Utilities.listStatusRecursively(localPath,
                                     localFs, null, conf.getInt(HboxConfiguration.HBOX_FILE_LIST_LEVEL, HboxConfiguration.DEFAULT_HBOX_FILE_LIST_LEVEL));
                             for (FileStatus uploadFile : uploadFiles) {
-                                if (conf.getBoolean(HboxConfiguration.HBOX_INTERRESULT_SAVE_INC, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_SAVE_INC) && uploadFile.getModificationTime() <= previousInnerModelTimeStamp) {
+                                if (conf.getBoolean(HboxConfiguration.HBOX_INTERRESULT_UPLOAD_INC, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_UPLOAD_INC) && uploadFile.getModificationTime() <= previousInnerModelTimeStamp) {
                                     LOG.debug("current file " + uploadFile.getPath().toString() + " not changed after last saved.");
                                 } else {
                                     Path uploadPath = uploadFile.getPath();

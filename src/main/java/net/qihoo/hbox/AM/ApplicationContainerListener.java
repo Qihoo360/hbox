@@ -23,6 +23,7 @@ import org.apache.hadoop.mapred.InputSplit;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
@@ -44,11 +45,9 @@ public class ApplicationContainerListener extends AbstractService implements App
 
     private final Map<HboxContainerId, HboxContainerStatus> containerId2Status;
 
+    private final Map<HboxContainerId, String> containerId2GPU;
+
     private final Map<String, List<ContainerHostPair>> clusterDef;
-
-    private final Map<HboxContainerId, String> lightGBMIpPortMap;
-
-    private final Map<HboxContainerId, String> lightLDAIpPortMap;
 
     private final Boolean single;
 
@@ -60,19 +59,37 @@ public class ApplicationContainerListener extends AbstractService implements App
 
     private final Map<HboxContainerId, String> mapedTaskID;
 
+    private final Map<HboxContainerId, String> vpcCommandAndPasswdMap;
+
+    private final Map<HboxContainerId, String> digitsUrlMap;
+
     private final Map<HboxContainerId, String> containersAppStartTimeMap;
 
     private final Map<HboxContainerId, String> containersAppFinishTimeMap;
 
+    private final Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> containersGpuMemMetrics;
+
+    private final Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> containersGpuUtilMetrics;
+
     private final Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> containersCpuMetrics;
 
+    private final Map<HboxContainerId, ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>> containersGpuMemStatistics;
+
+    private final Map<HboxContainerId, ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>> containersGpuUtilStatistics;
+
     private final Map<HboxContainerId, ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>> containersCpuStatistics;
+
+    private final Map<HboxContainerId, String> lightGBMIpPortMap;
+
+    private final Map<HboxContainerId, String> lightLDAIpPortMap;
 
     private String clusterDefStr;
 
     private String lightGBMIpPortStr;
 
     private String lightLDAIpPortStr;
+
+    private String torchRank0IP;
 
     private final Clock clock;
 
@@ -94,22 +111,33 @@ public class ApplicationContainerListener extends AbstractService implements App
 
     private Long interResultTimeStamp;
 
+    private Long allContainerStartTime;
+
     private final Map<HboxContainerId, InnerModelSavedPair> containerId2InnerModel;
 
     private String hboxAppType;
 
-    private int isAMFinished;
+    private boolean isAMFinished;
+
+    private final ConcurrentHashMap<HboxContainerId, StringBuilder> containerId2StdOut;
+
+    private final ConcurrentHashMap<HboxContainerId, StringBuilder> containerId2StdErr;
+
+    private int signalID;
 
     public ApplicationContainerListener(ApplicationContext applicationContext, Configuration conf) {
         super(ApplicationContainerListener.class.getSimpleName());
         this.setConfig(conf);
         this.containerId2Role = new ConcurrentHashMap<>();
         this.containerId2Status = new ConcurrentHashMap<>();
+        this.containerId2GPU = new ConcurrentHashMap<>();
         this.reporterProgress = new ConcurrentHashMap<>();
         this.mapedTaskID = new ConcurrentHashMap<>();
+        this.vpcCommandAndPasswdMap = new ConcurrentHashMap<>();
+        this.digitsUrlMap = new ConcurrentHashMap<>();
         this.containersAppStartTimeMap = new ConcurrentHashMap<>();
         this.containersAppFinishTimeMap = new ConcurrentHashMap<>();
-        this.single = conf.getBoolean(HboxConfiguration.HBOX_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MODE_SINGLE);
+        this.single = conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE);
         this.clusterDef = new ConcurrentHashMap<>();
         this.clusterDef.put(HboxConstants.WORKER, Collections.synchronizedList(new ArrayList<ContainerHostPair>()));
         this.clusterDef.put(HboxConstants.PS, Collections.synchronizedList(new ArrayList<ContainerHostPair>()));
@@ -117,10 +145,9 @@ public class ApplicationContainerListener extends AbstractService implements App
         this.clusterDefStr = null;
         this.tfDistributionStrategy = conf.getBoolean(HboxConfiguration.HBOX_TF_DISTRIBUTION_STRATEGY, HboxConfiguration.DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY);
         this.tfEvaluator = conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR);
-        this.lightGBMIpPortMap = new ConcurrentHashMap<>();
         this.lightGBMIpPortStr = null;
-        this.lightLDAIpPortMap = new ConcurrentHashMap<>();
         this.lightLDAIpPortStr = null;
+        this.torchRank0IP = null;
         this.applicationContext = applicationContext;
         this.clock = new SystemClock();
         this.runningContainers = new ConcurrentHashMap<>();
@@ -131,15 +158,25 @@ public class ApplicationContainerListener extends AbstractService implements App
         this.tensorboardUrl = null;
         this.isSaveInnerModel = false;
         this.interResultTimeStamp = Long.MIN_VALUE;
+        this.allContainerStartTime = Long.MIN_VALUE;
         this.containerId2InnerModel = new ConcurrentHashMap<>();
+        this.containersGpuMemMetrics = new ConcurrentHashMap<>();
+        this.containersGpuUtilMetrics = new ConcurrentHashMap<>();
         this.containersCpuMetrics = new ConcurrentHashMap<>();
+        this.containersGpuMemStatistics = new ConcurrentHashMap<>();
+        this.containersGpuUtilStatistics = new ConcurrentHashMap<>();
         this.containersCpuStatistics = new ConcurrentHashMap<>();
+        this.lightGBMIpPortMap = new ConcurrentHashMap<>();
+        this.lightLDAIpPortMap = new ConcurrentHashMap<>();
+        this.containerId2StdOut = new ConcurrentHashMap<>();
+        this.containerId2StdErr = new ConcurrentHashMap<>();
         if (System.getenv().containsKey(HboxConstants.Environment.HBOX_APP_TYPE.toString())) {
             hboxAppType = System.getenv(HboxConstants.Environment.HBOX_APP_TYPE.toString()).toUpperCase();
         } else {
             hboxAppType = "HBOX";
         }
-        this.isAMFinished = -1;
+        this.isAMFinished = false;
+        this.signalID = -1;
     }
 
     @Override
@@ -163,11 +200,19 @@ public class ApplicationContainerListener extends AbstractService implements App
         containerTimeoutMonitor.setName("Container-timeout-monitor");
         containerTimeoutMonitor.setDaemon(true);
         containerTimeoutMonitor.start();
-        LOG.info("Container timeout monitor thread had started");
+        LOG.info("Container timeout monitor thread hads started");
     }
 
     public String getTensorboardUrl() {
         return this.tensorboardUrl;
+    }
+
+    public Map<HboxContainerId, String> getVPCCommandAndPasswdMap() {
+        return this.vpcCommandAndPasswdMap;
+    }
+
+    public Map<HboxContainerId, String> getDigitsUrlMap() {
+        return this.digitsUrlMap;
     }
 
     public Map<HboxContainerId, String> getReporterProgress() {
@@ -186,8 +231,42 @@ public class ApplicationContainerListener extends AbstractService implements App
         return this.mapedTaskID;
     }
 
+    public Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuMemMetrics() {
+        return this.containersGpuMemMetrics;
+    }
+
+    public Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuUtilMetrics() {
+        return this.containersGpuUtilMetrics;
+    }
+
     public Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics() {
         return this.containersCpuMetrics;
+    }
+
+    public Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> getContainersGpuMemStatistics() {
+        Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> gpuStatistics = new ConcurrentHashMap<>();
+        for (HboxContainerId id : this.containersGpuMemStatistics.keySet()) {
+            Map<String, ContainerMetricsStatisticsTuple> statisticsTuple = this.containersGpuMemStatistics.get(id);
+            ConcurrentHashMap<String, List<Double>> statisticsValue = new ConcurrentHashMap<>();
+            for (String str : statisticsTuple.keySet()) {
+                statisticsValue.put(str, statisticsTuple.get(str).getStatisticsInfo());
+            }
+            gpuStatistics.put(id, statisticsValue);
+        }
+        return gpuStatistics;
+    }
+
+    public Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> getContainersGpuUtilStatistics() {
+        Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> gpuStatistics = new ConcurrentHashMap<>();
+        for (HboxContainerId id : this.containersGpuUtilStatistics.keySet()) {
+            Map<String, ContainerMetricsStatisticsTuple> statisticsTuple = this.containersGpuUtilStatistics.get(id);
+            ConcurrentHashMap<String, List<Double>> statisticsValue = new ConcurrentHashMap<>();
+            for (String str : statisticsTuple.keySet()) {
+                statisticsValue.put(str, statisticsTuple.get(str).getStatisticsInfo());
+            }
+            gpuStatistics.put(id, statisticsValue);
+        }
+        return gpuStatistics;
     }
 
     public Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> getContainersCpuStatistics() {
@@ -211,12 +290,11 @@ public class ApplicationContainerListener extends AbstractService implements App
         isHboxTrainFinished = true;
     }
 
-    public void setAMFinished(int exitcode) {
-        isAMFinished = exitcode;
+    public void setAMFinished() {
+        isAMFinished = true;
     }
 
     public void setSaveInnerModel(Boolean isSaveInnerModel) {
-        LOG.debug("last saved status:" + this.isSaveInnerModel + "; new saved status:" + isSaveInnerModel);
         if (this.isSaveInnerModel != isSaveInnerModel) {
             this.isSaveInnerModel = isSaveInnerModel;
             if (this.isSaveInnerModel) {
@@ -225,7 +303,7 @@ public class ApplicationContainerListener extends AbstractService implements App
                     Configuration conf = this.getConfig();
                     for (OutputInfo output : this.applicationContext.getOutputs()) {
                         Path innerResult = new Path(output.getDfsLocation()
-                                + conf.get(HboxConfiguration.HBOX_INTERREAULST_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
+                                + conf.get(HboxConfiguration.HBOX_INTERRESULT_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
                                 + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date(this.interResultTimeStamp)));
                         FileSystem fs = innerResult.getFileSystem(conf);
                         fs.mkdirs(innerResult);
@@ -233,7 +311,7 @@ public class ApplicationContainerListener extends AbstractService implements App
                         LOG.info("interResult path:" + innerResult);
                     }
                 } catch (IOException e) {
-                    LOG.error("create the interResult path error: " + e);
+                    LOG.info("create the interResult path error: " + e);
                 }
             }
         }
@@ -250,6 +328,31 @@ public class ApplicationContainerListener extends AbstractService implements App
         return null;
     }
 
+    public String getContainerGPUDevice(HboxContainerId hboxContainerId) {
+        if (containerId2GPU.containsKey(hboxContainerId)) {
+            return containerId2GPU.get(hboxContainerId);
+        }
+        return null;
+    }
+
+    public String getContainerStdOut(HboxContainerId hboxContainerId) {
+        if (containerId2StdOut.containsKey(hboxContainerId)) {
+            String r = containerId2StdOut.get(hboxContainerId).toString();
+            containerId2StdOut.put(hboxContainerId, new StringBuilder(""));
+            return r;
+        }
+        return "";
+    }
+
+    public String getContainerStdErr(HboxContainerId hboxContainerId) {
+        if (containerId2StdErr.containsKey(hboxContainerId)) {
+            String r = containerId2StdErr.get(hboxContainerId).toString();
+            containerId2StdErr.put(hboxContainerId, new StringBuilder(""));
+            return r;
+        }
+        return "";
+    }
+
     @Override
     public void registerContainer(HboxContainerId containerId, String role) {
         containerId2Status.put(containerId, HboxContainerStatus.UNDEFINED);
@@ -257,12 +360,18 @@ public class ApplicationContainerListener extends AbstractService implements App
         reporterProgress.put(containerId, "");
         containersAppStartTimeMap.put(containerId, "");
         containersAppFinishTimeMap.put(containerId, "");
+        containersGpuMemMetrics.put(containerId, new ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>());
+        containersGpuUtilMetrics.put(containerId, new ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>());
         containersCpuMetrics.put(containerId, new ConcurrentHashMap<String, LinkedBlockingDeque<Object>>());
+        containersGpuMemStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
+        containersGpuUtilStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
         containersCpuStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
-        if (role.equals(HboxConstants.WORKER) || (role.equals(HboxConstants.PS) && (hboxAppType.equals("TENSORFLOW") || hboxAppType.equals("LIGHTLDA")))) {
+        if (role.equals(HboxConstants.WORKER) || (role.equals(HboxConstants.PS) && (hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("TENSORFLOW") || hboxAppType.equals("TENSOR2TENSOR") || hboxAppType.equals("XDL")))) {
             containerId2InnerModel.put(containerId, new InnerModelSavedPair());
         }
         runningContainers.put(containerId, new LastTime(clock.getTime()));
+        containerId2StdOut.put(containerId, new StringBuilder(""));
+        containerId2StdErr.put(containerId, new StringBuilder(""));
     }
 
     @Override
@@ -307,7 +416,11 @@ public class ApplicationContainerListener extends AbstractService implements App
             }
         }
 
-        if (!this.getConfig().getBoolean(HboxConfiguration.HBOX_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MODE_SINGLE)) {
+        if (("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) && !this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
+            if (failedNum > 0) {
+                return true;
+            }
+        } else if ("MXNET".equals(hboxAppType) && !this.getConfig().getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE)) {
             if (failedNum > 0) {
                 return true;
             }
@@ -315,15 +428,23 @@ public class ApplicationContainerListener extends AbstractService implements App
             if (failedNum > 0) {
                 return true;
             }
-        } else if ("DISTLIGHTGBM".equals(hboxAppType)) {
+        } else if (hboxAppType.equals("DISTLIGHTGBM")) {
             if (failedNum > 0) {
                 return true;
             }
-        } else if ("XFLOW".equals(hboxAppType)) {
+        } else if (hboxAppType.equals("DISTLIGHTLDA")) {
             if (failedNum > 0) {
                 return true;
             }
-        } else if ("MPI".equals(hboxAppType)) {
+        } else if (hboxAppType.equals("MPI") || hboxAppType.equals("HOROVOD")) {
+            if (failedNum > 0) {
+                return true;
+            }
+        } else if (hboxAppType.equals("XFLOW")) {
+            if (failedNum > 0) {
+                return true;
+            }
+        } else if (hboxAppType.equals("XDL") && !this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
             if (failedNum > 0) {
                 return true;
             }
@@ -337,34 +458,7 @@ public class ApplicationContainerListener extends AbstractService implements App
     }
 
     @Override
-    public boolean isAllWorkerContainersSucceeded() {
-        if (containerId2Status.isEmpty()) {
-            return false;
-        }
-        Double failedNum = 0.0;
-        for (Entry<HboxContainerId, HboxContainerStatus> e : containerId2Status.entrySet()) {
-            if (!e.getValue().equals(HboxContainerStatus.SUCCEEDED)) {
-                failedNum += 1;
-                if (this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR) && e.getKey().toString().equals(applicationContext.getTfEvaluatorId())) {
-                    failedNum -= 1;
-                }
-            }
-        }
-        if (!this.getConfig().getBoolean(HboxConfiguration.HBOX_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MODE_SINGLE)) {
-            if (failedNum > 0) {
-                return false;
-            }
-        } else {
-            Double jobFailedNum = containerId2Status.size() * this.getConfig().getDouble(HboxConfiguration.HBOX_CONTAINER_MAX_FAILURES_RATE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_FAILURES_RATE);
-            if (failedNum >= jobFailedNum) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    @Override
-    public int isApplicationCompleted() {
+    public boolean isApplicationCompleted() {
         return isAMFinished;
     }
 
@@ -387,6 +481,44 @@ public class ApplicationContainerListener extends AbstractService implements App
         return true;
     }
 
+    @Override
+    public boolean isAllWorkerContainersSucceeded() {
+        if (containerId2Status.isEmpty()) {
+            return false;
+        }
+        Double failedNum = 0.0;
+        for (Entry<HboxContainerId, HboxContainerStatus> e : containerId2Status.entrySet()) {
+            if (!e.getValue().equals(HboxContainerStatus.SUCCEEDED)) {
+                failedNum += 1;
+                if (this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR) && e.getKey().toString().equals(applicationContext.getTfEvaluatorId())) {
+                    failedNum -= 1;
+                }
+            }
+        }
+        if (("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) && !this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
+            if (failedNum > 0) {
+                return false;
+            }
+        } else if ("MXNET".equals(hboxAppType) && !this.getConfig().getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE)) {
+            if (failedNum > 0) {
+                return false;
+            }
+        } else if (hboxAppType.equals("DISTLIGHTLDA")) {
+            if (failedNum > 0) {
+                return false;
+            }
+        } else if ("XDL".equals(hboxAppType) && !this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
+            if (failedNum > 0) {
+                return false;
+            }
+        } else {
+            Double jobFailedNum = containerId2Status.size() * this.getConfig().getDouble(HboxConfiguration.HBOX_CONTAINER_MAX_FAILURES_RATE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_FAILURES_RATE);
+            if (failedNum >= jobFailedNum) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     @Override
     public int interResultCompletedNum(Long lastInnerModelStr) {
@@ -400,7 +532,7 @@ public class ApplicationContainerListener extends AbstractService implements App
                 completedNum++;
             }
         }
-        LOG.debug("current interResult saved completed num:" + completedNum);
+        LOG.debug("current interResultModel saved completed num:" + completedNum);
         return completedNum;
     }
 
@@ -422,27 +554,19 @@ public class ApplicationContainerListener extends AbstractService implements App
     }
 
     @Override
-    public synchronized String getLightGbmIpPortStr() {
-        if (this.lightGBMIpPortMap.size() == applicationContext.getWorkerNum()) {
-            LOG.info("Sending lightGBM ip port list \"" + new Gson().toJson(lightGBMIpPortMap) + "\"to container");
-            this.lightGBMIpPortStr = new Gson().toJson(lightGBMIpPortMap);
-        }
-        return this.lightGBMIpPortStr;
+    public void reportLightLdaIpPort(HboxContainerId containerId, String lightLdaIpPort) {
+        this.lightLDAIpPortMap.put(containerId, lightLdaIpPort);
+        LOG.info("From container " + containerId.toString() + "Received reported lightLDA ip port: " + lightLdaIpPort);
     }
 
     @Override
-    public void reportLightLDAIpPort(HboxContainerId containerId, String lightLDAIpPort) {
-        this.lightLDAIpPortMap.put(containerId, lightLDAIpPort);
-        LOG.info("From container " + containerId.toString() + " Received reported lightLDA ip port: " + lightLDAIpPort);
+    public void reportTorchRank0IP(String ip) {
+        this.torchRank0IP = ip;
     }
 
     @Override
-    public synchronized String getLightLDAIpPortStr() {
-        if (this.lightLDAIpPortMap.size() == applicationContext.getPsNum()) {
-            LOG.info("Sending lightLDA ip port list \"" + new Gson().toJson(lightLDAIpPortMap) + "\"to container");
-            this.lightLDAIpPortStr = new Gson().toJson(lightLDAIpPortMap);
-        }
-        return this.lightLDAIpPortStr;
+    public String getTorchRank0IP() {
+        return this.torchRank0IP;
     }
 
     @Override
@@ -452,9 +576,91 @@ public class ApplicationContainerListener extends AbstractService implements App
     }
 
     @Override
+    public void reportVPCCommandAndPasswd(HboxContainerId containerId, String vpcCap) {
+        this.vpcCommandAndPasswdMap.put(containerId, vpcCap);
+        LOG.info("From container " + containerId.toString() + " received vpc command and password:" + vpcCap);
+    }
+
+    @Override
+    public void reportDigitsUrl(HboxContainerId containerId, String url) {
+        this.digitsUrlMap.put(containerId, url);
+        LOG.info("From container " + containerId.toString() + " received digits url:" + url);
+    }
+
+    @Override
     public void reportMapedTaskID(HboxContainerId containerId, String taskid) {
         this.mapedTaskID.put(containerId, taskid);
         LOG.info("STREAM containerId is:" + containerId.toString() + " taskid is:" + taskid);
+    }
+
+    @Override
+    public void reportGpuMemeoryUsed(HboxContainerId containerId, String gpuMemeoryUsed) {
+        if (this.containersGpuMemMetrics.get(containerId).size() == 0) {
+            Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {
+            }.getType();
+            ConcurrentHashMap<String, List<Long>> map = new Gson().fromJson(gpuMemeoryUsed, type);
+            for (String str : map.keySet()) {
+                LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
+                queue.add(map.get(str));
+                this.containersGpuMemMetrics.get(containerId).put(str, queue);
+                this.containersGpuMemStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(map.get(str).get(1).doubleValue()));
+            }
+        } else {
+            Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {
+            }.getType();
+            ConcurrentHashMap<String, List<Long>> map = new Gson().fromJson(gpuMemeoryUsed, type);
+            for (String str : map.keySet()) {
+                if (this.containersGpuMemMetrics.get(containerId).keySet().contains(str)) {
+                    if (this.containersGpuMemMetrics.get(containerId).get(str).size() < 1800) {
+                        this.containersGpuMemMetrics.get(containerId).get(str).add(map.get(str));
+                    } else {
+                        this.containersGpuMemMetrics.get(containerId).get(str).poll();
+                        this.containersGpuMemMetrics.get(containerId).get(str).add(map.get(str));
+                    }
+                    this.containersGpuMemStatistics.get(containerId).get(str).update(map.get(str).get(1).doubleValue());
+                } else {
+                    LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
+                    queue.add(map.get(str));
+                    this.containersGpuMemMetrics.get(containerId).put(str, queue);
+                    this.containersGpuMemStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(map.get(str).get(1).doubleValue()));
+                }
+            }
+        }
+    }
+
+    @Override
+    public void reportGpuUtilization(HboxContainerId containerId, String gpuUtilization) {
+        if (this.containersGpuUtilMetrics.get(containerId).size() == 0) {
+            Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {
+            }.getType();
+            ConcurrentHashMap<String, List<Long>> map = new Gson().fromJson(gpuUtilization, type);
+            for (String str : map.keySet()) {
+                LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
+                queue.add(map.get(str));
+                this.containersGpuUtilMetrics.get(containerId).put(str, queue);
+                this.containersGpuUtilStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(map.get(str).get(1).doubleValue()));
+            }
+        } else {
+            Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {
+            }.getType();
+            ConcurrentHashMap<String, List<Long>> map = new Gson().fromJson(gpuUtilization, type);
+            for (String str : map.keySet()) {
+                if (this.containersGpuUtilMetrics.get(containerId).keySet().contains(str)) {
+                    if (this.containersGpuUtilMetrics.get(containerId).get(str).size() < 1800) {
+                        this.containersGpuUtilMetrics.get(containerId).get(str).add(map.get(str));
+                    } else {
+                        this.containersGpuUtilMetrics.get(containerId).get(str).poll();
+                        this.containersGpuUtilMetrics.get(containerId).get(str).add(map.get(str));
+                    }
+                    this.containersGpuUtilStatistics.get(containerId).get(str).update(map.get(str).get(1).doubleValue());
+                } else {
+                    LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
+                    queue.add(map.get(str));
+                    this.containersGpuUtilMetrics.get(containerId).put(str, queue);
+                    this.containersGpuUtilStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(map.get(str).get(1).doubleValue()));
+                }
+            }
+        }
     }
 
     @Override
@@ -537,39 +743,105 @@ public class ApplicationContainerListener extends AbstractService implements App
         return this.interResultTimeStamp;
     }
 
+    public synchronized Long allContainerStartTime() {
+        if (this.allContainerStartTime < 0) {
+            DateFormat fmt = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy");
+            Calendar calendar = Calendar.getInstance();
+            for (String startTime : this.containersAppStartTimeMap.values()) {
+                if (startTime.equals("")) {
+                    continue;
+                } else {
+                    try {
+                        calendar.setTime(fmt.parse(startTime));
+                        this.allContainerStartTime = calendar.getTimeInMillis();
+                        break;
+                    } catch (Exception e) {
+                        LOG.error("transform the container app start time error. " + e);
+                    }
+                }
+            }
+        }
+        return this.allContainerStartTime;
+    }
+
     @Override
     public synchronized String getClusterDef() {
-        if (this.clusterDef.get(HboxConstants.WORKER.toString()).size() == applicationContext.getWorkerNum()
-                && ((!tfDistributionStrategy && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum())
-                || (tfDistributionStrategy
-                && (applicationContext.getPsNum() == 0 || (applicationContext.getPsNum() > 0 && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum()))
-                && (!tfEvaluator || (tfEvaluator && this.clusterDef.get(HboxConstants.EVALUATOR.toString()).size() == 1))))) {
-            if (this.clusterDefStr == null) {
-                Collections.sort(this.clusterDef.get(HboxConstants.PS.toString()), new compairIndex());
-                Collections.sort(this.clusterDef.get(HboxConstants.WORKER.toString()), new compairIndex());
-                List workerList = new ArrayList<String>();
-                for (int i = 0; i < applicationContext.getWorkerNum(); i++) {
-                    workerList.add(this.clusterDef.get(HboxConstants.WORKER.toString()).get(i).getHost());
-                }
-                Map<String, List<String>> clusterMessage = new HashMap<>();
-                clusterMessage.put(HboxConstants.WORKER, workerList);
-                if (applicationContext.getPsNum() > 0) {
-                    List psList = new ArrayList<String>();
-                    for (int i = 0; i < applicationContext.getPsNum(); i++) {
-                        psList.add(this.clusterDef.get(HboxConstants.PS.toString()).get(i).getHost());
+        boolean correctWorker = this.clusterDef.get(HboxConstants.WORKER.toString()).size() == applicationContext.getWorkerNum();
+        boolean notDistModeButHavePs = !tfDistributionStrategy && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum();
+        boolean correctPs = applicationContext.getPsNum() == 0 || (applicationContext.getPsNum() > 0 && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum());
+        boolean correctEvaluator = !tfEvaluator || this.clusterDef.get(HboxConstants.EVALUATOR.toString()).size() == 1;
+        boolean validDistMode = tfDistributionStrategy && correctPs && correctEvaluator;
+        if (correctWorker) {
+            if (notDistModeButHavePs || validDistMode) {
+                if (this.clusterDefStr == null) {
+                    Collections.sort(this.clusterDef.get(HboxConstants.PS.toString()), new compairIndex());
+                    Collections.sort(this.clusterDef.get(HboxConstants.WORKER.toString()), new compairIndex());
+                    List workerList = new ArrayList<String>();
+                    for (int i = 0; i < applicationContext.getWorkerNum(); i++) {
+                        workerList.add(this.clusterDef.get(HboxConstants.WORKER.toString()).get(i).getHost());
                     }
-                    clusterMessage.put(HboxConstants.PS, psList);
+                    Map<String, List<String>> clusterMessage = new HashMap<>();
+                    clusterMessage.put(HboxConstants.WORKER, workerList);
+                    if (applicationContext.getPsNum() > 0) {
+                        List psList = new ArrayList<String>();
+                        for (int i = 0; i < applicationContext.getPsNum(); i++) {
+                            psList.add(this.clusterDef.get(HboxConstants.PS.toString()).get(i).getHost());
+                        }
+                        clusterMessage.put(HboxConstants.PS, psList);
+                    }
+                    if (tfDistributionStrategy && tfEvaluator) {
+                        List evaluatorList = new ArrayList<String>();
+                        evaluatorList.add(this.clusterDef.get(HboxConstants.EVALUATOR.toString()).get(0).getHost());
+                        clusterMessage.put(HboxConstants.EVALUATOR, evaluatorList);
+                    }
+                    LOG.info("Sending cluster def \"" + new Gson().toJson(clusterMessage) + "\"to container");
+                    this.clusterDefStr = new Gson().toJson(clusterMessage);
                 }
-                if (tfDistributionStrategy && tfEvaluator) {
-                    List evaluatorList = new ArrayList<String>();
-                    evaluatorList.add(this.clusterDef.get(HboxConstants.EVALUATOR.toString()).get(0).getHost());
-                    clusterMessage.put(HboxConstants.EVALUATOR, evaluatorList);
-                }
-                LOG.info("Sending cluster def \"" + new Gson().toJson(clusterMessage) + "\"to container");
-                this.clusterDefStr = new Gson().toJson(clusterMessage);
             }
         }
         return this.clusterDefStr;
+    }
+
+    @Override
+    public synchronized String getLightGbmIpPortStr() {
+        if (this.lightGBMIpPortMap.size() == applicationContext.getWorkerNum()) {
+            LOG.info("Sending lightGBM ip port list \"" + new Gson().toJson(lightGBMIpPortMap) + "\"to container");
+            this.lightGBMIpPortStr = new Gson().toJson(lightGBMIpPortMap);
+        }
+        return this.lightGBMIpPortStr;
+    }
+
+    @Override
+    public synchronized String getLightLdaIpPortStr() {
+        if (this.lightLDAIpPortMap.size() == applicationContext.getPsNum()) {
+            LOG.info("Sending lightGBM ip port list \"" + new Gson().toJson(lightLDAIpPortMap) + "\"to container");
+            this.lightLDAIpPortStr = new Gson().toJson(lightLDAIpPortMap);
+        }
+        return this.lightLDAIpPortStr;
+    }
+
+    @Override
+    public void reportStatus(HboxContainerId containerId, HboxContainerStatus containerStatus) {
+        try {
+            LOG.info("Update container " + containerId.toString() + " status to " + containerStatus);
+            containerId2Status.put(containerId, containerStatus);
+            if (containerStatus.equals(HboxContainerStatus.SUCCEEDED) || containerStatus.equals(HboxContainerStatus.FAILED)) {
+                LOG.info("container " + containerId.toString() + " is " + containerStatus + ", now remove from running containers");
+                runningContainers.remove(containerId);
+            }
+        } catch (Exception e) {
+            LOG.error("Update container " + containerId.toString() + " status failed, ", e);
+        }
+    }
+
+    @Override
+    public void reportGPUDevice(HboxContainerId containerId, String containerGpuInfo) {
+        try {
+            LOG.info("Get container " + containerId.toString() + " GPU Device ID: " + containerGpuInfo);
+            containerId2GPU.put(containerId, containerGpuInfo);
+        } catch (Exception e) {
+            LOG.error("Get the container " + containerId.toString() + " GPU Device ID failed, ", e);
+        }
     }
 
     @Override
@@ -597,6 +869,15 @@ public class ApplicationContainerListener extends AbstractService implements App
             }
         }
 
+        if (this.getConfig().getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE) && !(hboxAppType.equals("HOROVOD") || hboxAppType.equals("MPI") || hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS"))) {
+            if (heartbeatRequest.getContainerStdOut() != null && heartbeatRequest.getContainerStdOut() != "") {
+                containerId2StdOut.put(containerId, containerId2StdOut.get(containerId).append(heartbeatRequest.getContainerStdOut()));
+            }
+            if (heartbeatRequest.getContainerStdErr() != null && heartbeatRequest.getContainerStdErr() != "") {
+                containerId2StdErr.put(containerId, containerId2StdErr.get(containerId).append(heartbeatRequest.getContainerStdErr()));
+            }
+        }
+
         if (containerId2Role.get(containerId).equals(HboxConstants.WORKER)) {
             String localProgressLog = heartbeatRequest.getProgressLog();
             if (!localProgressLog.equals("")) {
@@ -604,19 +885,27 @@ public class ApplicationContainerListener extends AbstractService implements App
                 try {
                     LOG.debug("container " + containerId + " " + localProgressLog);
                 } catch (Exception e) {
-                    LOG.error("log progress error:" + e);
+                    LOG.info("log progress error:" + e);
                 }
             }
+            String localContainersStartTime = heartbeatRequest.getContainersStartTime();
+            if (!localContainersStartTime.equals("")) {
+                this.containersAppStartTimeMap.put(containerId, localContainersStartTime);
+            }
+            String localContainersFinishTime = heartbeatRequest.getContainersFinishTime();
+            if (!localContainersFinishTime.equals("")) {
+                this.containersAppFinishTimeMap.put(containerId, localContainersFinishTime);
+            }
+        } else {
+            String localContainersStartTime = heartbeatRequest.getContainersStartTime();
+            if (!localContainersStartTime.equals("")) {
+                this.containersAppStartTimeMap.put(containerId, localContainersStartTime);
+            }
+            String localContainersFinishTime = heartbeatRequest.getContainersFinishTime();
+            if (!localContainersFinishTime.equals("")) {
+                this.containersAppFinishTimeMap.put(containerId, localContainersFinishTime);
+            }
         }
-        String localContainersStartTime = heartbeatRequest.getContainersStartTime();
-        if (!localContainersStartTime.equals("")) {
-            this.containersAppStartTimeMap.put(containerId, localContainersStartTime);
-        }
-        String localContainersFinishTime = heartbeatRequest.getContainersFinishTime();
-        if (!localContainersFinishTime.equals("")) {
-            this.containersAppFinishTimeMap.put(containerId, localContainersFinishTime);
-        }
-
         if (this.isSaveInnerModel) {
             if (containerId2InnerModel.containsKey(containerId)) {
                 if (!containerId2InnerModel.get(containerId).getInnerModelTimeStamp().equals(this.interResultTimeStamp)) {
@@ -640,9 +929,20 @@ public class ApplicationContainerListener extends AbstractService implements App
     }
 
     @Override
+    public boolean isHboxTrainCompleted() {
+        return isHboxTrainFinished;
+    }
+
+    @Override
     public InputInfo[] getInputSplit(HboxContainerId containerId) {
         int inputInfoSize = applicationContext.getInputs(containerId).size();
         return applicationContext.getInputs(containerId).toArray(new InputInfo[inputInfoSize]);
+    }
+
+    @Override
+    public InputInfo[] getInputWholeSplit() {
+        int inputInfoSize = applicationContext.getWholeInputs().size();
+        return applicationContext.getWholeInputs().values().toArray(new InputInfo[inputInfoSize]);
     }
 
     @Override
@@ -714,7 +1014,7 @@ public class ApplicationContainerListener extends AbstractService implements App
                 try {
                     Thread.sleep(monitorInterval);
                 } catch (InterruptedException e) {
-                    LOG.warn("ContainerHeartbeatHandler thread interrupted");
+                    LOG.info("ContainerHeartbeatHandler thread interrupted");
                     break;
                 }
             }
@@ -781,6 +1081,10 @@ public class ApplicationContainerListener extends AbstractService implements App
             return this.savedStatus;
         }
 
+        public void setModelSavedStatus(Boolean savedStatus) {
+            this.savedStatus = savedStatus;
+        }
+
     }
 
     private class ContainerMetricsStatisticsTuple {
@@ -817,4 +1121,13 @@ public class ApplicationContainerListener extends AbstractService implements App
         }
     }
 
+    @Override
+    public void sendSignal(int sid) {
+        this.signalID = sid;
+    }
+
+    @Override
+    public int getSignal() {
+        return this.signalID;
+    }
 }

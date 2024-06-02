@@ -5,6 +5,9 @@ import net.qihoo.hbox.container.HboxContainerId;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.mapred.InputSplit;
 
+import java.util.Map;
+
+
 public interface ApplicationContainerProtocol extends VersionedProtocol {
 
     public static final long versionID = 1L;
@@ -13,17 +16,29 @@ public interface ApplicationContainerProtocol extends VersionedProtocol {
 
     void reportLightGbmIpPort(HboxContainerId containerId, String lightGbmIpPort);
 
-    String getLightGbmIpPortStr();
+    void reportLightLdaIpPort(HboxContainerId containerId, String lightLdaIpPort);
 
-    void reportLightLDAIpPort(HboxContainerId containerId, String lightLDAIpPort);
+    void reportTorchRank0IP(String ip);
 
-    String getLightLDAIpPortStr();
+    String getTorchRank0IP();
 
     String getClusterDef();
 
+    String getLightGbmIpPortStr();
+
+    String getLightLdaIpPortStr();
+
+    void reportStatus(HboxContainerId containerId, HboxContainerStatus containerStatus);
+
+    void reportGPUDevice(HboxContainerId containerId, String containerGPUDevice);
+
     HeartbeatResponse heartbeat(HboxContainerId containerId, HeartbeatRequest heartbeatRequest);
 
+    boolean isHboxTrainCompleted();
+
     InputInfo[] getInputSplit(HboxContainerId containerId);
+
+    InputInfo[] getInputWholeSplit();
 
     InputSplit[] getStreamInputSplit(HboxContainerId containerId);
 
@@ -33,10 +48,24 @@ public interface ApplicationContainerProtocol extends VersionedProtocol {
 
     void reportMapedTaskID(HboxContainerId containerId, String taskId);
 
+    void reportVPCCommandAndPasswd(HboxContainerId containerId, String commandAndPasswd);
+
+    void reportDigitsUrl(HboxContainerId containerId, String url);
+
+    void reportGpuMemeoryUsed(HboxContainerId containerId, String gpuMemeoryUsed);
+
+    void reportGpuUtilization(HboxContainerId containerId, String gpuUtilization);
+
     void reportCpuMetrics(HboxContainerId containerId, String cpuMetrics);
 
     Long interResultTimeStamp();
 
-    int isApplicationCompleted();
+    boolean isApplicationCompleted();
+
+    Long allContainerStartTime();
+
+    int getSignal();
+
+    void sendSignal(int sid);
 
 }

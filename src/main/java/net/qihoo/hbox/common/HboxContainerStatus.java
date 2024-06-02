@@ -1,7 +1,7 @@
 package net.qihoo.hbox.common;
 
 /**
- * Hbox Container Status
+ * MPI Container Status
  */
 public enum HboxContainerStatus {
     UNDEFINED,

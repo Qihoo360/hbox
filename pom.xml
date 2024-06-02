@@ -6,11 +6,12 @@
 
     <groupId>net.qihoo</groupId>
     <artifactId>hbox</artifactId>
-    <version>1.4</version>
+    <version>1.6</version>
 
 
     <properties>
-        <hadoop2.version>2.7.3</hadoop2.version>
+        <hadoop2.version>3.2.1</hadoop2.version>
+        <!--hadoop2.version>2.7.2</hadoop2.version-->
         <junit.version>4.11</junit.version>
         <jdk.version>1.7</jdk.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -71,6 +72,12 @@
             <artifactId>junit</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
+        </dependency>
+        <!-- amazon s3 -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-s3</artifactId>
+            <version>1.11.63</version>
         </dependency>
     </dependencies>
 
@@ -148,6 +155,12 @@
                 </executions>
             </plugin>
         </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
     </build>
 
 </project>

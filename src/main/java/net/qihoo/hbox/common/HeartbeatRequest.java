@@ -15,6 +15,8 @@ public class HeartbeatRequest implements Writable {
     private String progressLog;
     private String containersStartTime;
     private String containersFinishTime;
+    private StringBuilder containerStdOut;
+    private StringBuilder containerStdErr;
 
     public HeartbeatRequest() {
         hboxContainerStatus = HboxContainerStatus.UNDEFINED;
@@ -22,6 +24,8 @@ public class HeartbeatRequest implements Writable {
         progressLog = "";
         containersStartTime = "";
         containersFinishTime = "";
+        containerStdOut = new StringBuilder("");
+        containerStdErr = new StringBuilder("");
     }
 
     public void setHboxContainerStatus(HboxContainerStatus hboxContainerStatus) {
@@ -64,6 +68,30 @@ public class HeartbeatRequest implements Writable {
         return this.containersFinishTime;
     }
 
+    public void appendContainerStdOut(String strOut) {
+        this.containerStdOut.append(strOut).append(System.getProperty("line.separator"));
+    }
+
+    public String getContainerStdOut() {
+        return this.containerStdOut.toString();
+    }
+
+    public void clearContainerStdOut() {
+        this.containerStdOut.setLength(0);
+    }
+
+    public void appendContainerStdErr(String strErr) {
+        this.containerStdErr.append(strErr).append(System.getProperty("line.separator"));
+    }
+
+    public String getContainerStdErr() {
+        return this.containerStdErr.toString();
+    }
+
+    public void clearContainerStdErr() {
+        this.containerStdErr.setLength(0);
+    }
+
     @Override
     public void write(DataOutput dataOutput) throws IOException {
         WritableUtils.writeEnum(dataOutput, this.hboxContainerStatus);
@@ -71,6 +99,8 @@ public class HeartbeatRequest implements Writable {
         Text.writeString(dataOutput, this.progressLog);
         Text.writeString(dataOutput, this.containersStartTime);
         Text.writeString(dataOutput, this.containersFinishTime);
+        Text.writeString(dataOutput, this.containerStdOut.toString());
+        Text.writeString(dataOutput, this.containerStdErr.toString());
     }
 
     @Override
@@ -80,6 +110,8 @@ public class HeartbeatRequest implements Writable {
         this.progressLog = Text.readString(dataInput);
         this.containersStartTime = Text.readString(dataInput);
         this.containersFinishTime = Text.readString(dataInput);
+        this.containerStdOut.append(Text.readString(dataInput));
+        this.containerStdErr.append(Text.readString(dataInput));
     }
 
 }
