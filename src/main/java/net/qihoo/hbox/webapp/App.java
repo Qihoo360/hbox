@@ -7,10 +7,10 @@ import com.google.inject.servlet.RequestScoped;
 
 @RequestScoped
 public class App {
-  final ApplicationContext context;
+    final ApplicationContext context;
 
-  @Inject
-  App(ApplicationContext context) {
-    this.context = context;
-  }
+    @Inject
+    App(ApplicationContext context) {
+        this.context = context;
+    }
 }

@@ -4,15 +4,15 @@ import net.qihoo.hbox.container.HboxContainerId;
 
 public interface ContainerListener {
 
-  void registerContainer(HboxContainerId hboxContainerId, String role);
+    void registerContainer(HboxContainerId hboxContainerId, String role);
 
-  boolean isAllPsContainersFinished();
+    boolean isAllPsContainersFinished();
 
-  boolean isTrainCompleted();
+    boolean isTrainCompleted();
 
-  boolean isAllWorkerContainersSucceeded();
+    boolean isAllWorkerContainersSucceeded();
 
-  int interResultCompletedNum(Long lastInnerModel);
+    int interResultCompletedNum(Long lastInnerModel);
 
-  boolean isAllContainerStarted();
+    boolean isAllContainerStarted();
 }

@@ -7,36 +7,36 @@ import org.apache.hadoop.mapred.InputSplit;
 
 public interface ApplicationContainerProtocol extends VersionedProtocol {
 
-  public static final long versionID = 1L;
+    public static final long versionID = 1L;
 
-  void reportReservedPort(String host, int port, String role, int index);
+    void reportReservedPort(String host, int port, String role, int index);
 
-  void reportLightGbmIpPort(HboxContainerId containerId, String lightGbmIpPort);
+    void reportLightGbmIpPort(HboxContainerId containerId, String lightGbmIpPort);
 
-  String getLightGbmIpPortStr();
+    String getLightGbmIpPortStr();
 
-  void reportLightLDAIpPort(HboxContainerId containerId, String lightLDAIpPort);
+    void reportLightLDAIpPort(HboxContainerId containerId, String lightLDAIpPort);
 
-  String getLightLDAIpPortStr();
+    String getLightLDAIpPortStr();
 
-  String getClusterDef();
+    String getClusterDef();
 
-  HeartbeatResponse heartbeat(HboxContainerId containerId, HeartbeatRequest heartbeatRequest);
+    HeartbeatResponse heartbeat(HboxContainerId containerId, HeartbeatRequest heartbeatRequest);
 
-  InputInfo[] getInputSplit(HboxContainerId containerId);
+    InputInfo[] getInputSplit(HboxContainerId containerId);
 
-  InputSplit[] getStreamInputSplit(HboxContainerId containerId);
+    InputSplit[] getStreamInputSplit(HboxContainerId containerId);
 
-  OutputInfo[] getOutputLocation();
+    OutputInfo[] getOutputLocation();
 
-  void reportTensorBoardURL(String url);
+    void reportTensorBoardURL(String url);
 
-  void reportMapedTaskID(HboxContainerId containerId, String taskId);
+    void reportMapedTaskID(HboxContainerId containerId, String taskId);
 
-  void reportCpuMetrics(HboxContainerId containerId, String cpuMetrics);
+    void reportCpuMetrics(HboxContainerId containerId, String cpuMetrics);
 
-  Long interResultTimeStamp();
+    Long interResultTimeStamp();
 
-  int isApplicationCompleted();
+    int isApplicationCompleted();
 
 }

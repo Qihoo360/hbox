@@ -12,26 +12,26 @@ import org.apache.hadoop.yarn.webapp.view.TwoColumnLayout;
 
 public class HsLogsPage extends TwoColumnLayout {
 
-  @Override
-  protected void preHead(Page.HTML<_> html) {
-    String logEntity = $(ENTITY_STRING);
-    if (logEntity == null || logEntity.isEmpty()) {
-      logEntity = $(CONTAINER_ID);
+    @Override
+    protected void preHead(Page.HTML<_> html) {
+        String logEntity = $(ENTITY_STRING);
+        if (logEntity == null || logEntity.isEmpty()) {
+            logEntity = $(CONTAINER_ID);
+        }
+        if (logEntity == null || logEntity.isEmpty()) {
+            logEntity = "UNKNOWN";
+        }
+        set(ACCORDION_ID, "nav");
+        set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
     }
-    if (logEntity == null || logEntity.isEmpty()) {
-      logEntity = "UNKNOWN";
-    }
-    set(ACCORDION_ID, "nav");
-    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
-  }
 
-  /**
-   * The content of this page is the JobBlock
-   *
-   * @return HsJobBlock.class
-   */
-  @Override
-  protected Class<? extends SubView> content() {
-    return AggregatedLogsBlock.class;
-  }
+    /**
+     * The content of this page is the JobBlock
+     *
+     * @return HsJobBlock.class
+     */
+    @Override
+    protected Class<? extends SubView> content() {
+        return AggregatedLogsBlock.class;
+    }
 }

@@ -8,6 +8,7 @@ import net.qihoo.hbox.common.HboxContainerStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.mapred.InputSplit;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 
@@ -17,68 +18,68 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public interface ApplicationContext {
 
-  ApplicationId getApplicationID();
+    ApplicationId getApplicationID();
 
-  int getWorkerNum();
+    int getWorkerNum();
 
-  int getPsNum();
+    int getPsNum();
 
-  int getWorkerMemory();
+    int getWorkerMemory();
 
-  int getChiefWorkerMemory();
+    int getChiefWorkerMemory();
 
-  int getEvaluatorWorkerMemory();
+    int getEvaluatorWorkerMemory();
 
-  int getPsMemory();
+    int getPsMemory();
 
-  int getWorkerVCores();
+    int getWorkerVCores();
 
-  int getPsVCores();
+    int getPsVCores();
 
-  List<Container> getWorkerContainers();
+    List<Container> getWorkerContainers();
 
-  List<Container> getPsContainers();
+    List<Container> getPsContainers();
 
-  HboxContainerStatus getContainerStatus(HboxContainerId containerId);
+    HboxContainerStatus getContainerStatus(HboxContainerId containerId);
 
-  List<InputInfo> getInputs(HboxContainerId containerId);
+    List<InputInfo> getInputs(HboxContainerId containerId);
 
-  List<InputSplit> getStreamInputs(HboxContainerId containerId);
+    List<InputSplit> getStreamInputs(HboxContainerId containerId);
 
-  List<OutputInfo> getOutputs();
+    List<OutputInfo> getOutputs();
 
-  LinkedBlockingQueue<Message> getMessageQueue();
+    LinkedBlockingQueue<Message> getMessageQueue();
 
-  String getTensorBoardUrl();
+    String getTensorBoardUrl();
 
-  Map<HboxContainerId, String> getReporterProgress();
+    Map<HboxContainerId, String> getReporterProgress();
 
-  Map<HboxContainerId, String> getContainersAppStartTime();
+    Map<HboxContainerId, String> getContainersAppStartTime();
 
-  Map<HboxContainerId, String> getContainersAppFinishTime();
+    Map<HboxContainerId, String> getContainersAppFinishTime();
 
-  Map<HboxContainerId, String> getMapedTaskID();
+    Map<HboxContainerId, String> getMapedTaskID();
 
-  Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics();
+    Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> getContainersCpuMetrics();
 
-  Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> getContainersCpuStatistics();
+    Map<HboxContainerId, ConcurrentHashMap<String, List<Double>>> getContainersCpuStatistics();
 
-  int getSavingModelStatus();
+    int getSavingModelStatus();
 
-  int getSavingModelTotalNum();
+    int getSavingModelTotalNum();
 
-  Boolean getStartSavingStatus();
+    Boolean getStartSavingStatus();
 
-  void startSavingModelStatus(Boolean flag);
+    void startSavingModelStatus(Boolean flag);
 
-  Boolean getLastSavingStatus();
+    Boolean getLastSavingStatus();
 
-  List<Long> getModelSavingList();
+    List<Long> getModelSavingList();
 
-  String getTfEvaluatorId();
+    String getTfEvaluatorId();
 
-  String getChiefWorkerId();
+    String getChiefWorkerId();
 
-  Boolean getChiefWorker();
+    Boolean getChiefWorker();
 
 }

@@ -13,23 +13,23 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 
 public class HsWebApp extends WebApp implements AMParams {
 
-  private HistoryContext history;
+    private HistoryContext history;
 
-  public HsWebApp(HistoryContext history) {
-    this.history = history;
-  }
+    public HsWebApp(HistoryContext history) {
+        this.history = history;
+    }
 
-  @Override
-  public void setup() {
-    bind(HsWebServices.class);
-    bind(JAXBContextResolver.class);
-    bind(GenericExceptionHandler.class);
-    bind(AppContext.class).toInstance(history);
-    bind(HistoryContext.class).toInstance(history);
-    route("/", HsController.class);
-    route(pajoin("/job", APP_ID), HsController.class, "job");
-    route(pajoin("/logs", NM_NODENAME, CONTAINER_ID, ENTITY_STRING, APP_OWNER,
-        CONTAINER_LOG_TYPE), HsController.class, "logs");
-  }
+    @Override
+    public void setup() {
+        bind(HsWebServices.class);
+        bind(JAXBContextResolver.class);
+        bind(GenericExceptionHandler.class);
+        bind(AppContext.class).toInstance(history);
+        bind(HistoryContext.class).toInstance(history);
+        route("/", HsController.class);
+        route(pajoin("/job", APP_ID), HsController.class, "job");
+        route(pajoin("/logs", NM_NODENAME, CONTAINER_ID, ENTITY_STRING, APP_OWNER,
+                CONTAINER_LOG_TYPE), HsController.class, "logs");
+    }
 }
 
