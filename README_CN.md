@@ -4,11 +4,18 @@
     <img width="400" heigth="400" src="./doc/img/logo.jpg">
   </a>
 </div>
-  
+
 [![license](https://img.shields.io/badge/license-Apache2.0-blue.svg?style=flat)](./LICENSE)
 [![Release Version](https://img.shields.io/badge/release-1.4-red.svg)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)]()
 
+我们将代码仓库从XLearning改名为hbox.
+
+如果你已经在本地克隆了这个代码仓库, 请更新你的远端URL:
+
+```bash
+git remote set-url origin https://github.com/Qihoo360/hbox.git
+```
 
 **Hbox**是一款支持多种机器学习、深度学习框架的调度系统。基于Hadoop Yarn完成了对TensorFlow、MXNet、Caffe、Theano、PyTorch、Keras、XGBoost等常用框架的集成，同时具备良好的扩展性和兼容性。  
 
@@ -50,9 +57,9 @@ Hbox系统包括三种组件：
 - **View TensorBoard**：当作业类型为TensorFlow时，可点击该链接直接跳转到TensorBoard页面；  
 - **Save Model**：当作业提交脚本中“--output”参数不为空时，用户可通过`Save Model`按钮，在作业执行过程中，将本地输出当前模型训练结果上传至HDFS。上传成功后，显示目前已上传的模型列表；  
 - **Worker Metrix**：显示各worker执行所占用的资源信息。 
-  
+
 如下图所示：
-  
+
 ![yarn1](./doc/img/yarn1.png) 
 
 
@@ -100,7 +107,7 @@ Hbox系统包括三种组件：
   + HADOOP\_CONF\_DIR    
 
 - hbox-site.xml：详细系统配置说明请见[**配置参数**](./doc/configure_cn.md)部分。
-  
+
 - log4j.properties：配置日志级别  
 
 
@@ -119,7 +126,7 @@ Hbox系统包括三种组件：
 
     cd $HBOX_HOME
     hadoop fs -put data /tmp/ 
-    
+
 ### 2 提交运行
      cd $HBOX_HOME/examples/tensorflow
      $HBOX_HOME/bin/xl-submit \
@@ -136,26 +143,26 @@ Hbox系统包括三种组件：
        --ps-num 1 \
        --ps-cores 2 \
        --queue default \
-       
+
 
 
 提交脚本各参数含义如下：  
 
-参数名称 | 含义  
----------------- | ---------------  
-app-name | 作业名称为 "tf-demo"  
-app-type | 作业类型为 "tensorflow"  
-input | 输入文件，HDFS路径：/tmp/data/tensorflow，对应本地路径./data  
-output | 输出文件，HDFS路径：/tmp/tensorflow_model，对应本地路径./model  
-files | 需要传给各container的本地文件，包括 demo.py、dataDeal.py  
-launch-cmd | 训练执行命令  
-worker-memory | worker内存使用为10G  
-worker-num | worker数目为2  
-worker-cores | worker使用CPU核数为3 
-ps-memory | parameterServer内存使用为1G  
-ps-num | parameterServer数目为1  
-ps-cores | parameterServer使用CPU核数为2  
-queue | 作业提交队列    
+| 参数名称          | 含义                                       |
+| ------------- | ---------------------------------------- |
+| app-name      | 作业名称为 "tf-demo"                          |
+| app-type      | 作业类型为 "tensorflow"                       |
+| input         | 输入文件，HDFS路径：/tmp/data/tensorflow，对应本地路径./data |
+| output        | 输出文件，HDFS路径：/tmp/tensorflow_model，对应本地路径./model |
+| files         | 需要传给各container的本地文件，包括 demo.py、dataDeal.py |
+| launch-cmd    | 训练执行命令                                   |
+| worker-memory | worker内存使用为10G                           |
+| worker-num    | worker数目为2                               |
+| worker-cores  | worker使用CPU核数为3                          |
+| ps-memory     | parameterServer内存使用为1G                   |
+| ps-num        | parameterServer数目为1                      |
+| ps-cores      | parameterServer使用CPU核数为2                 |
+| queue         | 作业提交队列                                   |
 
 
 更多相关参数详细说明请见[**运行提交参数**](./doc/submit_cn.md)部分。  
@@ -172,8 +179,7 @@ queue | 作业提交队列
 
 
 ## 联系我们
-Mail： <g-hbox-dev@360.cn>     
-QQ群：588356340  
+
 ![qq](./doc/img/qq.jpg)
 
 

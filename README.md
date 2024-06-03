@@ -4,10 +4,18 @@
     <img width="400" heigth="400" src="./doc/img/logo.jpg">
   </a>
 </div>
-  
+
 [![license](https://img.shields.io/badge/license-Apache2.0-blue.svg?style=flat)](./LICENSE)
 [![Release Version](https://img.shields.io/badge/release-1.4-red.svg)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)]()
+
+We have renamed the repositiry from XLearning to hbox.
+
+if you have a local clone of the repository, please update your remote URL:
+
+```bash
+git remote set-url origin https://github.com/Qihoo360/hbox.git
+```
 
 **Hbox** is a convenient and efficient scheduling platform combined with the big data and artificial intelligence, support for a variety of machine learning, deep learning frameworks. Hbox is running on the Hadoop Yarn and has integrated deep learning frameworks such as TensorFlow, MXNet, Caffe, Theano, PyTorch, Keras, XGBoost. Hbox has the satisfactory scalability and compatibility.
 
@@ -49,7 +57,7 @@ The application interface can be divided into four parts:
 - **View TensorBoard**：If set to start the service of TensorBoard when the type of application is TensorFlow, provide the link to enter the TensorBoard for real-time view.  
 - **Save Model**：If the application has the output, user can upload the intermediate output to specified HDFS path during the execution of the application through the button of "Save Model". After the upload finished, display the list of the intermediate saved path.   
 - **Worker Metrix**：display the resource usage information metrics of each worker.   
-As shown below:   
+  As shown below:   
 
 ![yarn1](./doc/img/yarn1.png) 
 
@@ -98,7 +106,7 @@ Under the "conf" directory of the unpacking distribution package "$HBOX_HOME", c
   + HADOOP\_CONF\_DIR    
 
 - hbox-site.xml: configure related properties. Note that the properties associated with the history service needs to be consistent with what has configured when the history service started.For more details, please see the [**Configuration**](./doc/configure.md) part。  
-  
+
 - log4j.properties：configure the log level  
 
 
@@ -116,7 +124,7 @@ upload the "data" directory under the root of unpacking distribution package to 
 
     cd $HBOX_HOME  
     hadoop fs -put data /tmp/ 
-    
+
 ### 2 submit
     cd $HBOX_HOME/examples/tensorflow
     $HBOX_HOME/bin/xl-submit \
@@ -137,21 +145,21 @@ upload the "data" directory under the root of unpacking distribution package to 
 
 The meaning of the parameters are as follows:  
 
-Property Name | Meaning  
----------------- | ---------------  
-app-name | application name as "tf-demo"  
-app-type | application type as "tensorflow"  
-input | input file, HDFS path is "/tmp/data/tensorflow" related to local dir "./data"  
-output | output file，HDFS path is "/tmp/tensorflow_model" related to local dir "./model"  
-files | application program and required local files, including demo.py, dataDeal.py 
-launch-cmd | execute command  
-worker-memory | amount of memory to use for the worker process is 10GB  
-worker-num | number of worker containers to use for the application is 2  
-worker-cores | number of cores to use for the worker process is 3  
-ps-memory | amount of memory to use for the ps process is 1GB  
-ps-num | number of ps containers to use for the application is 1  
-ps-cores | number of cores to use for the ps process is 2  
-queue | the queue that application submit to  
+| Property Name | Meaning                                  |
+| ------------- | ---------------------------------------- |
+| app-name      | application name as "tf-demo"            |
+| app-type      | application type as "tensorflow"         |
+| input         | input file, HDFS path is "/tmp/data/tensorflow" related to local dir "./data" |
+| output        | output file，HDFS path is "/tmp/tensorflow_model" related to local dir "./model" |
+| files         | application program and required local files, including demo.py, dataDeal.py |
+| launch-cmd    | execute command                          |
+| worker-memory | amount of memory to use for the worker process is 10GB |
+| worker-num    | number of worker containers to use for the application is 2 |
+| worker-cores  | number of cores to use for the worker process is 3 |
+| ps-memory     | amount of memory to use for the ps process is 1GB |
+| ps-num        | number of ps containers to use for the application is 1 |
+| ps-cores      | number of cores to use for the ps process is 2 |
+| queue         | the queue that application submit to     |
 
 
 For more details, set the [**Submit Parameter**](./doc/submit.md) part。  
@@ -169,7 +177,6 @@ For more details, set the [**Submit Parameter**](./doc/submit.md) part。
 
 
 ## Contact us
-Mail： <g-hbox-dev@360.cn>     
-QQ群：588356340  
+
 ![qq](./doc/img/qq.jpg)
 
