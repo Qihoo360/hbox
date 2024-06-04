@@ -1,23 +1,16 @@
-HBox Framework
-===
-
-HBox是一款基于Hadoop Yarn的深度学习作业调度框架。
-目前完成了对TensorFlow、MPI、MXNet、Caffe、Theano、PyTorch、Keras、XGBoost
-等常用框架的集成，同时具备良好的扩展性和兼容性。
-
 Download Releases
 ===
 
 http://maven.corp.mediav.com/nexus/content/repositories/releases/net/qihoo/hbox-dist/
 
 CI job
----
+===
 
 http://cd2ss.jx.shbt.qihoo.net:8080/job/hbox/
 
 
 Release Steps
----
+===
 
 ```bash
 # 1. pass integration tests
