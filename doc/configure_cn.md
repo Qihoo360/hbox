@@ -46,7 +46,7 @@ hbox.tf.distribution.strategy | false | 是否使用TensorFLow分布式策略方
 hbox.tf.board.enable | true | Board服务是否开启  
 hbox.tf.board.worker.index | 0 | 指定开启Board服务所在的worker index  
 hbox.tf.board.log.dir | eventLog | 指定Board日志存放路径，默认为本地路径./eventLog  
-hbox.tf.board.history.dir | /tmp/Hbox/eventLog | 指定Board日志上传至HDFS路径  
+hbox.tf.board.history.dir | /tmp/hbox/eventLog | 指定Board日志上传至HDFS路径
 hbox.tf.board.reload.interval | 1 | 指定TensorBoard数据加载时间间隔，单位为秒  
 hbox.board.modelpb | "" | 指定VisualDL加载的模型文件  
 hbox.board.cache.timeout | 20 | 指定VisualDL缓存加载间隔，单位为秒  
@@ -67,7 +67,7 @@ hbox.task.timeout.check.interval | 3 * 1000 | container超时检查时间间隔�
 hbox.localresource.timeout | 5 * 60 * 1000 | container下载本地资源超时时长，单位为毫秒  
 hbox.messages.len.max | 1000 | 消息队列大小限制，单位为字节  
 hbox.execute.node.limit | 200 | 作业申请节点数目上限  
-hbox.staging.dir | /tmp/Hbox/staging | 作业本地资源上传至HDFS路径  
+hbox.staging.dir | /tmp/hbox/staging | 作业本地资源上传至HDFS路径
 hbox.cleanup.enable | true | 作业结束后，是否删除资源上传HDFS路径内容  
 hbox.container.maxFailures.rate | 0.5 | 作业允许container失败比例上限  
 hbox.download.file.retry | 3 | DOWNLOAD模式下，输入文件下载尝试次数  
@@ -96,7 +96,7 @@ hbox.ps.nodeLabelExpression | (none) | 指定调度ps的yarn节点标签表达
 
 配置名称 | 默认值 | 含义   
 ---------------- | --------------- | ---------------  
-hbox.history.log.dir | /tmp/Hbox/history | history日志存放所在hdfs地址  
+hbox.history.log.dir | /tmp/hbox/history | history日志存放所在hdfs地址
 hbox.history.log.delete-monitor-time-interval | 24 * 60 * 60 * 1000 | history日志清理检测时间间隔，单位为毫秒  
 hbox.history.log.max-age-ms | 24 * 60 * 60 * 1000 | history日志保存时长，单位为毫秒  
 hbox.history.port | 10021 | history服务开放端口  

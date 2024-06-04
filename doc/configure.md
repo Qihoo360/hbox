@@ -46,7 +46,7 @@ Property Name | Default | Meaning
 hbox.tf.board.enable | true | If set to false, Board service is not necessary  
 hbox.tf.board.worker.index | 0 | the index of the worker which start the service of Board  
 hbox.tf.board.log.dir | eventLog | the directory saving TensorBoard event log  
-hbox.tf.board.history.dir | /tmp/Hbox/eventLog | specify the HDFS path which the TensorBoard event log upload to  
+hbox.tf.board.history.dir | /tmp/hbox/eventLog | specify the HDFS path which the TensorBoard event log upload to
 hbox.tf.board.reload.interval | 1 | how often the backend should load more data of event log (in seconds) for tensorboard  
 hbox.board.modelpb | "" | model proto in ONNX format for VisualDL  
 hbox.board.cache.timeout | 20 | memory cache timeout duration in seconds for VisualDL  
@@ -66,7 +66,7 @@ hbox.task.timeout.check.interval | 3 * 1000 | how often the AM check the timeout
 hbox.localresource.timeout | 5 * 60 * 1000 | set the timeout of the download the localResources (in milliseconds)  
 hbox.messages.len.max | 1000 | Maximum size (in bytes) of message queue  
 hbox.execute.node.limit | 200 | Maximum number of nodes that application use  
-hbox.staging.dir | /tmp/Hbox/staging | HDFS directory that application local resources upload to  
+hbox.staging.dir | /tmp/hbox/staging | HDFS directory that application local resources upload to
 hbox.cleanup.enable | true | whether delete the resources after the application finished  
 hbox.container.maxFailures.rate | 0.5 | maximum percentage of the failure containers   
 hbox.download.file.retry | 3 | Maximum number of retries for the input file download when the strategy of input file is DOWNLOAD  
@@ -95,7 +95,7 @@ hbox.ps.nodeLabelExpression | (none) | A YARN node label expression that restric
 
 Property Name | Default | Meaning   
 ---------------- | --------------- | ---------------  
-hbox.history.log.dir | /tmp/Hbox/history | the HDFS directory that saves the history log  
+hbox.history.log.dir | /tmp/hbox/history | the HDFS directory that saves the history log
 hbox.history.log.delete-monitor-time-interval | 24 * 60 * 60 * 1000 | set the time interval by which the application history logs will be checked to clean (in milliseconds)  
 hbox.history.log.max-age-ms | 24 * 60 * 60 * 1000 | how long the history log can be saved (in milliseconds)  
 hbox.history.port | 10021 | port for the history service  
