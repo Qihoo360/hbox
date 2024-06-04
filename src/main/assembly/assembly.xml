@@ -23,6 +23,11 @@
 
     <fileSets>
         <fileSet>
+            <includes>
+                <include>README.md</include>
+            </includes>
+        </fileSet>
+        <fileSet>
             <directory>bin</directory>
             <outputDirectory>/bin</outputDirectory>
             <fileMode>0755</fileMode> 

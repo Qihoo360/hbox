@@ -6,7 +6,7 @@
 
     <groupId>net.qihoo</groupId>
     <artifactId>hbox</artifactId>
-    <version>1.6</version>
+    <version>1.7</version>
 
 
     <properties>

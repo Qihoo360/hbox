@@ -26,16 +26,20 @@
         <value>true</value>
     </property>
     <property>
+        <name>hbox.execute.node.limit</name>
+        <value>100</value>
+    </property>
+    <property>
         <name>hbox.container.maxFailures.rate</name>
         <value>0.5</value>
     </property>
     <property>
         <name>hbox.history.webapp.address</name>
-        <value>0.0.0.0:19886</value>
+        <value>0.0.0.0:19966</value>
     </property>
     <property>
         <name>hbox.history.webapp.port</name>
-        <value>19886</value>
+        <value>19966</value>
     </property>
     <property>
         <name>hbox.tf.board.history.dir</name>
@@ -46,12 +50,24 @@
         <value>/tmp/Hbox/history</value>
     </property>
     <property>
-        <name>hbox.history.webapp.https.address</name>
-        <value>0.0.0.0:19885</value>
+        <name>hbox.history.address</name>
+        <value>0.0.0.0:10121</value>
+    </property>
+    <property>
+        <name>hbox.hisotory.port</name>
+        <value>10121</value>
+    </property>
+    <property>
+        <name>hbox.history.webapp.https.addresss</name>
+        <value>0.0.0.0:19967</value>
     </property>
     <property>
         <name>hbox.history.webapp.https.port</name>
-        <value>19885</value>
+        <value>19967</value>
+    </property>
+    <property>
+        <name>hbox.history.client.thread-count</name>
+        <value>10</value>
     </property>
 </configuration>
 

@@ -34,11 +34,11 @@
         <value>1000</value>
     </property>
     <property>
-        <name>hbox.am.memory</name>
-        <value>1024</value>
+        <name>hbox.driver.memory</name>
+        <value>2048</value>
     </property>
     <property>
-        <name>hbox.am.cores</name>
+        <name>hbox.driver.cores</name>
         <value>1</value>
     </property>
     <property>
@@ -48,6 +48,10 @@
     <property>
         <name>hbox.worker.cores</name>
         <value>1</value>
+    </property>
+    <property>
+        <name>hbox.worker.gpus</name>
+        <value>0</value>
     </property>
     <property>
         <name>hbox.worker.num</name>
@@ -60,6 +64,10 @@
     <property>
         <name>hbox.ps.cores</name>
         <value>1</value>
+    </property>
+    <property>
+        <name>hbox.ps.gpus</name>
+        <value>0</value>
     </property>
     <property>
         <name>hbox.ps.num</name>
@@ -150,28 +158,36 @@
         <value>0.0.0.0:10021</value>
     </property>
     <property>
-        <name>hbox.history.port</name>
+        <name>hbox.hisotory.port</name>
         <value>10021</value>
     </property>
     <property>
         <name>hbox.history.webapp.address</name>
-        <value>0.0.0.0:19886</value>
+        <value>0.0.0.0:19666</value>
     </property>
     <property>
         <name>hbox.history.webapp.port</name>
-        <value>19886</value>
+        <value>19666</value>
     </property>
     <property>
-        <name>hbox.history.webapp.https.address</name>
-        <value>0.0.0.0:19885</value>
+        <name>hbox.history.webapp.https.addresss</name>
+        <value>0.0.0.0:19667</value>
     </property>
     <property>
         <name>hbox.history.webapp.https.port</name>
-        <value>19885</value>
+        <value>19667</value>
     </property>
     <property>
         <name>hbox.history.client.thread-count</name>
         <value>10</value>
+    </property>
+    <property>
+        <name>hbox.history.admin.address</name>
+        <value>0.0.0.0:10043</value>
+    </property>
+    <property>
+        <name>hbox.history.admin.port</name>
+        <value>10043</value>
     </property>
     <property>
         <name>hbox.history.recovery.enable</name>
