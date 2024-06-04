@@ -19,7 +19,7 @@ public class HeaderBlock extends HtmlBlock implements AMParams {
                 div("#user").
                 __(loggedIn).__().
                 div("#logo").
-                img("/proxy/" + $(APP_ID) + "/static/hboxWebApp/logo.png").__().
+                img("/static/hboxWebApp/logo.png").__().
                 h1($(TITLE)).__();
     }
 }
