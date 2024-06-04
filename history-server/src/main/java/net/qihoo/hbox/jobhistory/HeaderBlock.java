@@ -1,5 +1,6 @@
 package net.qihoo.hbox.jobhistory;
 
+import net.qihoo.hbox.common.AMParams;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
