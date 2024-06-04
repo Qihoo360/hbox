@@ -8,8 +8,8 @@
 
 配置名称 | 默认值 | 含义  
 ---------------- | --------------- | ---------------  
-hbox.am.memory | 1024 | AM申请所需内存大小，单位为MB  
-hbox.am.cores | 1 | AM申请所需CPU核数  
+hbox.driver.memory | 2048 | AM申请所需内存大小，单位为MB
+hbox.driver.cores | 1 | AM申请所需CPU核数
 hbox.worker.num | 1 | worker启动数目  
 hbox.worker.memory | 1024 | worker申请使用内存大小，单位为MB  
 hbox.worker.cores | 1 | worker申请使用CPU核数  

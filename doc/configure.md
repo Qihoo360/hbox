@@ -8,8 +8,8 @@ The default value of each configuration can be modified by setting the correspon
 
 Property Name | Default | Meaning  
 ---------------- | --------------- | ---------------  
-hbox.am.memory | 1024MB | amount of memory to use for the AM process  
-hbox.am.cores | 1 | number of cores to use for the AM process  
+hbox.driver.memory | 2048 | amount of memory to use for the AM process, in MB
+hbox.driver.cores | 1 | number of cores to use for the AM process
 hbox.worker.num | 1 | number of worker containers to use for the application  
 hbox.worker.memory | 1024MB | amount of memory to use for the worker process  
 hbox.worker.cores | 1 | number of cores to use for the worker process    

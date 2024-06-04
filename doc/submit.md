@@ -18,8 +18,8 @@ user-path | the append for the environment variable $PATH
 jars | the required jar files  
 user-classpath-first | whether user job jar should be the first one on class path or not, default as the configure of hbox.user.classpath.first  
 conf | set the configuration  
-am-cores | number of cores to use for the AM process, default as the configure of hbox.am.cores  
-am-memory | amount of memory to use for the AM process (in MB)，default as the configure of hbox.am.memory  
+driver-cores | number of cores to use for the AM process, default as the configure of hbox.driver.cores
+driver-memory | amount of memory to use for the AM process (in MB)，default as the configure of hbox.driver.memory
 ps-num | number of ps containers to use for the application, default as the configure of hbox.ps.num  
 ps-cores | number of cores to use for the ps process, default as the configure of hbox.ps.cores  
 ps-memory | amount of memory to use for the ps process (in MB), default as the configure of hbox.ps.memory  
