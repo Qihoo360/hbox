@@ -5,7 +5,7 @@
   <parent>
     <groupId>net.qihoo</groupId>
     <artifactId>hbox-parent</artifactId>
-    <version>1�1.7.2-SNAPSHOT</version>
+    <version>1.7.3-SNAPSHOT</version>
   </parent>
 
   <artifactId>hbox-common</artifactId>
