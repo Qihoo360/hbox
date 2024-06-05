@@ -9,7 +9,7 @@
 - 将路径内的所有文件记性打包，如：` tar -zcvf  tensorflow.tgz ./* ` 
 - 上传该压缩包至hdfs，如放置在hdfs的`/tmp/tensorflow.tgz`  
 - hbox提交脚本中，添加cacheArchive参数，如：  `--cacheArchive /tmp/tensorflow.tgz#tensorflow`  
-- 在launch-cmd中所执行的脚本中，添加环境变量设置：`export PYTHONPATH=./:$PYTHONPATH`  
+- 在执行的脚本中，添加环境变量设置：`export PYTHONPATH=./:$PYTHONPATH`
 
 ### 2. 如何查看作业执行进度？  
 若用户需要查看作业执行进度，需要在执行程序中按照`"report:progress:<float type>"`格式向标准错误打印进度信息，Hbox客户端及Web界面可根据所接收信息进行展示。  

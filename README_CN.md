@@ -73,29 +73,31 @@ Hbox系统包括三种组件：
 
 ### 1 编译环境依赖 
 
-- jdk >= 1.7
-- Maven >= 3.3
+- jdk >= 1.8
+- Maven >= 3.6.3
 
 ### 2 编译方法  
 
 在源码根目录下，执行:  
 
-`mvn package`
+`./mvnw package`
 
-完成编译后，在源码根目录下的target目录中会生成发布包`hbox-1.1-dist.tar.gz`。该发布包解压后的主要目录结构如下：  
+完成编译后，在源码根目录下的 `core/target` 目录中会生成发布包`hbox-1.1-dist.tar.gz`。该发布包解压后的主要目录结构如下：
 
-- bin：作业提交脚本  
-- lib：Hbox jar包及所依赖jar包  
-- conf：Hbox配置文件  
-- sbin：Hbox History Server启动脚本  
-- data：运行示例所需输入数据和文件  
-- examples：运行示例  
+- bin：作业管理脚本
+- sbin：Hbox History Server启动脚本
+- lib：依赖jar包
+- libexec：公共脚本和hbox-site.xml 示例
+- hbox-*.jar: HBox jar 包
+
+提交任务前, 用户需要设置 conf 目录, 可以通过环境变量 `HBOX_CONF_DIR` 指向包含 `hbox-site.xml` 的目录,
+也可以用软连接 `$HBOX_HOME/conf` 指向配置目录.
 
 ### 3 部署环境依赖  
 
 - CentOS 7.2  
-- Java >= 1.7
-- Hadoop = 2.6，2.7，2.8
+- Java >= 1.8
+- Hadoop = 2.6 -- 3.2 (GPU 功能依赖hadoop 3.1+)
 - [可选]各计算节点具有所需学习平台的依赖环境，如TensorFlow、numpy、Caffe等。  
 
 
@@ -119,7 +121,7 @@ Hbox系统包括三种组件：
 
 ## 运行示例
 
-在Hbox客户端，使用`$HBOX_HOME/bin/xl-submit`提交脚本将作业提交至Yarn集群。
+在Hbox客户端，使用`$HBOX_HOME/bin/hbox-submit`提交脚本将作业提交至Yarn集群。
 以TensorFlow作业提交为例：
 ### 1 上传训练数据至hdfs路径  
 将发布包解压后的data文件夹上传至hdfs，如：  
@@ -129,13 +131,12 @@ Hbox系统包括三种组件：
 
 ### 2 提交运行
      cd $HBOX_HOME/examples/tensorflow
-     $HBOX_HOME/bin/xl-submit \
+     $HBOX_HOME/bin/hbox-submit \
        --app-type "tensorflow" \
        --app-name "tf-demo" \
        --input /tmp/data/tensorflow#data \
        --output /tmp/tensorflow_model#model \
        --files demo.py,dataDeal.py \
-       --launch-cmd "python demo.py --data_path=./data --save_path=./model --log_dir=./eventLog --training_epochs=10" \
        --worker-memory 10G \
        --worker-num 2 \
        --worker-cores 3 \
@@ -143,6 +144,7 @@ Hbox系统包括三种组件：
        --ps-num 1 \
        --ps-cores 2 \
        --queue default \
+       python demo.py --data_path=./data --save_path=./model --log_dir=./eventLog --training_epochs=10
 
 
 
@@ -155,7 +157,6 @@ Hbox系统包括三种组件：
 | input         | 输入文件，HDFS路径：/tmp/data/tensorflow，对应本地路径./data |
 | output        | 输出文件，HDFS路径：/tmp/tensorflow_model，对应本地路径./model |
 | files         | 需要传给各container的本地文件，包括 demo.py、dataDeal.py |
-| launch-cmd    | 训练执行命令                                   |
 | worker-memory | worker内存使用为10G                           |
 | worker-num    | worker数目为2                               |
 | worker-cores  | worker使用CPU核数为3                          |

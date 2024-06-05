@@ -1,5 +1,5 @@
 #!/bin/sh
-$HBOX_HOME/bin/xl-submit \
+$HBOX_HOME/bin/hbox-submit \
    --app-type "xflow" \
    --worker-memory 5g \
    --worker-num 2 \
@@ -7,6 +7,6 @@ $HBOX_HOME/bin/xl-submit \
    --ps-num 2 \
    --files xflow_lr,demo.sh \
    --cacheFile hdfs://hbox.test.host1:9000/tmp/data/xflow#data \
-   --launch-cmd "sh demo.sh" \
    --app-name "xflow" \
    --queue default \
+   sh demo.sh

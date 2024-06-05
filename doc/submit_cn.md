@@ -2,7 +2,8 @@
 
 [**English Document**](./submit.md)
 
-在Hbox客户端，使用`$HBOX_HOME/bin/hbox-submit`命令，将作业提交至Yarn集群进行调度执行。提交命令使用说明请见[README运行示例](../README_CN.md)部分，详细提交参数说明如下：
+在Hbox客户端，使用`$HBOX_HOME/bin/hbox-submit [[--property value]...] command [argument...]`命令，将作业提交至Yarn集群进行调度执行。
+提交命令使用说明请见[README运行示例](../README_CN.md)部分，详细提交参数说明如下：
 
 参数名称 | 含义  
 ---------------- | ---------------  
@@ -13,7 +14,6 @@ output | 输出文件路径，格式为 HDFS路径#本地文件夹名称
 files | 指定作业执行所需本地文件
 cacheArchive | 指定作业执行所需相关HDFS压缩文件  
 cacheFile | 指定作业执行所需相关HDFS文件  
-launch-cmd | 作业执行命令  
 user-path | 用户追加环境变量$PATH  
 jars | 指定用户自定义jar包文件  
 user-classpath-first | 是否优先加载用户自定义jar包，默认为系统配置hbox.user.classpath.first  

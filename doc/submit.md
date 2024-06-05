@@ -2,7 +2,8 @@
 
 [**中文文档**](./submit_cn.md)
 
-Using the command `$HBOX_HOME/bin/hbox-submit` to submit the application to Cluster at the Hbox client. Please see the example in the part of [README Quick Start](../README.md). The following is more details of the parameter.
+Using the command `$HBOX_HOME/bin/hbox-submit [[--property value]...] command [argument...]` to submit the application to Cluster at the Hbox client.
+Please see the example in the part of [README Quick Start](../README.md). The following is more details of the parameter.
 
 Property Name | Meaning  
 ---------------- | ---------------  
@@ -13,7 +14,6 @@ output | output file path in the format of "the HDFS path"#"local path"
 files | the required local files of the application
 cacheArchive | the required compressed files in the HDFS path  
 cacheFile | the required files in the HDFS path  
-launch-cmd | execute command  
 user-path | the append for the environment variable $PATH  
 jars | the required jar files  
 user-classpath-first | whether user job jar should be the first one on class path or not, default as the configure of hbox.user.classpath.first  

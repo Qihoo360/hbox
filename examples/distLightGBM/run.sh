@@ -1,4 +1,4 @@
-$HBOX_HOME/bin/xl-submit \
+$HBOX_HOME/bin/hbox-submit \
   --app-type "distlightgbm" \
   --app-name "distLightGBM-demo" \
   --files train.conf,demo.sh \
@@ -7,6 +7,6 @@ $HBOX_HOME/bin/xl-submit \
   --cacheArchive /tmp/data/distLightGBM/LightGBM.tgz#LightGBM \
   --cacheFile /tmp/data/distLightGBM/data#data \
   --output /tmp/lightGBM_output#output \
-  --launch-cmd "sh demo.sh" \
   --queue default \
+  sh demo.sh
 

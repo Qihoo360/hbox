@@ -70,31 +70,33 @@ Except the automatic construction of the ClusterSpec at the distributed mode Ten
 
 ### 1 Compilation Environment Requirements 
 
-- jdk >= 1.7
-- Maven >= 3.3
+- jdk >= 1.8
+- Maven >= 3.6.3
 
 ### 2 Compilation Method 
 
 Run the following command in the root directory of the source code:  
 
-`mvn package`    
+`./mvnw package`
 
-After compiling, a distribution package named `hbox-1.1-dist.tar.gz` will be generated under `target` in the root directory.   
+After compiling, a distribution package named `hbox-1.1-dist.tar.gz` will be generated under `core/target` in the root directory.
 Unpacking the distribution package, the following subdirectories will be generated under the root directory:
 
-- bin: scripts for application commit  
-- lib: jars for Hbox and dependencies  
-- conf: configuration files  
-- sbin: scripts for history service  
-- data: data and files for examples
-- examples: Hbox examples
+- bin: scripts for managing application jobs
+- sbin: scripts for history service
+- lib: dependencies jars
+- libexec: common scripts and hbox-site.xml configuration examples
+- hbox-*.jar: HBox jars
+
+To setup configurations, user need to set `HBOX_CONF_DIR` to a folder containing a valid `hbox-site.xml`,
+or link this folder to `$HBOX_HOME/conf`.
 
 
 ### 3 Deployment Environment Requirements  
 
 - CentOS 7.2  
-- Java >= 1.7
-- Hadoop = 2.6, 2.7, 2.8
+- Java >= 1.8
+- Hadoop = 2.6 -- 3.2 (GPU requires 3.1+)
 - [optional] Dependent environment for deep learning frameworks at the cluster nodes, such as TensorFlow, numpy, Caffe.  
 
 
@@ -117,7 +119,7 @@ Under the "conf" directory of the unpacking distribution package "$HBOX_HOME", c
 
 ## Quick Start
 
-Use `$HBOX_HOME/bin/xl-submit` to submit the application to cluster in the Hbox client.   
+Use `$HBOX_HOME/bin/hbox-submit` to submit the application to cluster in the Hbox client.
 Here are the submit example for the TensorFlow application.
 ### 1 upload data to hdfs  
 upload the "data" directory under the root of unpacking distribution package to HDFS  
@@ -127,13 +129,12 @@ upload the "data" directory under the root of unpacking distribution package to 
 
 ### 2 submit
     cd $HBOX_HOME/examples/tensorflow
-    $HBOX_HOME/bin/xl-submit \
+    $HBOX_HOME/bin/hbox-submit \
        --app-type "tensorflow" \
        --app-name "tf-demo" \
        --input /tmp/data/tensorflow#data \
        --output /tmp/tensorflow_model#model \
        --files demo.py,dataDeal.py \
-       --launch-cmd "python demo.py --data_path=./data --save_path=./model --log_dir=./eventLog --training_epochs=10" \
        --worker-memory 10G \
        --worker-num 2 \
        --worker-cores 3 \
@@ -141,6 +142,7 @@ upload the "data" directory under the root of unpacking distribution package to 
        --ps-num 1 \
        --ps-cores 2 \
        --queue default \
+       python demo.py --data_path=./data --save_path=./model --log_dir=./eventLog --training_epochs=10
 
 
 The meaning of the parameters are as follows:  
@@ -152,7 +154,6 @@ The meaning of the parameters are as follows:
 | input         | input file, HDFS path is "/tmp/data/tensorflow" related to local dir "./data" |
 | output        | output file，HDFS path is "/tmp/tensorflow_model" related to local dir "./model" |
 | files         | application program and required local files, including demo.py, dataDeal.py |
-| launch-cmd    | execute command                          |
 | worker-memory | amount of memory to use for the worker process is 10GB |
 | worker-num    | number of worker containers to use for the application is 2 |
 | worker-cores  | number of cores to use for the worker process is 3 |
