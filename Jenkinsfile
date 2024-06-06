@@ -59,17 +59,5 @@ pipeline {
                 }
             }
         }
-        stage('Deploy .tar.gz on tags') {
-            when {
-                buildingTag()
-                tag pattern: "v\\d+\\.\\d+\\.\\d+.*", comparator: "REGEXP"
-                environment name: 'GIT_URL', value: 'ssh://git@code.geelib.qihoo.net:11022/xt_hadoop/hbox.git'
-            }
-            steps {
-	        withCredentials([file(credentialsId: 'maven-deploy-mediav-releases', variable: 'MAVEN_SETTING')]) {
-                    sh './mvnw -B -Dmirror.of.proxy=central -gs "${MAVEN_SETTING}" deploy -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false'
-		}
-            }
-        }
     }
 }

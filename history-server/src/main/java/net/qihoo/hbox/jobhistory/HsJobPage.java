@@ -4,6 +4,8 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 import net.qihoo.hbox.common.AMParams;
 import org.apache.hadoop.yarn.webapp.SubView;
+import org.apache.hadoop.yarn.webapp.WebApp;
+import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.view.TwoColumnLayout;
 
 /**
@@ -33,4 +35,16 @@ public class HsJobPage extends TwoColumnLayout implements AMParams {
         }
     }
 
+    @Override
+    protected Class<? extends SubView> header() {
+        try {
+            if (WebApps.Builder.class.getMethod("build", WebApp.class) != null) {
+                return HeaderBlock.class;
+            }
+        } catch (NoSuchMethodException e) {
+            LOG.debug("current hadoop version don't have the method build of Class " + WebApps.class.toString() + ". For More Detail: " + e);
+            return org.apache.hadoop.yarn.webapp.view.HeaderBlock.class;
+        }
+        return null;
+    }
 }

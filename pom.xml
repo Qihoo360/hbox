@@ -4,7 +4,7 @@
 
   <groupId>net.qihoo</groupId>
   <artifactId>hbox-parent</artifactId>
-  <version>1�1.7.2-SNAPSHOT</version>
+  <version>1.7.3-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>HBox Parent Pom</name>
@@ -26,7 +26,7 @@
   <properties>
     <maven.min-version>3.6.3</maven.min-version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.build.outputTimestamp>2024-05-22T06:04:52Z</project.build.outputTimestamp>
+    <project.build.outputTimestamp>2024-06-04T08:11:48Z</project.build.outputTimestamp>
 
     <!-- Supporting Tech Matrix
     ~ Build-time JDK: 8+, select by developer or ci environment, prefer LTS JDKs
