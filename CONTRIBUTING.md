@@ -1,12 +1,12 @@
 Download Releases
 ===
 
-http://maven.corp.mediav.com/nexus/content/repositories/releases/net/qihoo/hbox-dist/
+https://github.com/Qihoo360/hbox/releases
 
 CI job
 ===
 
-http://cd2ss.jx.shbt.qihoo.net:8080/job/hbox/
+https://github.com/Qihoo360/hbox/actions
 
 Dev Tasks
 ===
@@ -33,10 +33,4 @@ Release Steps
 
 # 5. sync with the remote repo
 git fetch
-
-# 6. trigger ci jobs for the new tag
-# jenkins does not auto build jobs for tag (JENKINS-47496)
-# and we now cannot install jenkins-plugin https://plugins.jenkins.io/basic-branch-build-strategies/
-#
-# url: http://cd2ss.jx.shbt.qihoo.net:8080/job/hbox/
 ```
