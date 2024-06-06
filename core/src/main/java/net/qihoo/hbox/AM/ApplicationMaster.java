@@ -89,6 +89,8 @@ public class ApplicationMaster extends CompositeService {
     private Path appConfRemoteLocation;
     // location of files on HDFS
     private String appFilesRemoteLocation;
+    // location of archive files on HDFS
+    private String appArchiveFilesRemoteLocation;
     // location of lib jars on HDFS
     private String appLibJarsRemoteLocation;
     // location of cacheFiles on HDFS
@@ -320,6 +322,11 @@ public class ApplicationMaster extends CompositeService {
         if (envs.containsKey(HboxConstants.Environment.HBOX_FILES_LOCATION.toString())) {
             appFilesRemoteLocation = envs.get(HboxConstants.Environment.HBOX_FILES_LOCATION.toString());
             LOG.info("Application files location: " + appFilesRemoteLocation);
+        }
+
+        if (envs.containsKey(HboxConstants.Environment.HBOX_ARCHIVE_FILES_LOCATION.toString())) {
+            appArchiveFilesRemoteLocation = envs.get(HboxConstants.Environment.HBOX_ARCHIVE_FILES_LOCATION.toString());
+            LOG.info("Application archive files location: " + appArchiveFilesRemoteLocation);
         }
 
         if (envs.containsKey(HboxConstants.Environment.HBOX_LIBJARS_LOCATION.toString())) {
@@ -1361,6 +1368,40 @@ public class ApplicationMaster extends CompositeService {
                                     LocalResourceType.FILE));
                     if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
                         reLinkFiles.append(path.getName()).append(",");
+                    }
+                }
+            }
+
+            if (appArchiveFilesRemoteLocation != null) {
+                String[] archiveFiles = StringUtils.split(appArchiveFilesRemoteLocation, ",");
+                for (String archiveFile : archiveFiles) {
+                    Path pathRemote;
+                    String aliasName;
+                    if (archiveFile.contains("#")) {
+                        String[] paths = StringUtils.split(archiveFile, "#");
+                        if (paths.length != 2) {
+                            throw new RuntimeException("Error cacheArchive path format " + appArchiveFilesRemoteLocation);
+                        }
+                        pathRemote = new Path(paths[0]);
+                        aliasName = paths[1];
+                    } else {
+                        pathRemote = new Path(archiveFile);
+                        aliasName = pathRemote.getName();
+                    }
+                    URI pathRemoteUri = pathRemote.toUri();
+                    if (Boolean.parseBoolean(conf.get(HboxConfiguration.HBOX_APPEND_DEFAULTFS_ENABLE, String.valueOf(HboxConfiguration.DEFAULT_HBOX_APPEND_DEFAULTFS_ENABLE)))) {
+                        if (pathRemoteUri.getScheme() == null || pathRemoteUri.getHost() == null) {
+                            pathRemote = new Path(defaultUri.toString(), pathRemote.toString());
+                        }
+                    }
+                    LOG.info("archive file remote path is " + pathRemote + " and alias name is " + aliasName);
+                    containerLocalResource.put(aliasName,
+                            Utilities.createApplicationResource(pathRemote.getFileSystem(conf),
+                                    pathRemote,
+                                    LocalResourceType.ARCHIVE,
+                                    LocalResourceVisibility.APPLICATION));
+                    if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+                        reLinkFiles.append(aliasName).append(",");
                     }
                 }
             }

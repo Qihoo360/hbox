@@ -34,6 +34,7 @@ class ClientArguments {
     int psNum;
     String duration;
     String[] hboxFiles;
+    String[] hboxArchiveFiles;
     String[] libJars;
     String[] hboxCommandArgs;
     String inputStrategy;
@@ -91,6 +92,7 @@ class ClientArguments {
         psGCores = HboxConfiguration.DEFAULT_HBOX_PS_GPU;
         psNum = HboxConfiguration.DEFAULT_HBOX_PS_NUM;
         hboxFiles = null;
+        hboxArchiveFiles = null;
         libJars = null;
         hboxCacheFiles = "";
         hboxCacheArchives = "";
@@ -162,6 +164,9 @@ class ClientArguments {
 
         allOptions.addOption("files", "files", true,
                 "Location of the hbox files used in container");
+
+        allOptions.addOption("archiveFiles", "archiveFiles", true,
+                "Location of local archive files will be uploaded to container and be decompressed");
 
         allOptions.addOption("jars", "jars", true,
                 "Location of the hbox lib jars used in container");
@@ -424,6 +429,10 @@ class ClientArguments {
 
         if (cliParser.hasOption("files")) {
             hboxFiles = StringUtils.split(cliParser.getOptionValue("files"), ',');
+        }
+
+        if (cliParser.hasOption("archiveFiles")) {
+            hboxArchiveFiles = StringUtils.split(cliParser.getOptionValue("archiveFiles"), ',');
         }
 
         if (cliParser.hasOption("jars")) {
