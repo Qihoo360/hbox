@@ -287,6 +287,11 @@
           <artifactId>git-commit-id-plugin</artifactId>
           <version>4.9.10</version>
         </plugin>
+
+        <plugin>
+          <artifactId>maven-wrapper-plugin</artifactId>
+          <version>3.3.2</version>
+        </plugin>
       </plugins>
     </pluginManagement>
 
