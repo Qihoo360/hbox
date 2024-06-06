@@ -35,7 +35,7 @@
     <project.target.release>8</project.target.release>
 
     <hadoop.version>3.2.1</hadoop.version>
-    <sortpom.version>3.4.1</sortpom.version>
+    <sortpom.version>4.0.0</sortpom.version>
     <sort.verifyFail>warn</sort.verifyFail>
 
     <!-- release, only deploy the tgz archive -->
@@ -147,7 +147,7 @@
       <plugins>
         <plugin>
           <artifactId>maven-site-plugin</artifactId>
-          <version>4.0.0-M14</version>
+          <version>4.0.0-M15</version>
         </plugin>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
@@ -216,7 +216,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.5.3</version>
+          <version>3.6.0</version>
           <configuration>
             <createDependencyReducedPom>false</createDependencyReducedPom>
             <filters combine.children="append">
@@ -267,7 +267,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-enforcer-plugin</artifactId>
-          <version>3.4.1</version>
+          <version>3.5.0</version>
         </plugin>
         <plugin>
           <artifactId>maven-release-plugin</artifactId>
