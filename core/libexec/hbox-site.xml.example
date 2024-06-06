@@ -6,7 +6,7 @@
 <configuration>
     <property>
         <name>hbox.staging.dir</name>
-        <value>/home/yarn/hbox/staging/${user.name}</value>
+        <value>/tmp/hbox/staging/${user.name}</value>
     </property>
     <property>
         <name>hbox.cleanup.enable</name>
@@ -22,7 +22,7 @@
     </property>
     <property>
         <name>hbox.history.webapp.address</name>
-        <value>gpu06.sys.lycc.qihoo.net:19966</value>
+        <value>0.0.0.0:19966</value>
     </property>
     <property>
         <name>hbox.history.webapp.port</name>
@@ -30,15 +30,15 @@
     </property>
     <property>
         <name>hbox.tf.board.history.dir</name>
-        <value>/home/yarn/hbox/eventLog</value>
+        <value>/tmp/hbox/eventLog</value>
     </property>
     <property>
         <name>hbox.history.log.dir</name>
-        <value>/home/yarn/hbox/history</value>
+        <value>/tmp/hbox/history</value>
     </property>
     <property>
         <name>hbox.history.address</name>
-        <value>gpu06.sys.lycc.qihoo.net:10121</value>
+        <value>0.0.0.0:10121</value>
     </property>
     <property>
         <name>hbox.hisotory.port</name>
@@ -46,7 +46,7 @@
     </property>
     <property>
         <name>hbox.history.webapp.https.addresss</name>
-        <value>gpu06.sys.lycc.qihoo.net:19967</value>
+        <value>0.0.0.0:19967</value>
     </property>
     <property>
         <name>hbox.history.webapp.https.port</name>
