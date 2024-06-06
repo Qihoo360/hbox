@@ -1532,6 +1532,10 @@ public class ApplicationMaster extends CompositeService {
         } else {
             containerEnv.put("CLASSPATH", System.getenv("CLASSPATH") + ":" + libJarsClassPath);
         }
+
+        // for libhdfs.so
+        containerEnv.computeIfPresent("CLASSPATH", (k, v) -> v + ":$(hadoop classpath --glob)");
+
         containerEnv.put(HboxConstants.Environment.APP_ATTEMPTID.toString(), applicationAttemptID.toString());
         containerEnv.put(HboxConstants.Environment.APP_ID.toString(), applicationAttemptID.getApplicationId().toString());
 
