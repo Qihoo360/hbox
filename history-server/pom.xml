@@ -259,7 +259,7 @@
     </plugins>
   </build>
 
-  <url>https://geelib.qihoo.net/geelib/repoOverview?repoId=xt_hadoop/hbox</url>
+  <url>https://github.com/Qihoo360/hbox</url>
   <scm>
     <tag>HEAD</tag>
   </scm>

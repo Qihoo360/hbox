@@ -45,7 +45,6 @@
     <preparationGoals>-pl . sortpom:sort resources:copy-resources@update-ver-for-tests scm:add -Dincludes=tests/ver.sh</preparationGoals>
     <completionGoals>-pl . sortpom:sort resources:copy-resources@update-ver-for-tests scm:add -Dincludes=tests/ver.sh</completionGoals>
     <checkModificationExcludeList>${project.basedir}/tests/ver.sh</checkModificationExcludeList>
-    <reference.repo>mediav-releases</reference.repo>
     <maven.deploy.skip>true</maven.deploy.skip>
     <maven.deploy.file.skip>snapshots</maven.deploy.file.skip>
   </properties>
@@ -355,7 +354,7 @@
     </plugins>
   </build>
 
-  <url>https://geelib.qihoo.net/geelib/repoOverview?repoId=xt_hadoop/hbox</url>
+  <url>https://github.com/Qihoo360/hbox</url>
   <inceptionYear>2018</inceptionYear>
   <organization>
     <name>Qihoo 360 Technology Co. Ltd. (Qihoo 360)</name>
@@ -364,34 +363,23 @@
 
   <licenses>
     <license>
-      <name>Copyright License</name>
-      <url>https://adgit.src.corp.qihoo.net/casino/adq-parent/-/raw/master/LICENSE</url>
+      <name>Apache-2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
       <distribution>repo</distribution>
     </license>
   </licenses>
 
   <scm>
-    <developerConnection>scm:git:ssh://git@code.geelib.qihoo.net:11022/xt_hadoop/hbox.git</developerConnection>
-    <url>https://geelib.qihoo.net/geelib/repoOverview?repoId=xt_hadoop/hbox&amp;gitRef=master</url>
+    <connection>scm:git:https://github.com/Qihoo360/hbox.git</connection>
+    <developerConnection>scm:git:git@github.com:Qihoo360/hbox.git</developerConnection>
+    <url>https://github.com/Qihoo360/hbox/tree/master</url>
     <tag>HEAD</tag>
   </scm>
 
   <issueManagement>
-    <system>Gitlab Issue</system>
-    <!-- not clear where is the issue function in geelib -->
-    <url>https://adgit.src.corp.qihoo.net/deep-learning/hbox/-/issues</url>
+    <system>Github Issue</system>
+    <url>https://github.com/Qihoo360/hbox/issues</url>
   </issueManagement>
-
-  <distributionManagement>
-    <repository>
-      <id>mediav-releases</id>
-      <name>Releases Repository</name>
-      <url>https://maven.corp.mediav.com/nexus/content/repositories/releases</url>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </repository>
-  </distributionManagement>
 
   <profiles>
     <profile>
