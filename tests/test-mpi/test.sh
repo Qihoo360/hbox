@@ -9,9 +9,6 @@ if [[ ! ${HBOX_HOME-} ]]; then
   HBOX_HOME="$(dirname -- "$0")/../../hbox-$HBOX_VERSION"
 fi
 
-: "${HBOX_CONF_DIR:="$(dirname -- "$0")"/../conf.hpc-yarn}"
-export HBOX_CONF_DIR
-
 submit_opts=(--app-name "[HBOX][test] submit a mpi base application")
 submit_opts+=(--app-type  "TENSORNET")
 submit_opts+=(--worker-num 2)

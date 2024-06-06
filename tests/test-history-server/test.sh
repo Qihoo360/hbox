@@ -9,9 +9,6 @@ if [[ ! ${HBOX_HOME-} ]]; then
   HBOX_HOME="$(dirname -- "$0")/../../hbox-$HBOX_VERSION"
 fi
 
-: "${HBOX_CONF_DIR:="$(dirname -- "$0")"/../conf.hpc-yarn}"
-export HBOX_CONF_DIR
-
 host=$(hostname -f)
 
 submit_opts=( -D hbox.history.address="$host:10121" )
