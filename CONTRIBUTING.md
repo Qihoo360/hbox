@@ -8,6 +8,12 @@ CI job
 
 http://cd2ss.jx.shbt.qihoo.net:8080/job/hbox/
 
+Dev Tasks
+===
+
+Bump maven plugins: `./mvnw versions:display-plugin-updates -pl .`
+Bump maven wrapper: `./mvnw wrapper:wrapper`
+Sort pom.xml: `./mvnw sortpom:sort`
 
 Release Steps
 ===
