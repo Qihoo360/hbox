@@ -54,6 +54,7 @@ public class Client {
     private ApplicationMessageProtocol hboxClient;
     private transient AtomicBoolean isRunning;
     private StringBuffer appFilesRemotePath;
+    private StringBuffer appArchiveFilesRemotePath;
     private StringBuffer appLibJarsRemotePath;
     private ApplicationId applicationId;
     private int maxContainerMem;
@@ -75,6 +76,7 @@ public class Client {
         this.clientArguments = new ClientArguments(args);
         this.isRunning = new AtomicBoolean(false);
         this.appFilesRemotePath = new StringBuffer(1000);
+        this.appArchiveFilesRemotePath = new StringBuffer(1000);
         this.appLibJarsRemotePath = new StringBuffer(1000);
         this.inputPaths = new ConcurrentHashMap<>();
         this.s3InputPaths = new ConcurrentHashMap<>();
@@ -724,6 +726,46 @@ public class Client {
         }
     }
 
+    private void prepareArchiveFilesForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
+        Path[] filesDst = new Path[clientArguments.hboxArchiveFiles.length];
+        LOG.info("Copy hbox archive files from local filesystem to remote.");
+        boolean amEnableFiles = conf.getBoolean(HboxConfiguration.HBOX_AM_CMD_ENABLE, HboxConfiguration.DEFAULT_HBOX_AM_ENABLE);
+        for (int i = 0; i < clientArguments.hboxArchiveFiles.length; i++) {
+            assert (!clientArguments.hboxArchiveFiles[i].isEmpty());
+            Path filesSrc;
+            String aliasName;
+            if (clientArguments.hboxArchiveFiles[i].contains("#")) {
+                String[] paths = StringUtils.split(clientArguments.hboxArchiveFiles[i], "#");
+                if (paths.length != 2) {
+                    throw new RuntimeException("Error cacheArchive path format " + clientArguments.hboxArchiveFiles[i]);
+                }
+                filesSrc = new Path(paths[0]);
+                aliasName = paths[1];
+            } else {
+                filesSrc = new Path(clientArguments.hboxArchiveFiles[i]);
+                aliasName = filesSrc.getName();
+            }
+
+            filesDst[i] = Utilities.getRemotePath(
+                    conf, applicationId, filesSrc.getName());
+            LOG.info("Copying " + filesSrc + " to remote path " + filesDst[i].toString());
+            dfs.copyFromLocalFile(false, true, filesSrc, filesDst[i]);
+            appArchiveFilesRemotePath.append(filesDst[i].toUri().toString() + "#" + aliasName).append(",");
+
+            if (amEnableFiles || (clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
+                    || clientArguments.appType.equals("XFLOW")
+                    || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
+                localResources.put(aliasName,
+                        Utilities.createApplicationResource(filesDst[i].getFileSystem(conf),
+                                filesDst[i],
+                                LocalResourceType.ARCHIVE,
+                                LocalResourceVisibility.APPLICATION));
+            }
+        }
+        appMasterEnv.put(HboxConstants.Environment.HBOX_ARCHIVE_FILES_LOCATION.toString(),
+                appArchiveFilesRemotePath.deleteCharAt(appArchiveFilesRemotePath.length() - 1).toString());
+    }
+
     private void prepareJarsForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
         Path[] tfFilesDst = new Path[clientArguments.libJars.length];
         LOG.info("Copy hbox lib jars from local filesystem to remote.");
@@ -1009,6 +1051,10 @@ public class Client {
         appMasterEnv.put(HboxConstants.Environment.HBOX_APP_NAME.toString(), clientArguments.appName);
         if (clientArguments.hboxFiles != null) {
             prepareFilesForAM(appMasterEnv, localResources);
+        }
+
+        if (clientArguments.hboxArchiveFiles != null) {
+            prepareArchiveFilesForAM(appMasterEnv, localResources);
         }
 
         if (clientArguments.libJars != null) {

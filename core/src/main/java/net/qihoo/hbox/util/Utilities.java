@@ -168,6 +168,26 @@ public final class Utilities {
 
     public static LocalResource createApplicationResource(FileSystem fs, Path path, LocalResourceType type)
             throws IOException {
+        LocalResource localResource;
+        switch (fs.getConf().get(HboxConfiguration.HBOX_LOCAL_RESOURCE_VISIBILITY, HboxConfiguration.DEFAULT_HBOX_LOCAL_RESOURCE_VISIBILITY).toUpperCase()) {
+            case "PUBLIC":
+                localResource = createApplicationResource(fs, path, type, LocalResourceVisibility.PUBLIC);
+                break;
+            case "APPLICATION":
+                localResource = createApplicationResource(fs, path, type, LocalResourceVisibility.APPLICATION);
+                break;
+            case "PRIVATE":
+                localResource = createApplicationResource(fs, path, type, LocalResourceVisibility.PRIVATE);
+                break;
+            default:
+                localResource = createApplicationResource(fs, path, type, LocalResourceVisibility.PUBLIC);
+                break;
+        }
+        return localResource;
+    }
+
+    public static LocalResource createApplicationResource(FileSystem fs, Path path, LocalResourceType type, LocalResourceVisibility visibility)
+            throws IOException {
         LocalResource localResource = Records.newRecord(LocalResource.class);
         FileStatus fileStatus = fs.getFileStatus(path);
         if (!fs.getConf().get(HboxConfiguration.HBOX_REMOTE_DEFAULTFS, HboxConfiguration.DEFAULT_HBOX_REMOTE_DEFAULTFS).equals("")) {
@@ -177,20 +197,7 @@ public final class Utilities {
         localResource.setSize(fileStatus.getLen());
         localResource.setTimestamp(fileStatus.getModificationTime());
         localResource.setType(type);
-        switch (fs.getConf().get(HboxConfiguration.HBOX_LOCAL_RESOURCE_VISIBILITY, HboxConfiguration.DEFAULT_HBOX_LOCAL_RESOURCE_VISIBILITY).toUpperCase()) {
-            case "PUBLIC":
-                localResource.setVisibility(LocalResourceVisibility.PUBLIC);
-                break;
-            case "APPLICATION":
-                localResource.setVisibility(LocalResourceVisibility.APPLICATION);
-                break;
-            case "PRIVATE":
-                localResource.setVisibility(LocalResourceVisibility.PRIVATE);
-                break;
-            default:
-                localResource.setVisibility(LocalResourceVisibility.PUBLIC);
-                break;
-        }
+        localResource.setVisibility(visibility);
         return localResource;
     }
 
