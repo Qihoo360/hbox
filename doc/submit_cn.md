@@ -46,3 +46,4 @@ output-strategy | 输出文件加载策略，默认为系统配置hbox.output.st
 outputformat | 当输出文件加载模式为STREAM时，指定outputformat类，默认为系统配置hbox.outputformat.class  
 tf-evaluator | 在分布式TensorFlow作业类型下，是否设置evaluator角色，默认为系统配置hbox.tf.evaluator  
 output-index | 指定保存index对应worker的输出文件，默认保存所有worker的输出结果  
+archiveFiles | 上传本地压缩文件, container内自动解压. 逗号分割, 路径后#可带alias名字
