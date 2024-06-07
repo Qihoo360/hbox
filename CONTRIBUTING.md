@@ -28,11 +28,12 @@ Release Steps
 # run on gateways
 
 # 3. prepare release version, git tag and next version
-./mvnw release:clean release:prepare
+./mvnw release:clean release:prepare -DpushChanges=false
 
-# 4. cleanup
+# 4. push to git repo
+git push --follow-tags
+
+# 5. cleanup and sync with the remote repo
 ./mvnw release:clean
-
-# 5. sync with the remote repo
 git fetch
 ```
