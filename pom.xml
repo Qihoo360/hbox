@@ -291,6 +291,16 @@
           <artifactId>maven-wrapper-plugin</artifactId>
           <version>3.3.2</version>
         </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>build-helper-maven-plugin</artifactId>
+          <version>3.6.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>versions-maven-plugin</artifactId>
+          <version>2.16.2</version>
+        </plugin>
       </plugins>
     </pluginManagement>
 
@@ -348,6 +358,18 @@
               <goal>verify</goal>
             </goals>
             <phase>verify</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>parse-version</id>
+            <goals>
+              <goal>parse-version</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
@@ -451,6 +473,53 @@
                   <skipPoms>false</skipPoms>
                   <runOnlyOnce>true</runOnlyOnce>
                   <injectAllReactorProjects>true</injectAllReactorProjects>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>bump-minor-version</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>versions-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>set</goal>
+                </goals>
+                <phase>validate</phase>
+                <inherited>false</inherited>
+                <configuration>
+                  <newVersion>${parsedVersion.majorVersion}.${parsedVersion.nextMinorVersion}.0${parsedVersion.qualifier?}</newVersion>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>bump-major-version</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>versions-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>set</goal>
+                </goals>
+                <phase>validate</phase>
+                <inherited>false</inherited>
+                <configuration>
+                  <newVersion>${parsedVersion.nextMajorVersion}.0.0${parsedVersion.qualifier?}</newVersion>
                 </configuration>
               </execution>
             </executions>

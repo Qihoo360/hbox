@@ -13,6 +13,8 @@ Dev Tasks
 
 Bump maven plugins: `./mvnw versions:display-plugin-updates -pl .`
 Bump maven wrapper: `./mvnw wrapper:wrapper`
+Bump project major version: `./mvnw validate -Pbump-major-version`
+Bump project minor version: `./mvnw validate -Pbump-minor-version`
 Sort pom.xml: `./mvnw sortpom:sort`
 
 Release Steps
