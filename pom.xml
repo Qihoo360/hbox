@@ -38,6 +38,8 @@
     <sortpom.version>4.0.0</sortpom.version>
     <sort.verifyFail>warn</sort.verifyFail>
 
+    <project.effective.version>${project.version}</project.effective.version>
+
     <!-- release, only deploy the tgz archive -->
     <autoVersionSubmodules>true</autoVersionSubmodules>
     <tagNameFormat>v@{project.version}</tagNameFormat>
@@ -483,6 +485,9 @@
 
     <profile>
       <id>bump-minor-version</id>
+      <properties>
+        <project.effective.version>${parsedVersion.majorVersion}.${parsedVersion.nextMinorVersion}.0${parsedVersion.qualifier?}</project.effective.version>
+      </properties>
       <build>
         <plugins>
           <plugin>
@@ -490,13 +495,39 @@
             <artifactId>versions-maven-plugin</artifactId>
             <executions>
               <execution>
+                <id>bumping-minor-version</id>
                 <goals>
                   <goal>set</goal>
                 </goals>
                 <phase>validate</phase>
                 <inherited>false</inherited>
                 <configuration>
-                  <newVersion>${parsedVersion.majorVersion}.${parsedVersion.nextMinorVersion}.0${parsedVersion.qualifier?}</newVersion>
+                  <newVersion>${project.effective.version}</newVersion>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-resources-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sync-ver-for-tests</id>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <phase>validate</phase>
+                <inherited>false</inherited>
+                <configuration>
+                  <outputDirectory>${project.basedir}/tests</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>src/test/resources</directory>
+                      <includes>
+                        <include>ver.sh</include>
+                      </includes>
+                      <filtering>true</filtering>
+                    </resource>
+                  </resources>
                 </configuration>
               </execution>
             </executions>
@@ -506,6 +537,9 @@
     </profile>
     <profile>
       <id>bump-major-version</id>
+      <properties>
+        <project.effective.version>${parsedVersion.nextMajorVersion}.0.0${parsedVersion.qualifier?}</project.effective.version>
+      </properties>
       <build>
         <plugins>
           <plugin>
@@ -513,13 +547,39 @@
             <artifactId>versions-maven-plugin</artifactId>
             <executions>
               <execution>
+                <id>bumping-major-version</id>
                 <goals>
                   <goal>set</goal>
                 </goals>
                 <phase>validate</phase>
                 <inherited>false</inherited>
                 <configuration>
-                  <newVersion>${parsedVersion.nextMajorVersion}.0.0${parsedVersion.qualifier?}</newVersion>
+                  <newVersion>${project.effective.version}</newVersion>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-resources-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sync-ver-for-tests</id>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <phase>validate</phase>
+                <inherited>false</inherited>
+                <configuration>
+                  <outputDirectory>${project.basedir}/tests</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>src/test/resources</directory>
+                      <includes>
+                        <include>ver.sh</include>
+                      </includes>
+                      <filtering>true</filtering>
+                    </resource>
+                  </resources>
                 </configuration>
               </execution>
             </executions>
