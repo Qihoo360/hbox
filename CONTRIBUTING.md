@@ -13,6 +13,8 @@ Dev Tasks
 
 Bump maven plugins: `./mvnw versions:display-plugin-updates -pl .`
 Bump maven wrapper: `./mvnw wrapper:wrapper`
+Bump project major version: `./mvnw validate -Pbump-major-version`
+Bump project minor version: `./mvnw validate -Pbump-minor-version`
 Sort pom.xml: `./mvnw sortpom:sort`
 
 Release Steps
@@ -26,11 +28,12 @@ Release Steps
 # run on gateways
 
 # 3. prepare release version, git tag and next version
-./mvnw release:clean release:prepare
+./mvnw release:clean release:prepare -DpushChanges=false
 
-# 4. cleanup
+# 4. push to git repo
+git push --follow-tags
+
+# 5. cleanup and sync with the remote repo
 ./mvnw release:clean
-
-# 5. sync with the remote repo
 git fetch
 ```

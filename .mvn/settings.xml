@@ -5,7 +5,7 @@
           xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
   <mirrors>
     <mirror>
-      <id>mediav-proxy</id>
+      <id>aliyun-proxy</id>
       <name>Public Maven2 Proxy Repositories</name>
       <url>https://maven.aliyun.com/repository/central/</url>
       <mirrorOf>${mirror.of.proxy}</mirrorOf>
