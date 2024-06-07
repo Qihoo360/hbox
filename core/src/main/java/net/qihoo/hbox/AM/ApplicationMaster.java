@@ -1669,8 +1669,8 @@ public class ApplicationMaster extends CompositeService {
         // MPI related options
         // bind-to none option
         envLists.add("OMPI_MCA_hwloc_base_binding_policy=none");
-        // -mca plm_rsh_agent /bin/echo
-        envLists.add("OMPI_MCA_plm_rsh_agent=/bin/echo");
+        // -mca plm_rsh_agent /bin/true
+        envLists.add("OMPI_MCA_plm_rsh_agent=/bin/true");
         // -mca plm_base_verbose 1
         envLists.add("OMPI_MCA_plm_base_verbose=1");
         // --oversubscribe
@@ -1744,7 +1744,7 @@ public class ApplicationMaster extends CompositeService {
      * @return
      */
     private void processMpiExecOutput(String mpiExecOutput) {
-        if (mpiExecOutput.startsWith("command") || mpiExecOutput.contains("<template>")) {
+        if (mpiContainerCommand == null && (mpiExecOutput.startsWith("command") || mpiExecOutput.contains("<template>"))) {
             LOG.info("Container mpi Command " + mpiExecOutput);
             appendMessage(new Message(LogType.STDERR, mpiExecOutput));
             if (mpiExecOutput.startsWith("command")) {
