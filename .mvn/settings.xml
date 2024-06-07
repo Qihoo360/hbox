@@ -11,4 +11,16 @@
       <mirrorOf>${mirror.of.proxy}</mirrorOf>
     </mirror>
   </mirrors>
+
+  <profiles>
+    <profile>
+      <id>mirror-central</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <mirror.of.proxy>central</mirror.of.proxy>
+      </properties>
+    </profile>
+  </profiles>
 </settings>
