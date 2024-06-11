@@ -249,6 +249,7 @@
                     <exclude>org.apache.hadoop.service.*</exclude>
                     <exclude>org.apache.hadoop.tracing.*</exclude>
                     <exclude>org.apache.hadoop.util.*</exclude>
+                    <exclude>org.apache.hadoop.yarn.api.*</exclude>
                     <exclude>org.apache.hadoop.yarn.api.records.*</exclude>
                     <exclude>org.apache.hadoop.yarn.conf.*</exclude>
                     <exclude>org.apache.hadoop.yarn.exceptions.*</exclude>
