@@ -78,7 +78,7 @@ jobs:
         cache: maven
 
     - name: Maven verify
-      run: ./mvnw -B -ntp -e -Dmirror.of.proxy= verify
+      run: ./mvnw -V -B -ntp -e -Dmirror.of.proxy= verify
 
   reproducible:
     name: 'Build and check reproducible'
@@ -98,7 +98,7 @@ jobs:
       shell: bash
       run: |
         set -ux
-        ./mvnw -B -ntp -e -Dmirror.of.proxy= install -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
+        ./mvnw -V -B -ntp -e -Dmirror.of.proxy= install -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
         ./mvnw -B -ntp -e -Dmirror.of.proxy= clean
         mkdir -p target
 
