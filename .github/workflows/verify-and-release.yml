@@ -1,4 +1,4 @@
-name: Verify and Release on tags
+name: Verify and Release
 
 # trigger on push to branches and PR
 on:
@@ -10,6 +10,10 @@ on:
     - 'v[0-9]+.[0-9]+'
     - 'v[0-9]+.[0-9]+.[0-9]+'
   pull_request:
+
+env:
+  # restore to default url to download maven
+  MVNW_REPOURL: https://repo.maven.apache.org/maven2
 
 jobs:
   lint_shellcheck:
@@ -49,9 +53,9 @@ jobs:
         distribution: 'temurin'
         cache: maven
     - name: Lint Maven Pom Format
-      run: ./mvnw -V -B -ntp sortpom:verify -Dsort.verifyFail=STOP
+      run: ./mvnw -V -B -ntp -Dmirror.of.proxy= sortpom:verify -Dsort.verifyFail=STOP
     - name: Lint Check Maven Plugins
-      run: ./mvnw -B -ntp artifact:check-buildplan
+      run: ./mvnw -B -ntp -Dmirror.of.proxy= artifact:check-buildplan
 
   verify:
     name: 'Verify with JDK ${{ matrix.jdk }}'
@@ -73,21 +77,33 @@ jobs:
         cache: maven
 
     - name: Maven verify
-      if: ${{ ! startsWith(github.ref, 'refs/tags/v') }}
-      run: ./mvnw -B -ntp -e verify
+      run: ./mvnw -B -ntp -e -Dmirror.of.proxy= verify
 
-    - name: Maven verify and check reproducible on tags
-      if: startsWith(github.ref, 'refs/tags/v')
+  reproducible:
+    name: 'Build and check reproducible'
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [ verify ]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: 11
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Build reproducible artifacts
       shell: bash
       run: |
         set -ux
-        ./mvnw -B -ntp -e install -Dbuildinfo.detect.skip=false
-        ./mvnw -B -ntp -e clean
+        ./mvnw -B -ntp -e -Dmirror.of.proxy= install -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
+        ./mvnw -B -ntp -e -Dmirror.of.proxy= clean
         mkdir -p target
 
         true artifact:compare should not contain warning or error
         trap 'cat target/build.log' ERR
-        ./mvnw -B -ntp -e -l target/build.log package artifact:compare -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
+        ./mvnw -B -ntp -e -Dmirror.of.proxy= -l target/build.log package artifact:compare -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
 
         test 0 = "$(sed -n '/^\\[INFO\\] --- maven-artifact-plugin:[^:][^:]*:compare/,/^\\[INFO\\] ---/ p' target/build.log | grep -c '^\\[\\(WARNING\\|ERROR\\)\\]')"
 
@@ -97,3 +113,31 @@ jobs:
         trap '' ERR
 
         find . -name "*.buildcompare" -print0 | xargs -0 cat
+
+    - name: Store artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        path: core/target/hbox-*-dist.tar.gz
+        retention-days: 7
+
+  create_a_draft_release:
+    name: Create a draft release
+    runs-on: ubuntu-latest
+    if: github.repository == 'Qihoo360/hbox' && startsWith(github.ref, 'refs/tags/v')
+    needs: [ reproducible ]
+    permissions:
+      contents: write
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        merge-multiple: true
+        path: core/target/
+
+    - name: Publish artifacts
+      uses: softprops/action-gh-release@v2
+      with:
+        draft: true
+        prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
+        fail_on_unmatched_files: true
+        files: core/target/hbox-*-dist.tar.gz
