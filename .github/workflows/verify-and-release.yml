@@ -1,0 +1,99 @@
+name: Verify and Release on tags
+
+# trigger on push to branches and PR
+on:
+  push:
+    branches:
+    - '**'        # matches every branch
+    tags:
+    - 'v[0-9]+'
+    - 'v[0-9]+.[0-9]+'
+    - 'v[0-9]+.[0-9]+.[0-9]+'
+  pull_request:
+
+jobs:
+  lint_shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    # execute on any push or pull request from forked repo
+    if: github.event_name == 'push' || ( github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork )
+    env:
+      SHELLCHECK_VERSION: '0.10.0'
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: download shellcheck
+      run: |
+        curl --silent --fail --show-error --retry 2 --retry-delay 1 --connect-timeout 5 --location --url "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" -o shellcheck-v${SHELLCHECK_VERSION}.tar.xz
+        tar xvf "shellcheck-v${SHELLCHECK_VERSION}.tar.xz"
+        rm -f "shellcheck-v${SHELLCHECK_VERSION}.tar.xz"
+        chmod +x "$GITHUB_WORKSPACE/shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
+
+    - name: check
+      run: |
+        echo "$GITHUB_WORKSPACE/shellcheck-v${SHELLCHECK_VERSION}" >> $GITHUB_PATH
+        shellcheck core/bin/hbox-* core/sbin/start-history-server.sh core/libexec/hbox-common-env.sh
+        find tests -name '*.sh' | xargs shellcheck
+
+  lint_maven:
+    name: lint pom.xml and maven plugins
+    runs-on: ubuntu-latest
+    # execute on any push or pull request from forked repo
+    if: github.event_name == 'push' || ( github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork )
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: 11
+        distribution: 'temurin'
+        cache: maven
+    - name: Lint Maven Pom Format
+      run: ./mvnw -V -B -ntp sortpom:verify -Dsort.verifyFail=STOP
+    - name: Lint Check Maven Plugins
+      run: ./mvnw -B -ntp artifact:check-buildplan
+
+  verify:
+    name: 'Verify with JDK ${{ matrix.jdk }}'
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ 8, 11, 17 ]
+    runs-on: ubuntu-latest
+    # execute on any push or pull request from forked repo
+    if: github.event_name == 'push' || ( github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork )
+    needs: [ lint_shellcheck, lint_maven ]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: '${{ matrix.jdk }}'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Maven verify
+      if: ${{ ! startsWith(github.ref, 'refs/tags/v') }}
+      run: ./mvnw -B -ntp -e verify
+
+    - name: Maven verify and check reproducible on tags
+      if: startsWith(github.ref, 'refs/tags/v')
+      shell: bash
+      run: |
+        set -ux
+        ./mvnw -B -ntp -e install -Dbuildinfo.detect.skip=false
+        ./mvnw -B -ntp -e clean
+        mkdir -p target
+
+        true artifact:compare should not contain warning or error
+        trap 'cat target/build.log' ERR
+        ./mvnw -B -ntp -e -l target/build.log package artifact:compare -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
+
+        test 0 = "$(sed -n '/^\\[INFO\\] --- maven-artifact-plugin:[^:][^:]*:compare/,/^\\[INFO\\] ---/ p' target/build.log | grep -c '^\\[\\(WARNING\\|ERROR\\)\\]')"
+
+        true all files should be ok
+        trap 'find . -name "*.buildcompare" -print0 | xargs -0 cat' ERR
+        find . -name '*.buildcompare' -print0 | xargs -0 grep -q '^ko=0$'
+        trap '' ERR
+
+        find . -name "*.buildcompare" -print0 | xargs -0 cat
