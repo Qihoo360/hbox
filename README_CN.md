@@ -17,7 +17,7 @@
 git remote set-url origin https://github.com/Qihoo360/hbox.git
 ```
 
-**Hbox**是一款支持多种机器学习、深度学习框架的调度系统。基于Hadoop Yarn完成了对TensorFlow、MXNet、Caffe、Theano、PyTorch、Keras、XGBoost等常用框架的集成，同时具备良好的扩展性和兼容性。  
+**Hbox**是一款支持多种机器学习、深度学习框架的调度系统。基于Hadoop Yarn完成了对Tensornet、TensorFlow、MXNet、Caffe、Theano、PyTorch、Keras、XGBoost、horovod、openmpi、tensor2tensor等常用框架的集成，支持GPU资源调度、docker模式运行以及restful API管理接口，同时具备良好的扩展性和兼容性。  
 
 [**English Document**](./README.md)
 
@@ -38,7 +38,7 @@ Hbox系统包括三种组件：
 
 
 ### 2 基于HDFS的统一数据管理  
-训练数据和模型结果统一采用HDFS进行存储，用户可通过`--input-strategy`或`hbox.input.strategy`指定输入数据所采用的读取方式。目前，Hbox支持如下三种HDFS输入数据读取方式：  
+训练数据和模型结果统一采用HDFS（支持S3）进行存储，用户可通过`--input-strategy`或`hbox.input.strategy`指定输入数据所采用的读取方式。目前，Hbox支持如下三种HDFS输入数据读取方式：  
 - **Download**： AM根据用户在提交脚本中所指定的输入数据参数，遍历对应HDFS路径下所有文件，以文件为单位将输入数据平均分配给不同Worker。在Worker中的执行程序对应进程启动之前，Worker会根据对应的文件分配信息将需要读取的HDFS文件下载到本地指定路径； 
 - **Placeholder**： 与Download模式不同，Worker不会直接下载HDFS文件到本地指定路径，而是将所分配的HDFS文件列表通过环境变量`INPUT_FILE_LIST`传给Worker中的执行程序对应进程。执行程序从环境变量`os.environ["INPUT_FILE_LIST"]`中获取需要处理的文件列表，直接对HDFS文件进行读写等操作。该模式要求深度学习框架具备读取HDFS文件的功能，或借助第三方模块库如pydoop等。  
 - **InputFormat**： Hbox集成有MapReduce中的InputFormat功能。在AM中，根据“split size”对所提交脚本中所指定的输入数据进行分片，并均匀的分配给不同Worker。在Worker中，根据所分配到的分片信息，以用户指定的InputFormat类读取数据分片，并通过管道将数据传递给Worker中的执行程序进程。

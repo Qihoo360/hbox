@@ -17,7 +17,7 @@ if you have a local clone of the repository, please update your remote URL:
 git remote set-url origin https://github.com/Qihoo360/hbox.git
 ```
 
-**Hbox** is a convenient and efficient scheduling platform combined with the big data and artificial intelligence, support for a variety of machine learning, deep learning frameworks. Hbox is running on the Hadoop Yarn and has integrated deep learning frameworks such as TensorFlow, MXNet, Caffe, Theano, PyTorch, Keras, XGBoost. Hbox has the satisfactory scalability and compatibility.
+**Hbox** is a convenient and efficient scheduling platform combined with the big data and artificial intelligence, support for a variety of machine learning, deep learning frameworks. Hbox is running on the Hadoop Yarn and has integrated deep learning frameworks such as Tensornet, TensorFlow, MXNet, Caffe, Theano, PyTorch, Keras, XGBoost，horovod, openmpi, tensor2tensor. support GPU resource schedule, run in docker and restful api management interface. Hbox has the satisfactory scalability and compatibility.
 
 [**中文文档**](./README_CN.md)  
 
@@ -37,7 +37,7 @@ Besides the distributed mode of TensorFlow and MXNet frameworks, Hbox supports t
 
 
 ### 2 Unified Data Management Based On HDFS  
-Hbox is enable to specify the input strategy for the input data `--input` by setting the `--input-strategy` parameter or `hbox.input.strategy` configuration. Hbox support three ways to read the HDFS input data:  
+Training data and [mo](http://model.industry_sparse_xgb.mo)del result save to HDFS(support S3). Hbox is enable to specify the input strategy for the input data `--input` by setting the `--input-strategy` parameter or `hbox.input.strategy` configuration. Hbox support three ways to read the HDFS input data:  
 
 - **Download**: AM traverses all files under the specified HDFS path and distributes data to workers in files. Each worker download files from the remote to local.  
 - **Placeholder**: The difference with Download mode is that AM send the related HDFS file list to workers. The process in worker read the data from HDFS directly.   
