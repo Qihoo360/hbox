@@ -68,9 +68,10 @@ public class HsController extends Controller implements AMParams {
             LOG.info("open and read the log from " + jobLogPath + " error, " + e);
         }
 
-        if (line == null) {
-            set(CONTAINER_NUMBER, String.valueOf(0));
-        } else {
+        set(CONTAINER_NUMBER, "0");
+        set("AM_NUM", "0");
+
+        if (line != null) {
             Gson gson = new Gson();
             Map<String, List<String>> readLog = new TreeMap<String, List<String>>();
             readLog = (Map<String, List<String>>) gson.fromJson(line, readLog.getClass());
@@ -79,7 +80,6 @@ public class HsController extends Controller implements AMParams {
             set("chiefWorkerMemory", "");
             set("evaluatorWorkerMemory", "");
             set("USAGED_INFO", "false");
-            set("AM_NUM", "0");
             if (readLog.keySet().contains("hboxVersion")) {
                 set("VERSION", readLog.get("hboxVersion").get(0));
                 int i = 0;
