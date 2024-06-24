@@ -145,7 +145,7 @@
         <value>0.0.0.0:10021</value>
     </property>
     <property>
-        <name>hbox.hisotory.port</name>
+        <name>hbox.history.port</name>
         <value>10021</value>
     </property>
     <property>

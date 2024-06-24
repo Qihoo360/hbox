@@ -425,7 +425,7 @@ public class HboxConfiguration extends YarnConfiguration {
      */
     public static final String HBOX_HISTORY_ADDRESS = "hbox.history.address";
 
-    public static final String HBOX_HISTORY_PORT = "hbox.hisotory.port";
+    public static final String HBOX_HISTORY_PORT = "hbox.history.port";
 
     public static final int DEFAULT_HBOX_HISTORY_PORT = 10021;
 

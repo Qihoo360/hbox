@@ -41,7 +41,7 @@
         <value>0.0.0.0:10121</value>
     </property>
     <property>
-        <name>hbox.hisotory.port</name>
+        <name>hbox.history.port</name>
         <value>10121</value>
     </property>
     <property>
