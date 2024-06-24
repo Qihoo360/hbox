@@ -142,3 +142,4 @@ jobs:
         prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
         fail_on_unmatched_files: true
         files: core/target/hbox-*-dist.tar.gz
+        generate_release_notes: true
