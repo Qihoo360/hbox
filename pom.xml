@@ -34,7 +34,7 @@
     -->
     <project.target.release>8</project.target.release>
 
-    <hadoop.version>3.2.1</hadoop.version>
+    <hadoop.version>[3.2.4]</hadoop.version>
     <sortpom.version>4.0.0</sortpom.version>
     <sort.verifyFail>warn</sort.verifyFail>
 
@@ -124,13 +124,13 @@
       <dependency>
         <groupId>org.json</groupId>
         <artifactId>json</artifactId>
-        <version>20140107</version>
+        <version>[20231013,)</version>
       </dependency>
       <!-- amazon s3 -->
       <dependency>
         <groupId>com.amazonaws</groupId>
         <artifactId>aws-java-sdk-s3</artifactId>
-        <version>1.11.86</version>
+        <version>[1.12.261]</version>
       </dependency>
       <!-- junit -->
       <dependency>

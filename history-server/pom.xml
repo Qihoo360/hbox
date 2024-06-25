@@ -197,8 +197,6 @@
                   <includes>
                     <!-- for /jobhistory/job -->
                     <include>*-default.xml</include>
-                    <include>org/apache/hadoop/io/*</include>
-                    <include>org/apache/hadoop/tracing/*</include>
                     <include>org/apache/hadoop/conf/*</include>
                     <include>org/apache/hadoop/crypto/key/*</include>
                     <include>org/apache/hadoop/fs/*</include>
@@ -212,13 +210,16 @@
                     <include>org/apache/hadoop/hdfs/shortcircuit/*</include>
                     <include>org/apache/hadoop/hdfs/util/*</include>
                     <include>org/apache/hadoop/http/*</include>
+                    <include>org/apache/hadoop/io/*</include>
                     <include>org/apache/hadoop/io/retry/*</include>
                     <include>org/apache/hadoop/ipc/**/*</include>
                     <include>org/apache/hadoop/metrics2/**/*</include>
                     <include>org/apache/hadoop/net/unix/*</include>
+                    <include>org/apache/hadoop/security/SecurityUtil*</include>
                     <include>org/apache/hadoop/security/http/XFrameOptionsFilter*</include>
                     <include>org/apache/hadoop/security/token/**/*</include>
                     <include>org/apache/hadoop/service/*</include>
+                    <include>org/apache/hadoop/tracing/*</include>
                     <include>org/apache/hadoop/util/*</include>
                     <include>org/apache/hadoop/util/concurrent/*</include>
                     <include>org/apache/hadoop/yarn/webapp/**/*</include>
