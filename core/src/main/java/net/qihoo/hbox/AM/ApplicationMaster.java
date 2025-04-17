@@ -391,7 +391,7 @@ public class ApplicationMaster extends CompositeService {
     }
 
     private void init() {
-        appendMessage(new Message(LogType.STDERR, "ApplicationMaster starting services"));
+        appendMessage(new Message(LogType.STDOUT, "ApplicationMaster starting services"));
 
         this.rmCallbackHandler = new RMCallbackHandler();
         this.amrmSync = AMRMClient.<ContainerRequest>createAMRMClient();
@@ -1643,13 +1643,16 @@ public class ApplicationMaster extends CompositeService {
         mpiexecArgs.add(nodes.toString());
 
         // mpiexecArgs is run directly on AM(not by a shell), so no escaping is needed.
-        // The user command appended is transfered to from mpiexec to the orted process on the work
+        // The user command appended is transfered from mpiexec to the orted process on the work
         // container as an argv array. To redirect stdout/stderr of the user command as a subprocess
         // of orted, we can insert a shell like this:
         //   /bin/sh -xc 'exec "$@" 1>>stdout 2>>stderr' -- hboxCommandArgs
         // The command is not processed by yarn nm service, so <LOG_DIR> cannot be replaced by yarn.
         // This command is also executed directly by execv syscall, so add them here as raw string:
         // For rank 0 (within this code which TF_INDEX is 1 for mpi), logs will be directed to both console and stdout
+        mpiexecArgs.add("/usr/bin/env");
+        mpiexecArgs.add("-u");
+        mpiexecArgs.add("PMIX_INSTALL_PREFIX"); // unset PMIX_INSTALL_PREFIX which inherits path from mpi master node
         mpiexecArgs.add("/bin/sh");
         mpiexecArgs.add("-c");
         mpiexecArgs.add(String.format("[ \"$%s\" != 1 ] && exec \"$@\" 1>> \"$%s\"/%s 2>> \"$%s\"/%s; \"$@\" 2>&1 | tee -a \"$%s\"/%s", HboxConstants.Environment.HBOX_TF_INDEX, HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_OUT_FILE, HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_ERR_FILE, HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_OUT_FILE)); // envs are expanded by /bin/sh
@@ -1666,7 +1669,10 @@ public class ApplicationMaster extends CompositeService {
         envLists.add("PWD=" + mpiExecDir);
         envLists.add("LD_LIBRARY_PATH=" + ldLibraryPath.toString());
 
+
         // MPI related options
+        // relocated openmpi install dir
+        envLists.add("OPAL_PREFIX=" + mpiInstallDir);
         // bind-to none option
         envLists.add("OMPI_MCA_hwloc_base_binding_policy=none");
         // -mca plm_rsh_agent /bin/true
@@ -1704,7 +1710,9 @@ public class ApplicationMaster extends CompositeService {
                     reader = new BufferedReader(new InputStreamReader(mpiExecProcess.getInputStream()));
                     String mpiExecOutput;
                     while ((mpiExecOutput = reader.readLine()) != null) {
-                        processMpiExecOutput(mpiExecOutput);
+                        LOG.info(mpiExecOutput);
+                        appendMessage(new Message(LogType.STDOUT, mpiExecOutput));
+                        extractMpiRTECommand(mpiExecOutput, amContainerStdOut);
                     }
                 } catch (Exception e) {
                     LOG.warn("Error in mpi exec process stdinThread");
@@ -1723,6 +1731,7 @@ public class ApplicationMaster extends CompositeService {
                     while ((mpiExecStderr = reader.readLine()) != null) {
                         LOG.info(mpiExecStderr);
                         appendMessage(new Message(LogType.STDERR, mpiExecStderr));
+                        extractMpiRTECommand(mpiExecStderr, null);
                         if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                             amContainerStdErr.append(mpiExecStderr);
                         }
@@ -1743,8 +1752,12 @@ public class ApplicationMaster extends CompositeService {
      * @param mpiExecOutput
      * @return
      */
-    private void processMpiExecOutput(String mpiExecOutput) {
-        if (mpiContainerCommand == null && (mpiExecOutput.startsWith("command") || mpiExecOutput.contains("<template>"))) {
+    private void extractMpiRTECommand(final String mpiExecOutput, final StringBuilder logCollector) {
+        if (mpiContainerCommand != null) {
+            return;
+        }
+
+        if (mpiExecOutput.startsWith("command") || mpiExecOutput.contains("<template>")) {
             LOG.info("Container mpi Command " + mpiExecOutput);
             appendMessage(new Message(LogType.STDERR, mpiExecOutput));
             if (mpiExecOutput.startsWith("command")) {
@@ -1754,12 +1767,9 @@ public class ApplicationMaster extends CompositeService {
                 int commandStartIndex = mpiExecOutput.indexOf("orted -mca");
                 mpiContainerCommand = mpiExecOutput.substring(commandStartIndex);
             }
-            if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
-                amContainerStdOut.append(mpiExecOutput);
+            if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE) && null != logCollector) {
+                logCollector.append(mpiExecOutput);
             }
-        }  else {
-            LOG.info(mpiExecOutput);
-            appendMessage(new Message(LogType.STDOUT, mpiExecOutput));
         }
     }
 
@@ -2661,17 +2671,24 @@ public class ApplicationMaster extends CompositeService {
                 launchMpiExec();
             else launchHorovodExec();
             mpiExitCode = -1;
+            final long start = System.currentTimeMillis();
             while (mpiContainerCommand == null) {
                 Utilities.sleep(statusUpdateInterval);
                 try {
                     mpiExitCode = mpiExecProcess.exitValue();
                 } catch (IllegalThreadStateException e) {
-                    LOG.debug(hboxAppType.toLowerCase() + " exec process is running");
+                    LOG.debug(hboxAppType.toLowerCase() + " mpiexec process is running");
                 }
                 if (mpiExitCode != -1) {
                     appendMessage(new Message(LogType.STDERR, hboxAppType.toLowerCase() + " exec exit with code " + mpiExitCode));
-                    throw new HboxExecException(hboxAppType.toLowerCase() + "exec exit with code " + mpiExitCode);
+                    throw new HboxExecException(hboxAppType.toLowerCase() + " mpiexec exit with code " + mpiExitCode);
                 }
+                if (System.currentTimeMillis() - start > 30_000) { // wait at most 30s
+                    final String errMsg = hboxAppType.toLowerCase() + " timeout for extracting mpi rte command from mpiexec output!";
+                    LOG.error(errMsg);
+                    appendMessage(new Message(LogType.STDERR, errMsg));
+                    throw new HboxExecException(errMsg);
+                 }
             }
         }
 
