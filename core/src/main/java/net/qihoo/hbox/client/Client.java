@@ -1200,7 +1200,7 @@ public class Client {
                 if (FinalApplicationStatus.SUCCEEDED == finalApplicationStatus) {
                     return true;
                 } else {
-                    LOG.info("Application has completed failed with YarnApplicationState=" + yarnApplicationState.toString() +
+                    LOG.error("Application has completed failed with YarnApplicationState=" + yarnApplicationState.toString() +
                             " and FinalApplicationStatus=" + finalApplicationStatus.toString());
                     return false;
                 }
@@ -1208,7 +1208,7 @@ public class Client {
                     || YarnApplicationState.FAILED == yarnApplicationState) {
                 hboxClient = null;
                 isRunning.set(false);
-                LOG.info("Application has completed with YarnApplicationState=" + yarnApplicationState.toString() +
+                LOG.error("Application has completed with YarnApplicationState=" + yarnApplicationState.toString() +
                         " and FinalApplicationStatus=" + finalApplicationStatus.toString());
                 return false;
             }
