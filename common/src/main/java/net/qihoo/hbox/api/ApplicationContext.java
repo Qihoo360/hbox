@@ -1,18 +1,17 @@
 package net.qihoo.hbox.api;
 
-import net.qihoo.hbox.common.InputInfo;
-import net.qihoo.hbox.common.Message;
-import net.qihoo.hbox.common.OutputInfo;
-import net.qihoo.hbox.container.HboxContainerId;
-import net.qihoo.hbox.common.HboxContainerStatus;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
-
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
+import net.qihoo.hbox.common.HboxContainerStatus;
+import net.qihoo.hbox.common.InputInfo;
+import net.qihoo.hbox.common.Message;
+import net.qihoo.hbox.common.OutputInfo;
+import net.qihoo.hbox.container.HboxContainerId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 
 public interface ApplicationContext {
 
@@ -115,5 +114,4 @@ public interface ApplicationContext {
     String getContainerStdErr(HboxContainerId cid);
 
     void sendSignal(int sid);
-
 }

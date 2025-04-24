@@ -1,13 +1,10 @@
-
 package net.qihoo.hbox.common;
-
-
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 
 public class OutputInfo implements Writable {
     private String localLocation;
@@ -16,14 +13,15 @@ public class OutputInfo implements Writable {
 
     private String outputType;
 
-    public OutputInfo() {
-    }
+    public OutputInfo() {}
 
     public String getOutputType() {
         return outputType;
     }
 
-    public void setOutputType(String outputType) { this.outputType = outputType; }
+    public void setOutputType(String outputType) {
+        this.outputType = outputType;
+    }
 
     public String getLocalLocation() {
         return localLocation;

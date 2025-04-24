@@ -1,14 +1,13 @@
 package net.qihoo.hbox.common;
 
-import net.qihoo.hbox.conf.HboxConfiguration;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Map;
+import net.qihoo.hbox.conf.HboxConfiguration;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 public class DockerExecutor implements ILaunch {
 
@@ -40,10 +39,11 @@ public class DockerExecutor implements ILaunch {
     public Process exec(String command, String[] envp, Map<String, String> envs, File dir) throws IOException {
         LOG.info("docker command:" + command + ",envs:" + envs);
         Runtime rt = Runtime.getRuntime();
-        String workDir = "/" + conf.get(HboxConfiguration.HBOX_DOCKER_WORK_DIR, HboxConfiguration.DEFAULT_HBOX_DOCKER_WORK_DIR);
+        String workDir =
+                "/" + conf.get(HboxConfiguration.HBOX_DOCKER_WORK_DIR, HboxConfiguration.DEFAULT_HBOX_DOCKER_WORK_DIR);
         String path = new File("").getAbsolutePath();
         StringBuilder envsParam = new StringBuilder();
-        //把container的环境变量添加到docker中去
+        // 把container的环境变量添加到docker中去
         for (String keyValue : envp) {
             if (keyValue.startsWith("PATH") || keyValue.startsWith("CLASSPATH")) {
                 continue;
@@ -53,7 +53,10 @@ public class DockerExecutor implements ILaunch {
         }
         String mount = " -v " + path + ":" + workDir;
         String[] localDirs = envs.get("LOCAL_DIRS").split(",");
-        Boolean publicFlag = conf.get(HboxConfiguration.HBOX_LOCAL_RESOURCE_VISIBILITY, HboxConfiguration.DEFAULT_HBOX_LOCAL_RESOURCE_VISIBILITY).equalsIgnoreCase("public");
+        Boolean publicFlag = conf.get(
+                        HboxConfiguration.HBOX_LOCAL_RESOURCE_VISIBILITY,
+                        HboxConfiguration.DEFAULT_HBOX_LOCAL_RESOURCE_VISIBILITY)
+                .equalsIgnoreCase("public");
         if (localDirs.length > 0) {
             for (String perPath : localDirs) {
                 if (publicFlag) {
@@ -72,7 +75,7 @@ public class DockerExecutor implements ILaunch {
         }
 
         String dockerImageName = conf.get(HboxConfiguration.HBOX_DOCKER_IMAGE_NAME);
-        //从仓库拉取镜像文件
+        // 从仓库拉取镜像文件
         try {
             String dockerPullCommand = this.dockerPath + " pull " + dockerImageName;
             LOG.info("Docker Pull command:" + dockerPullCommand);

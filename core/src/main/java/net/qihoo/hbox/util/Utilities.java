@@ -1,7 +1,14 @@
 package net.qihoo.hbox.util;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import net.qihoo.hbox.conf.HboxConfiguration;
-import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
@@ -14,21 +21,10 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
-
 public final class Utilities {
     private static Log LOG = LogFactory.getLog(Utilities.class);
 
-    private Utilities() {
-    }
+    private Utilities() {}
 
     public static void sleep(long millis) {
         try {
@@ -38,8 +34,8 @@ public final class Utilities {
         }
     }
 
-    public static List<FileStatus> listStatusRecursively(Path path, FileSystem fs, List<FileStatus> fileStatuses, int subLevel)
-            throws IOException {
+    public static List<FileStatus> listStatusRecursively(
+            Path path, FileSystem fs, List<FileStatus> fileStatuses, int subLevel) throws IOException {
         if (fileStatuses == null) {
             fileStatuses = new ArrayList<>(1000);
         }
@@ -74,10 +70,12 @@ public final class Utilities {
 
     public static Path getRemotePath(HboxConfiguration conf, ApplicationId appId, String fileName) {
         String pathSuffix = appId.toString() + "/" + fileName;
-        Path remotePath = new Path(conf.get(HboxConfiguration.HBOX_STAGING_DIR, HboxConfiguration.DEFAULT_HBOX_STAGING_DIR),
-                pathSuffix);
+        Path remotePath = new Path(
+                conf.get(HboxConfiguration.HBOX_STAGING_DIR, HboxConfiguration.DEFAULT_HBOX_STAGING_DIR), pathSuffix);
 
-        if (Boolean.parseBoolean(conf.get(HboxConfiguration.HBOX_APPEND_DEFAULTFS_ENABLE, String.valueOf(HboxConfiguration.DEFAULT_HBOX_APPEND_DEFAULTFS_ENABLE)))) {
+        if (Boolean.parseBoolean(conf.get(
+                HboxConfiguration.HBOX_APPEND_DEFAULTFS_ENABLE,
+                String.valueOf(HboxConfiguration.DEFAULT_HBOX_APPEND_DEFAULTFS_ENABLE)))) {
             remotePath = new Path(conf.get("fs.defaultFS"), remotePath);
         }
         LOG.debug("Got remote path of " + fileName + " is " + remotePath.toString());
@@ -160,7 +158,8 @@ public final class Utilities {
                     return false;
                 }
             } catch (Exception e) {
-                LOG.error("Check whether the path " + sub.toString() + " is the sub path of the path " + parent.toString() + ". Exception : " + e);
+                LOG.error("Check whether the path " + sub.toString() + " is the sub path of the path "
+                        + parent.toString() + ". Exception : " + e);
                 return false;
             }
         }
@@ -169,7 +168,11 @@ public final class Utilities {
     public static LocalResource createApplicationResource(FileSystem fs, Path path, LocalResourceType type)
             throws IOException {
         LocalResource localResource;
-        switch (fs.getConf().get(HboxConfiguration.HBOX_LOCAL_RESOURCE_VISIBILITY, HboxConfiguration.DEFAULT_HBOX_LOCAL_RESOURCE_VISIBILITY).toUpperCase()) {
+        switch (fs.getConf()
+                .get(
+                        HboxConfiguration.HBOX_LOCAL_RESOURCE_VISIBILITY,
+                        HboxConfiguration.DEFAULT_HBOX_LOCAL_RESOURCE_VISIBILITY)
+                .toUpperCase()) {
             case "PUBLIC":
                 localResource = createApplicationResource(fs, path, type, LocalResourceVisibility.PUBLIC);
                 break;
@@ -186,11 +189,13 @@ public final class Utilities {
         return localResource;
     }
 
-    public static LocalResource createApplicationResource(FileSystem fs, Path path, LocalResourceType type, LocalResourceVisibility visibility)
-            throws IOException {
+    public static LocalResource createApplicationResource(
+            FileSystem fs, Path path, LocalResourceType type, LocalResourceVisibility visibility) throws IOException {
         LocalResource localResource = Records.newRecord(LocalResource.class);
         FileStatus fileStatus = fs.getFileStatus(path);
-        if (!fs.getConf().get(HboxConfiguration.HBOX_REMOTE_DEFAULTFS, HboxConfiguration.DEFAULT_HBOX_REMOTE_DEFAULTFS).equals("")) {
+        if (!fs.getConf()
+                .get(HboxConfiguration.HBOX_REMOTE_DEFAULTFS, HboxConfiguration.DEFAULT_HBOX_REMOTE_DEFAULTFS)
+                .equals("")) {
             path = new Path(fs.getConf().get(HboxConfiguration.HBOX_REMOTE_DEFAULTFS), path);
         }
         localResource.setResource(ConverterUtils.getYarnUrlFromPath(path));
@@ -203,13 +208,20 @@ public final class Utilities {
 
     public static void addPathToEnvironment(Map<String, String> env, String userEnvKey, String userEnvValue) {
         if (env.containsKey(userEnvKey)) {
-            env.put(userEnvKey, userEnvValue + System.getProperty("path.separator") + env.get(userEnvKey) + System.getProperty("path.separator") + System.getenv(userEnvKey));
+            env.put(
+                    userEnvKey,
+                    userEnvValue
+                            + System.getProperty("path.separator")
+                            + env.get(userEnvKey)
+                            + System.getProperty("path.separator")
+                            + System.getenv(userEnvKey));
         } else {
             env.put(userEnvKey, userEnvValue + System.getProperty("path.separator") + System.getenv(userEnvKey));
         }
     }
 
-    public static void getReservePort(Socket socket, String localHost, int reservePortBegin, int reservePortEnd) throws IOException {
+    public static void getReservePort(Socket socket, String localHost, int reservePortBegin, int reservePortEnd)
+            throws IOException {
         int i = 0;
         Random random = new Random(System.currentTimeMillis());
         while (i < 1000) {

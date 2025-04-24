@@ -1,6 +1,13 @@
 package net.qihoo.hbox.webapp;
 
 import com.google.inject.Inject;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
 import net.qihoo.hbox.api.ApplicationContext;
 import net.qihoo.hbox.common.LogType;
 import net.qihoo.hbox.container.HboxContainerId;
@@ -12,27 +19,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
-
 /**
  * Created by jiarunying-it on 2018/8/28.
  */
-
 @Path("/ws")
 public class AMWebServices {
     private final ApplicationContext appCtx;
     private final App app;
     private final Configuration conf;
 
-    private
-    @Context
-    HttpServletResponse response;
+    private @Context HttpServletResponse response;
 
     @Inject
     public AMWebServices(final App app, final ApplicationContext context, final Configuration conf) {
@@ -42,7 +38,7 @@ public class AMWebServices {
     }
 
     private void init() {
-        //clear content type
+        // clear content type
         response.setContentType(null);
     }
 
@@ -60,7 +56,8 @@ public class AMWebServices {
     public ContainersInfo getContainersInfo() {
         init();
         ContainersInfo containersInfo = new ContainersInfo();
-        containersInfo.add(new ContainerInfo(new HboxContainerId(ContainerId.fromString(appCtx.getAMContainerID())), appCtx));
+        containersInfo.add(
+                new ContainerInfo(new HboxContainerId(ContainerId.fromString(appCtx.getAMContainerID())), appCtx));
         for (Container c : appCtx.getPsContainers()) {
             containersInfo.add(new ContainerInfo(new HboxContainerId(c.getId()), appCtx));
         }
@@ -139,9 +136,7 @@ public class AMWebServices {
     public String getBoardUrl() {
         init();
         String boardUrl = appCtx.getTensorBoardUrl();
-        if (boardUrl != null)
-            return boardUrl;
+        if (boardUrl != null) return boardUrl;
         return "";
     }
-
 }

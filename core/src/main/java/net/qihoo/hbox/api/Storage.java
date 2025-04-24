@@ -5,5 +5,6 @@ import java.io.InputStream;
 
 public interface Storage {
     boolean put(String name, File file);
+
     InputStream get(String fileName);
 }

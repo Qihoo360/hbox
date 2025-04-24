@@ -163,9 +163,9 @@ public interface HboxConstants {
         @InterfaceAudience.Public
         @InterfaceStability.Unstable
         public String $$() {
-            return ApplicationConstants.PARAMETER_EXPANSION_LEFT +
-                    variable +
-                    ApplicationConstants.PARAMETER_EXPANSION_RIGHT;
+            return ApplicationConstants.PARAMETER_EXPANSION_LEFT
+                    + variable
+                    + ApplicationConstants.PARAMETER_EXPANSION_RIGHT;
         }
     }
 }

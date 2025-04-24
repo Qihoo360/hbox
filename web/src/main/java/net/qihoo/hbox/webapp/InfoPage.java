@@ -1,13 +1,13 @@
 package net.qihoo.hbox.webapp;
 
+import static org.apache.hadoop.yarn.util.StringHelper.join;
+
 import net.qihoo.hbox.common.AMParams;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.HTML;
 import org.apache.hadoop.yarn.webapp.view.TwoColumnLayout;
-
-import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 public class InfoPage extends TwoColumnLayout implements AMParams {
     @Override
@@ -18,7 +18,11 @@ public class InfoPage extends TwoColumnLayout implements AMParams {
 
     @Override
     protected Class<? extends SubView> content() {
-        if ($(APP_TYPE).equals("Tensorflow") || $(APP_TYPE).equals("Mxnet") || $(APP_TYPE).equals("Distlightlda") || $(APP_TYPE).equals("Xflow") || $(APP_TYPE).equals("Xdl")) {
+        if ($(APP_TYPE).equals("Tensorflow")
+                || $(APP_TYPE).equals("Mxnet")
+                || $(APP_TYPE).equals("Distlightlda")
+                || $(APP_TYPE).equals("Xflow")
+                || $(APP_TYPE).equals("Xdl")) {
             return InfoBlock.class;
         } else {
             return SingleInfoBlock.class;
@@ -37,7 +41,8 @@ public class InfoPage extends TwoColumnLayout implements AMParams {
                 return HeaderBlock.class;
             }
         } catch (NoSuchMethodException e) {
-            LOG.debug("current hadoop version don't have the method build of Class " + WebApps.class.toString() + ". For More Detail: " + e);
+            LOG.debug("current hadoop version don't have the method build of Class " + WebApps.class.toString()
+                    + ". For More Detail: " + e);
             return org.apache.hadoop.yarn.webapp.view.HeaderBlock.class;
         }
         return null;

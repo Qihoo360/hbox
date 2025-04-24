@@ -1,17 +1,14 @@
 package net.qihoo.hbox.common;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import net.qihoo.hbox.storage.S3File;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-
 
 public class InputInfo implements Writable {
 
@@ -23,8 +20,7 @@ public class InputInfo implements Writable {
 
     private List<S3File> s3Files = new ArrayList<>();
 
-    public InputInfo() {
-    }
+    public InputInfo() {}
 
     public String getAliasName() {
         return aliasName;
@@ -62,7 +58,7 @@ public class InputInfo implements Writable {
         this.s3Files = s3Files;
     }
 
-    public void addS3File(S3File file){
+    public void addS3File(S3File file) {
         s3Files.add(file);
     }
 
@@ -94,7 +90,8 @@ public class InputInfo implements Writable {
         this.s3Files = new ArrayList<>();
         int urlSize = dataInput.readInt();
         for (int i = 0; i < urlSize; i++) {
-            this.s3Files.add(new S3File(Text.readString(dataInput), Text.readString(dataInput), Text.readString(dataInput)));
+            this.s3Files.add(
+                    new S3File(Text.readString(dataInput), Text.readString(dataInput), Text.readString(dataInput)));
         }
     }
 }

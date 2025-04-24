@@ -3,6 +3,19 @@ package net.qihoo.hbox.container;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
+import java.io.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.Type;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.zip.GZIPOutputStream;
 import net.qihoo.hbox.api.ApplicationContainerProtocol;
 import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.*;
@@ -29,20 +42,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-
-import java.io.*;
-import java.lang.reflect.Field;
-import java.lang.reflect.Type;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.zip.GZIPOutputStream;
 
 public class HboxContainer {
 
@@ -128,9 +127,10 @@ public class HboxContainer {
         this.conf = new HboxConfiguration();
         conf.addResource(new Path(HboxConstants.HBOX_JOB_CONFIGURATION));
         LOG.info("user is " + conf.get("hadoop.job.ugi"));
-        this.containerId = new HboxContainerId(ContainerId.fromString(System
-                .getenv(ApplicationConstants.Environment.CONTAINER_ID.name())));
-        this.downloadRetry = conf.getInt(HboxConfiguration.HBOX_DOWNLOAD_FILE_RETRY, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_RETRY);
+        this.containerId = new HboxContainerId(
+                ContainerId.fromString(System.getenv(ApplicationConstants.Environment.CONTAINER_ID.name())));
+        this.downloadRetry = conf.getInt(
+                HboxConfiguration.HBOX_DOWNLOAD_FILE_RETRY, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_RETRY);
         this.envs = System.getenv();
 
         if (envs.containsKey(ApplicationConstants.Environment.NM_HOST.toString())) {
@@ -138,17 +138,25 @@ public class HboxContainer {
         } else {
             localHost = "127.0.0.1";
         }
-        reservePortBegin = this.conf.getInt(HboxConfiguration.HBOX_RESERVE_PORT_BEGIN, HboxConfiguration.DEFAULT_HBOX_RESERVE_PORT_BEGIN);
-        reservePortEnd = this.conf.getInt(HboxConfiguration.HBOX_RESERVE_PORT_END, HboxConfiguration.DEFAULT_HBOX_RESERVE_PORT_END);
+        reservePortBegin = this.conf.getInt(
+                HboxConfiguration.HBOX_RESERVE_PORT_BEGIN, HboxConfiguration.DEFAULT_HBOX_RESERVE_PORT_BEGIN);
+        reservePortEnd = this.conf.getInt(
+                HboxConfiguration.HBOX_RESERVE_PORT_END, HboxConfiguration.DEFAULT_HBOX_RESERVE_PORT_END);
 
-        this.hboxAppType = envs.get(HboxConstants.Environment.HBOX_APP_TYPE.toString()).toUpperCase();
+        this.hboxAppType =
+                envs.get(HboxConstants.Environment.HBOX_APP_TYPE.toString()).toUpperCase();
         this.role = envs.get(HboxConstants.Environment.HBOX_TF_ROLE.toString());
         this.index = Integer.parseInt(envs.get(HboxConstants.Environment.HBOX_TF_INDEX.toString()));
         this.hboxCmdProcessId = "";
         this.outputIndex = -1;
         this.exitCode = -1;
 
-        if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType) || hboxAppType.equals("DISTXGBOOST") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XDL")) {
+        if ("TENSORFLOW".equals(hboxAppType)
+                || "TENSOR2TENSOR".equals(hboxAppType)
+                || hboxAppType.equals("DISTXGBOOST")
+                || hboxAppType.equals("DISTLIGHTGBM")
+                || hboxAppType.equals("DISTLIGHTLDA")
+                || hboxAppType.equals("XDL")) {
             LOG.info("Current role is:" + this.role);
         }
         if (hboxAppType.equals("MXNET") || hboxAppType.equals("XFLOW")) {
@@ -161,26 +169,40 @@ public class HboxContainer {
             this.outputIndex = Integer.parseInt(envs.get(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString()));
             LOG.info("Output index is:" + this.outputIndex);
         }
-        if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType) || hboxAppType.equals("MXNET") || hboxAppType.equals("DISTXGBOOST") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XFLOW") || hboxAppType.equals("XDL")) {
+        if ("TENSORFLOW".equals(hboxAppType)
+                || "TENSOR2TENSOR".equals(hboxAppType)
+                || hboxAppType.equals("MXNET")
+                || hboxAppType.equals("DISTXGBOOST")
+                || hboxAppType.equals("DISTLIGHTGBM")
+                || hboxAppType.equals("DISTLIGHTLDA")
+                || hboxAppType.equals("XFLOW")
+                || hboxAppType.equals("XDL")) {
             LOG.info("Current index is:" + this.index);
         }
         if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
             this.mpiAppDir = envs.get(ApplicationConstants.Environment.PWD.name());
 
-            if (conf.getBoolean(HboxConfiguration.HBOX_MPI_EXEC_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR_ENABLE)) {
-                this.mpiAppDir = conf.get(HboxConfiguration.HBOX_MPI_EXEC_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR);
+            if (conf.getBoolean(
+                    HboxConfiguration.HBOX_MPI_EXEC_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR_ENABLE)) {
+                this.mpiAppDir =
+                        conf.get(HboxConfiguration.HBOX_MPI_EXEC_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR);
             }
 
             LOG.info(hboxAppType.toLowerCase() + " app dir is:" + this.mpiAppDir);
             LOG.info(hboxAppType.toLowerCase() + " container index is: " + this.index);
         }
-        this.single = conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE);
-        this.singleMx = conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE);
-        heartbeatInterval = this.conf.getInt(HboxConfiguration.HBOX_CONTAINER_HEARTBEAT_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_HEARTBEAT_INTERVAL);
+        this.single =
+                conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE);
+        this.singleMx = conf.getBoolean(
+                HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE);
+        heartbeatInterval = this.conf.getInt(
+                HboxConfiguration.HBOX_CONTAINER_HEARTBEAT_INTERVAL,
+                HboxConfiguration.DEFAULT_HBOX_CONTAINER_HEARTBEAT_INTERVAL);
         reservedSocket = new Socket();
 
         this.inputFileList = "";
-        this.containerType = conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE);
+        this.containerType =
+                conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE);
         String containerMode = conf.get("hbox.container.mode", "default");
         LOG.info("Current container type: " + this.containerType);
         if (containerType.equalsIgnoreCase("docker")) {
@@ -240,8 +262,7 @@ public class HboxContainer {
         this.correctS3Conf = !s3Cluster.equals("") && !s3AccessKey.equals("") && !s3SecretKey.equals("");
         if (correctS3Conf) {
             String clusterPrefix = "http://";
-            if (!s3Cluster.startsWith(clusterPrefix))
-                s3Cluster = clusterPrefix + s3Cluster;
+            if (!s3Cluster.startsWith(clusterPrefix)) s3Cluster = clusterPrefix + s3Cluster;
             LOG.info("Amazon S3 is enabled.");
             LOG.info("S3 Cluster is: " + s3Cluster);
         }
@@ -253,23 +274,32 @@ public class HboxContainer {
         int appMasterPort = Integer.parseInt(System.getenv(HboxConstants.Environment.APPMASTER_PORT.toString()));
         InetSocketAddress addr = new InetSocketAddress(appMasterHost, appMasterPort);
         try {
-            this.amClient = RPC.getProxy(ApplicationContainerProtocol.class,
-                    ApplicationContainerProtocol.versionID, addr, conf);
+            this.amClient = RPC.getProxy(
+                    ApplicationContainerProtocol.class, ApplicationContainerProtocol.versionID, addr, conf);
         } catch (IOException e) {
             LOG.error("Connecting to ApplicationMaster " + appMasterHost + ":" + appMasterPort + " failed!");
             LOG.error("Container will suicide!");
             System.exit(1);
         }
-        //this.amClient.reportStatus(containerId, HboxContainerStatus.INITIALIZING);
+        // this.amClient.reportStatus(containerId, HboxContainerStatus.INITIALIZING);
         heartbeatThread = new Heartbeat(amClient, conf, containerId, role, index, outputIndex);
         heartbeatThread.setDaemon(true);
         heartbeatThread.start();
         heartbeatThread.setContainerStatus(HboxContainerStatus.INITIALIZING);
         containerReporter = null;
 
-        if ((("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) && !single) || hboxAppType.equals("DIGITS") || hboxAppType.equals("DISTLIGHTGBM") || hboxAppType.equals("DISTLIGHTLDA") || (hboxAppType.equals("DISTTORCH") && this.index == 0) || containerType.equalsIgnoreCase("docker")) {
+        if ((("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) && !single)
+                || hboxAppType.equals("DIGITS")
+                || hboxAppType.equals("DISTLIGHTGBM")
+                || hboxAppType.equals("DISTLIGHTLDA")
+                || (hboxAppType.equals("DISTTORCH") && this.index == 0)
+                || containerType.equalsIgnoreCase("docker")) {
             try {
-                Utilities.getReservePort(reservedSocket, InetAddress.getByName(localHost).getHostAddress(), reservePortBegin, reservePortEnd);
+                Utilities.getReservePort(
+                        reservedSocket,
+                        InetAddress.getByName(localHost).getHostAddress(),
+                        reservePortBegin,
+                        reservePortEnd);
             } catch (IOException e) {
                 LOG.error("Can not get available port");
                 reportFailedAndExit();
@@ -322,7 +352,10 @@ public class HboxContainer {
                     if (retry < downloadRetry) {
                         LOG.warn("Download input file " + this.downloadSrc + " failed, retry in " + (++retry), e);
                     } else {
-                        LOG.error("Download input file " + this.downloadSrc + " failed after " + downloadRetry + " retry times!", e);
+                        LOG.error(
+                                "Download input file " + this.downloadSrc + " failed after " + downloadRetry
+                                        + " retry times!",
+                                e);
                         reportFailedAndExit();
                     }
                 } finally {
@@ -344,14 +377,17 @@ public class HboxContainer {
     }
 
     @SuppressWarnings("deprecation")
-    private void prepareInputFiles() throws IOException, InterruptedException,
-            ExecutionException {
-        if (this.conf.getBoolean(HboxConfiguration.HBOX_INPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM) ||
-                conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("STREAM")) {
+    private void prepareInputFiles() throws IOException, InterruptedException, ExecutionException {
+        if (this.conf.getBoolean(HboxConfiguration.HBOX_INPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM)
+                || conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY)
+                        .equals("STREAM")) {
             LOG.info("HBOX_INPUT_STRATEGY is STREAM, use the stream way to read data from hdfs.");
-        } else if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("PLACEHOLDER")) {
-            if (conf.getBoolean(HboxConfiguration.HBOX_PLACEHOLDER_WHOLE_ENABLE, HboxConfiguration.DEFAULT_HBOX_PLACEHOLDER_WHOLE_ENABLE)) {
-                //PLACEHOLDER WHOLE mode
+        } else if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY)
+                .equals("PLACEHOLDER")) {
+            if (conf.getBoolean(
+                    HboxConfiguration.HBOX_PLACEHOLDER_WHOLE_ENABLE,
+                    HboxConfiguration.DEFAULT_HBOX_PLACEHOLDER_WHOLE_ENABLE)) {
+                // PLACEHOLDER WHOLE mode
                 InputInfo[] wholeFiles = amClient.getInputWholeSplit();
                 if (wholeFiles.length == 0) {
                     LOG.info("Current container has no input.");
@@ -368,7 +404,7 @@ public class HboxContainer {
                 this.inputFileList = new Gson().toJson(phInputInfo);
                 LOG.info("Input path is:" + this.inputFileList);
             } else {
-                //PLACEHOLDER mode
+                // PLACEHOLDER mode
                 List<InputInfo> inputs = Arrays.asList(amClient.getInputSplit(containerId));
                 if (inputs.size() == 0) {
                     LOG.info("Current container has no input.");
@@ -397,23 +433,25 @@ public class HboxContainer {
                 LOG.info("Amazon S3 Input path is:" + this.s3InputUrlList);
             }
         } else {
-            //DOWNLOAD mode
+            // DOWNLOAD mode
             List<InputInfo> inputs = Arrays.asList(amClient.getInputSplit(containerId));
             if (inputs.size() == 0) {
                 LOG.info("Current container has no input.");
                 return;
             }
             for (InputInfo inputInfo : inputs) {
-                LOG.info("Input path: " + inputInfo.getAliasName() + "@" + inputInfo.getPaths().toString());
+                LOG.info("Input path: " + inputInfo.getAliasName() + "@"
+                        + inputInfo.getPaths().toString());
             }
 
             ExecutorService executor = Executors.newFixedThreadPool(
-                    conf.getInt(HboxConfiguration.HBOX_DOWNLOAD_FILE_THREAD_NUMS, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_THREAD_NUMS),
+                    conf.getInt(
+                            HboxConfiguration.HBOX_DOWNLOAD_FILE_THREAD_NUMS,
+                            HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_THREAD_NUMS),
                     new ThreadFactoryBuilder()
                             .setDaemon(true)
                             .setNameFormat("Download-File-Thread #%d")
-                            .build()
-            );
+                            .build());
 
             for (InputInfo inputInfo : inputs) {
                 String downloadDir;
@@ -439,7 +477,9 @@ public class HboxContainer {
                 } else {
                     for (Path path : inputInfo.getPaths()) {
                         String downloadDst;
-                        if (conf.getBoolean(HboxConfiguration.HBOX_INPUTFILE_RENAME, HboxConfiguration.DEFAULT_HBOX_INPUTFILE_RENAME)) {
+                        if (conf.getBoolean(
+                                HboxConfiguration.HBOX_INPUTFILE_RENAME,
+                                HboxConfiguration.DEFAULT_HBOX_INPUTFILE_RENAME)) {
                             downloadDst = downloadDir + File.separator + System.currentTimeMillis() + "_" + index++;
                         } else {
                             String[] fileName = StringUtils.split(path.toString(), '/');
@@ -449,7 +489,6 @@ public class HboxContainer {
                         executor.submit(downloadTask);
                     }
                 }
-
             }
 
             boolean allDownloadTaskFinished = false;
@@ -467,7 +506,9 @@ public class HboxContainer {
 
     private void createLocalInputDir() {
         if (this.envs.containsKey(HboxConstants.Environment.HBOX_INPUT_PATH.toString())) {
-            String[] inputPath = this.envs.get(HboxConstants.Environment.HBOX_INPUT_PATH.toString()).split(",");
+            String[] inputPath = this.envs
+                    .get(HboxConstants.Environment.HBOX_INPUT_PATH.toString())
+                    .split(",");
             for (String path : inputPath) {
                 Utilities.mkdirs(path);
             }
@@ -476,7 +517,9 @@ public class HboxContainer {
 
     private void createLocalOutputDir() {
         if (this.conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STREAM)
-                || this.conf.get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY).equals("STREAM")) {
+                || this.conf
+                        .get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY)
+                        .equals("STREAM")) {
             LOG.info("HBOX_OUTPUT_STRATEGY is STREAM, do not need to create local output dir.");
         } else {
             List<OutputInfo> outputs = Arrays.asList(amClient.getOutputLocation());
@@ -491,29 +534,54 @@ public class HboxContainer {
         }
 
         if (!(hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS"))) {
-            int boardIndex = this.conf.getInt(HboxConfiguration.HBOX_TF_BOARD_WORKER_INDEX, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_WORKER_INDEX);
-            boolean boardEnable = this.conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_ENABLE);
-            boolean boardPsEnable = this.conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_PS_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_PS_ENABLE);
+            int boardIndex = this.conf.getInt(
+                    HboxConfiguration.HBOX_TF_BOARD_WORKER_INDEX, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_WORKER_INDEX);
+            boolean boardEnable = this.conf.getBoolean(
+                    HboxConfiguration.HBOX_TF_BOARD_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_ENABLE);
+            boolean boardPsEnable = this.conf.getBoolean(
+                    HboxConfiguration.HBOX_TF_BOARD_PS_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_PS_ENABLE);
             if (hboxAppType.equals("TENSORNET")) {
                 boardIndex = boardIndex + 1;
             }
             if (boardEnable) {
                 if (boardPsEnable) {
                     if (this.role.equals(HboxConstants.PS) && boardIndex == this.index) {
-                        if (this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR).indexOf("hdfs://") == -1) {
-                            Utilities.mkdirs(this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR));
-                            LOG.info("Created board log dir " + this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR));
+                        if (this.conf
+                                        .get(
+                                                HboxConfiguration.HBOX_TF_BOARD_LOG_DIR,
+                                                HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR)
+                                        .indexOf("hdfs://")
+                                == -1) {
+                            Utilities.mkdirs(this.conf.get(
+                                    HboxConfiguration.HBOX_TF_BOARD_LOG_DIR,
+                                    HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR));
+                            LOG.info("Created board log dir "
+                                    + this.conf.get(
+                                            HboxConfiguration.HBOX_TF_BOARD_LOG_DIR,
+                                            HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR));
                         } else {
-                            LOG.info("User appoint the board log dir : " + this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR));
+                            LOG.info("User appoint the board log dir : "
+                                    + this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR));
                         }
                     }
                 } else {
                     if (this.role.equals(HboxConstants.WORKER) && boardIndex == this.index) {
-                        if (this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR).indexOf("hdfs://") == -1) {
-                            Utilities.mkdirs(this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR));
-                            LOG.info("Created board log dir " + this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR));
+                        if (this.conf
+                                        .get(
+                                                HboxConfiguration.HBOX_TF_BOARD_LOG_DIR,
+                                                HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR)
+                                        .indexOf("hdfs://")
+                                == -1) {
+                            Utilities.mkdirs(this.conf.get(
+                                    HboxConfiguration.HBOX_TF_BOARD_LOG_DIR,
+                                    HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR));
+                            LOG.info("Created board log dir "
+                                    + this.conf.get(
+                                            HboxConfiguration.HBOX_TF_BOARD_LOG_DIR,
+                                            HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR));
                         } else {
-                            LOG.info("User appoint the board log dir : " + this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR));
+                            LOG.info("User appoint the board log dir : "
+                                    + this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR));
                         }
                     }
                 }
@@ -525,22 +593,27 @@ public class HboxContainer {
     private void uploadOutputFiles() throws IOException {
         boolean boardUpload = this.conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_UPLOAD, true);
         if (this.conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STREAM)
-                || this.conf.get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY).equals("STREAM")) {
+                || this.conf
+                        .get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY)
+                        .equals("STREAM")) {
             LOG.info("HBOX_OUTPUT_STRATEGY is STREAM, do not need to upload local output files.");
         } else {
             List<OutputInfo> outputs = Arrays.asList(amClient.getOutputLocation());
             for (OutputInfo s : outputs) {
-                LOG.info(s.getOutputType().toUpperCase() + " Output path: " + s.getLocalLocation() + "#" + s.getDfsLocation());
+                LOG.info(s.getOutputType().toUpperCase() + " Output path: " + s.getLocalLocation() + "#"
+                        + s.getDfsLocation());
             }
             if (outputs.size() > 0) {
-                int workerNum = conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM);
+                int workerNum =
+                        conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM);
                 ExecutorService executor = Executors.newFixedThreadPool(
-                        conf.getInt(HboxConfiguration.HBOX_UPLOAD_OUTPUT_THREAD_NUMS, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_THREAD_NUMS),
+                        conf.getInt(
+                                HboxConfiguration.HBOX_UPLOAD_OUTPUT_THREAD_NUMS,
+                                HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_THREAD_NUMS),
                         new ThreadFactoryBuilder()
                                 .setDaemon(true)
                                 .setNameFormat("Upload-Output-Thread #%d")
-                                .build()
-                );
+                                .build());
                 for (OutputInfo outputInfo : outputs) {
                     String outputType = outputInfo.getOutputType();
                     String bucketName = outputInfo.getDfsLocation();
@@ -550,19 +623,22 @@ public class HboxContainer {
                     FileSystem localFs = FileSystem.getLocal(conf);
                     Path localPath = new Path(outputInfo.getLocalLocation());
                     Path remotePath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + containerId.toString());
-                    if (workerNum == 1 && !conf.getBoolean(HboxConfiguration.HBOX_CREATE_CONTAINERID_DIR, HboxConfiguration.DEFAULT_HBOX_CREATE_CONTAINERID_DIR)) {
+                    if (workerNum == 1
+                            && !conf.getBoolean(
+                                    HboxConfiguration.HBOX_CREATE_CONTAINERID_DIR,
+                                    HboxConfiguration.DEFAULT_HBOX_CREATE_CONTAINERID_DIR)) {
                         remotePath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + localPath.toString());
                     }
                     if (outputIndex >= 0) {
                         LOG.info("Appoint worker index " + this.outputIndex + " to upload output to HDFS.");
                         if (this.role.equals(HboxConstants.WORKER) && this.index == outputIndex) {
                             remotePath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + localPath.toString());
-                        } else
-                            break;
+                        } else break;
                     }
                     FileSystem dfs = remotePath.getFileSystem(conf);
                     if (dfs.exists(remotePath)) {
-                        LOG.info("Container remote output path " + remotePath + "exists, so we has to delete is first.");
+                        LOG.info(
+                                "Container remote output path " + remotePath + "exists, so we has to delete is first.");
                         dfs.delete(remotePath);
                     }
                     dfs.close();
@@ -576,13 +652,16 @@ public class HboxContainer {
                         FileStatus[] uploadFiles = localFs.listStatus(localPath);
                         for (FileStatus uploadFile : uploadFiles) {
                             Path uploadPath = uploadFile.getPath();
-                            String[] fileName = StringUtils.splitByWholeSeparator(uploadPath.toString() + "/", splitDir, 2);
+                            String[] fileName =
+                                    StringUtils.splitByWholeSeparator(uploadPath.toString() + "/", splitDir, 2);
                             if (fileName.length == 2) {
                                 if (outputType.equals(HboxConstants.S3) && correctS3Conf) {
-                                    String containerId = this.containerId.getContainerId().toString();
+                                    String containerId =
+                                            this.containerId.getContainerId().toString();
                                     String appId = envs.get(HboxConstants.Environment.APP_ID.toString());
                                     String objectKey = appId + "/" + containerId + "/" + uploadPath.getName();
-                                    AmazonS3 s3 = new AmazonS3(s3Cluster, bucketName, this.s3AccessKey, this.s3SecretKey);
+                                    AmazonS3 s3 =
+                                            new AmazonS3(s3Cluster, bucketName, this.s3AccessKey, this.s3SecretKey);
                                     S3UploadTask task = new S3UploadTask(conf, s3, objectKey, uploadPath.toString());
                                     executor.submit(task);
                                 } else {
@@ -611,15 +690,21 @@ public class HboxContainer {
                 LOG.info("All output files upload finished.");
             }
         }
-        //upload tensorboard log
+        // upload tensorboard log
         if (!(hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS"))) {
-            if (!this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR).contains("hdfs://")) {
+            if (!this.conf
+                    .get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR)
+                    .contains("hdfs://")) {
                 HboxConfiguration tfConf = new HboxConfiguration();
                 tfConf.setBoolean("fs.hdfs.impl.disable.cache", true);
                 tfConf.setBoolean("fs.hdfsold.impl.disable.cache", true);
-                int boardIndex = this.conf.getInt(HboxConfiguration.HBOX_TF_BOARD_WORKER_INDEX, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_WORKER_INDEX);
-                Boolean boardEnable = this.conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_ENABLE);
-                String boardLogDir = this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR);
+                int boardIndex = this.conf.getInt(
+                        HboxConfiguration.HBOX_TF_BOARD_WORKER_INDEX,
+                        HboxConfiguration.DEFAULT_HBOX_TF_BOARD_WORKER_INDEX);
+                Boolean boardEnable = this.conf.getBoolean(
+                        HboxConfiguration.HBOX_TF_BOARD_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_ENABLE);
+                String boardLogDir = this.conf.get(
+                        HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR);
                 if (hboxAppType.equals("TENSORNET")) {
                     boardIndex = boardIndex + 1;
                     boardLogDir = this.mpiAppDir + '/' + boardLogDir;
@@ -629,37 +714,55 @@ public class HboxContainer {
                 Path boardHistoryDir;
                 Path remoteLogPath;
                 FileSystem boardDfs;
-                if (conf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR).equals(tfConf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR))) {
-                    boardHistoryDir = new Path(conf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
-                            HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR) + "/" + this.envs.get("APP_ID"));
+                if (conf.get(
+                                HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
+                                HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR)
+                        .equals(tfConf.get(
+                                HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
+                                HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR))) {
+                    boardHistoryDir = new Path(conf.get(
+                                    HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
+                                    HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR)
+                            + "/" + this.envs.get("APP_ID"));
                     remoteLogPath = new Path(tfConf.get("fs.defaultFS"), boardHistoryDir);
                     boardDfs = remoteLogPath.getFileSystem(tfConf);
                 } else {
-                    boardHistoryDir = new Path(conf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
+                    boardHistoryDir = new Path(conf.get(
+                            HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
                             HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR));
                     remoteLogPath = new Path(conf.get("fs.defaultFS"), boardHistoryDir);
                     boardDfs = remoteLogPath.getFileSystem(conf);
                 }
-//                System.out.println("upload tensorboard");
-//                System.out.println("boardUpload:" + boardUpload);
-//                System.out.println("boardLocalFs.exists(localLogPath):" + boardLocalFs.exists(localLogPath));
-//                System.out.println("boardEnable:" + boardEnable);
-//                System.out.println("boardIndex == this.index:" + (boardIndex == this.index));
-//                System.out.println("!this.role.equals(HboxConstants.EVALUATOR):" + !this.role.equals(HboxConstants.EVALUATOR));
+                //                System.out.println("upload tensorboard");
+                //                System.out.println("boardUpload:" + boardUpload);
+                //                System.out.println("boardLocalFs.exists(localLogPath):" +
+                // boardLocalFs.exists(localLogPath));
+                //                System.out.println("boardEnable:" + boardEnable);
+                //                System.out.println("boardIndex == this.index:" + (boardIndex == this.index));
+                //                System.out.println("!this.role.equals(HboxConstants.EVALUATOR):" +
+                // !this.role.equals(HboxConstants.EVALUATOR));
 
-                if (boardUpload && boardLocalFs.exists(localLogPath) && boardEnable && boardIndex == this.index && !this.role.equals(HboxConstants.EVALUATOR)) {
+                if (boardUpload
+                        && boardLocalFs.exists(localLogPath)
+                        && boardEnable
+                        && boardIndex == this.index
+                        && !this.role.equals(HboxConstants.EVALUATOR)) {
                     if (boardDfs.exists(remoteLogPath)) {
-                        LOG.info("Container remote board log output path " + remoteLogPath + " exists, so we has to delete is first.");
+                        LOG.info("Container remote board log output path " + remoteLogPath
+                                + " exists, so we has to delete is first.");
                         boardDfs.delete(remoteLogPath);
                     }
                     boardDfs.copyFromLocalFile(false, false, localLogPath, remoteLogPath);
-                    LOG.info("Upload board  log dir " + localLogPath + " to remote path " + remoteLogPath + " finished.");
+                    LOG.info("Upload board  log dir " + localLogPath + " to remote path " + remoteLogPath
+                            + " finished.");
                 }
                 boardLocalFs.close();
                 boardDfs.close();
             } else {
                 LOG.info("User appoint the board log dir : " + this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR));
-                if (!(hboxAppType.equals("TENSORFLOW") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("TENSOR2TENSOR"))) {
+                if (!(hboxAppType.equals("TENSORFLOW")
+                        || hboxAppType.equals("TENSORNET")
+                        || hboxAppType.equals("TENSOR2TENSOR"))) {
                     LOG.error("Note that VisualDL not support the hdfs path of logdir.");
                 }
             }
@@ -675,9 +778,12 @@ public class HboxContainer {
             return;
         }
         if (envs.containsKey(HboxConstants.Environment.MPI_FILES_LINKS.toString())) {
-            String linkFileStr = envs.get(HboxConstants.Environment.MPI_FILES_LINKS.toString()) + "," + HboxConstants.HBOX_JOB_CONFIGURATION;
-            if (conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_ENABLE)) {
-                String boardLogDir = this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR);
+            String linkFileStr = envs.get(HboxConstants.Environment.MPI_FILES_LINKS.toString()) + ","
+                    + HboxConstants.HBOX_JOB_CONFIGURATION;
+            if (conf.getBoolean(
+                    HboxConfiguration.HBOX_TF_BOARD_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_ENABLE)) {
+                String boardLogDir = this.conf.get(
+                        HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR);
                 String name = new Path(boardLogDir).getName();
                 if (name != null && !name.equals("")) {
                     boardLogDir = name;
@@ -719,19 +825,26 @@ public class HboxContainer {
 
     private Boolean run(String args[]) throws IOException {
         try {
-            if (conf.getBoolean(HboxConfiguration.HBOX_TF_INPUT_PS_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_INPUT_PS_ENABLE)) {
+            if (conf.getBoolean(
+                    HboxConfiguration.HBOX_TF_INPUT_PS_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_INPUT_PS_ENABLE)) {
                 prepareInputFiles();
-            } else if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("PLACEHOLDER")
-                    && conf.getBoolean(HboxConfiguration.HBOX_PLACEHOLDER_WHOLE_ENABLE, HboxConfiguration.DEFAULT_HBOX_PLACEHOLDER_WHOLE_ENABLE)) {
+            } else if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY)
+                            .equals("PLACEHOLDER")
+                    && conf.getBoolean(
+                            HboxConfiguration.HBOX_PLACEHOLDER_WHOLE_ENABLE,
+                            HboxConfiguration.DEFAULT_HBOX_PLACEHOLDER_WHOLE_ENABLE)) {
                 prepareInputFiles();
             } else {
                 if (this.role.equals(HboxConstants.WORKER)) {
                     prepareInputFiles();
-                } else if (conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR)) {
+                } else if (conf.getBoolean(
+                        HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR)) {
                     createLocalInputDir();
                 }
             }
-            if (this.conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_AUTO_CREATE_OUTPUT_DIR, HboxConfiguration.DEFAULT_HBOX_CONTAINER_AUTO_CREATE_OUTPUT_DIR)) {
+            if (this.conf.getBoolean(
+                    HboxConfiguration.HBOX_CONTAINER_AUTO_CREATE_OUTPUT_DIR,
+                    HboxConfiguration.DEFAULT_HBOX_CONTAINER_AUTO_CREATE_OUTPUT_DIR)) {
                 createLocalOutputDir();
             }
         } catch (InterruptedException e) {
@@ -748,21 +861,30 @@ public class HboxContainer {
 
         if (("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) && !single) {
             LOG.info("Reserved available port: " + reservedSocket.getLocalPort());
-            if (!this.role.equals(HboxConstants.EVALUATOR) || conf.getBoolean(HboxConfiguration.HBOX_TF_DISTRIBUTION_STRATEGY, HboxConfiguration.DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY)) {
-                amClient.reportReservedPort(envs.get(ApplicationConstants.Environment.NM_HOST.toString()),
-                        reservedSocket.getLocalPort(), this.role, this.index);
+            if (!this.role.equals(HboxConstants.EVALUATOR)
+                    || conf.getBoolean(
+                            HboxConfiguration.HBOX_TF_DISTRIBUTION_STRATEGY,
+                            HboxConfiguration.DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY)) {
+                amClient.reportReservedPort(
+                        envs.get(ApplicationConstants.Environment.NM_HOST.toString()),
+                        reservedSocket.getLocalPort(),
+                        this.role,
+                        this.index);
             }
-            this.localAddress = envs.get(ApplicationConstants.Environment.NM_HOST.toString()) + ":" + reservedSocket.getLocalPort();
+            this.localAddress =
+                    envs.get(ApplicationConstants.Environment.NM_HOST.toString()) + ":" + reservedSocket.getLocalPort();
             LOG.info("Current localAddress: " + this.localAddress);
 
             while (!heartbeatThread.isHboxTrainCompleted()) {
-                //TODO may be need encode use Base64 while used in Env
+                // TODO may be need encode use Base64 while used in Env
                 this.clusterDef = amClient.getClusterDef();
                 if (this.clusterDef != null) {
                     LOG.info("Cluster def is: " + this.clusterDef);
                     break;
                 }
-                Utilities.sleep(this.conf.getInt(HboxConfiguration.HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL));
+                Utilities.sleep(this.conf.getInt(
+                        HboxConfiguration.HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL,
+                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL));
             }
             if (heartbeatThread.isHboxTrainCompleted()) {
                 return false;
@@ -772,31 +894,35 @@ public class HboxContainer {
             Map<String, Object> taskInfo = new HashMap<>();
             Map<String, Object> tfConfigInfo = new HashMap<>();
             switch (hboxAppType) {
-                case "TENSORFLOW": {
-                    //cluster info
-                    clusterInfo = (Map) gson.fromJson(this.clusterDef, clusterInfo.getClass());
-                    //task info
-                    taskInfo.put("type", this.role);
-                    taskInfo.put("index", this.index);
-                    tfConfigInfo.put("cluster", clusterInfo);
-                    tfConfigInfo.put("task", taskInfo);
-                    LOG.info("Tensorflow distribute mode needs the TF_CONFIG: " + new Gson().toJson(tfConfigInfo));
-                }
-                break;
-                case "TENSOR2TENSOR": {
-                    if (this.role.equals("ps")) {
+                case "TENSORFLOW":
+                    {
+                        // cluster info
+                        clusterInfo = (Map) gson.fromJson(this.clusterDef, clusterInfo.getClass());
+                        // task info
                         taskInfo.put("type", this.role);
-                    } else {
-                        taskInfo.put("type", "master");
+                        taskInfo.put("index", this.index);
+                        tfConfigInfo.put("cluster", clusterInfo);
+                        tfConfigInfo.put("task", taskInfo);
+                        LOG.info("Tensorflow distribute mode needs the TF_CONFIG: " + new Gson().toJson(tfConfigInfo));
                     }
-                    taskInfo.put("index", this.index);
-                    clusterInfo = (Map) gson.fromJson(this.clusterDef.replaceAll("worker", "master"), clusterInfo.getClass());
-                    tfConfigInfo.put("cluster", clusterInfo);
-                    tfConfigInfo.put("task", taskInfo);
-                    tfConfigInfo.put("environment", "cloud");
-                    LOG.info("Tensor2Tensor distribute mode needs the TF_CONFIG: " + new Gson().toJson(tfConfigInfo));
-                }
-                break;
+                    break;
+                case "TENSOR2TENSOR":
+                    {
+                        if (this.role.equals("ps")) {
+                            taskInfo.put("type", this.role);
+                        } else {
+                            taskInfo.put("type", "master");
+                        }
+                        taskInfo.put("index", this.index);
+                        clusterInfo = (Map)
+                                gson.fromJson(this.clusterDef.replaceAll("worker", "master"), clusterInfo.getClass());
+                        tfConfigInfo.put("cluster", clusterInfo);
+                        tfConfigInfo.put("task", taskInfo);
+                        tfConfigInfo.put("environment", "cloud");
+                        LOG.info("Tensor2Tensor distribute mode needs the TF_CONFIG: "
+                                + new Gson().toJson(tfConfigInfo));
+                    }
+                    break;
             }
             this.tfConfig = new Gson().toJson(tfConfigInfo);
         }
@@ -816,26 +942,26 @@ public class HboxContainer {
             amClient.reportLightGbmIpPort(containerId, ipPortStr);
             String lightGBMIpPortStr = null;
             while (!heartbeatThread.isHboxTrainCompleted()) {
-                //TODO may be need encode use Base64 while used in Env
+                // TODO may be need encode use Base64 while used in Env
                 lightGBMIpPortStr = amClient.getLightGbmIpPortStr();
                 if (lightGBMIpPortStr != null) {
                     LOG.info("lightGBM IP PORT list is: " + lightGBMIpPortStr);
                     break;
                 }
-                Utilities.sleep(this.conf.getInt(HboxConfiguration.HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL));
+                Utilities.sleep(this.conf.getInt(
+                        HboxConfiguration.HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL,
+                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL));
             }
             if (heartbeatThread.isHboxTrainCompleted()) {
                 return false;
             }
-            Type type = new TypeToken<ConcurrentHashMap<String, String>>() {
-            }.getType();
+            Type type = new TypeToken<ConcurrentHashMap<String, String>>() {}.getType();
             ConcurrentHashMap<String, String> map = new Gson().fromJson(lightGBMIpPortStr, type);
             PrintWriter writer = new PrintWriter("lightGBMlist.txt", "UTF-8");
             for (String str : map.keySet()) {
                 writer.println(map.get(str));
             }
             writer.close();
-
         }
 
         if (hboxAppType.equals("DISTLIGHTLDA")) {
@@ -857,19 +983,20 @@ public class HboxContainer {
             if (this.role.equals(HboxConstants.WORKER)) {
                 String lightLDAIpPortStr = null;
                 while (!heartbeatThread.isHboxTrainCompleted()) {
-                    //TODO may be need encode use Base64 while used in Env
+                    // TODO may be need encode use Base64 while used in Env
                     lightLDAIpPortStr = amClient.getLightLdaIpPortStr();
                     if (lightLDAIpPortStr != null) {
                         LOG.info("lightLDA IP PORT list is: " + lightLDAIpPortStr);
                         break;
                     }
-                    Utilities.sleep(this.conf.getInt(HboxConfiguration.HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL));
+                    Utilities.sleep(this.conf.getInt(
+                            HboxConfiguration.HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL,
+                            HboxConfiguration.DEFAULT_HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL));
                 }
                 if (heartbeatThread.isHboxTrainCompleted()) {
                     return false;
                 }
-                Type type = new TypeToken<ConcurrentHashMap<String, String>>() {
-                }.getType();
+                Type type = new TypeToken<ConcurrentHashMap<String, String>>() {}.getType();
                 ConcurrentHashMap<String, String> map = new Gson().fromJson(lightLDAIpPortStr, type);
                 PrintWriter writer = new PrintWriter("lightLdaEndPoints.txt", "UTF-8");
                 for (String str : map.keySet()) {
@@ -884,7 +1011,8 @@ public class HboxContainer {
                 this.torchRank0Port = reservedSocket.getLocalPort();
                 LOG.info("Reserved available port: " + torchRank0Port);
                 try {
-                    InetAddress address = InetAddress.getByName(envs.get(ApplicationConstants.Environment.NM_HOST.toString()));
+                    InetAddress address =
+                            InetAddress.getByName(envs.get(ApplicationConstants.Environment.NM_HOST.toString()));
                     this.torchRank0IP = address.getHostAddress() + ":" + torchRank0Port;
                 } catch (UnknownHostException e) {
                     LOG.info("acquire host ip failed " + e);
@@ -894,13 +1022,15 @@ public class HboxContainer {
                 amClient.reportTorchRank0IP(torchRank0IP);
             } else {
                 while (!heartbeatThread.isHboxTrainCompleted()) {
-                    //TODO may be need encode use Base64 while used in Env
+                    // TODO may be need encode use Base64 while used in Env
                     this.torchRank0IP = amClient.getTorchRank0IP();
                     if (torchRank0IP != null) {
                         LOG.info("Torch Rank 0 IP:Port is: " + torchRank0IP);
                         break;
                     }
-                    Utilities.sleep(this.conf.getInt(HboxConfiguration.HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL));
+                    Utilities.sleep(this.conf.getInt(
+                            HboxConfiguration.HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL,
+                            HboxConfiguration.DEFAULT_HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL));
                 }
                 if (heartbeatThread.isHboxTrainCompleted()) {
                     return false;
@@ -915,7 +1045,9 @@ public class HboxContainer {
         List<String> envList = new ArrayList<>(20);
 
         LOG.debug("hadoop user name:" + System.getenv(HboxConstants.Environment.HADOOP_USER_NAME.toString()));
-        String containerExecType = conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE).toUpperCase();
+        String containerExecType = conf.get(
+                        HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE)
+                .toUpperCase();
 
         if (conf.get(HboxConfiguration.HBOX_CONTAINER_ENV) != null) {
             String[] env = StringUtils.split(conf.get(HboxConfiguration.HBOX_CONTAINER_ENV), "|");
@@ -932,14 +1064,15 @@ public class HboxContainer {
         envList.add("JAVA_HOME=" + System.getenv("JAVA_HOME"));
         envList.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
         envList.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
-        envList.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+        envList.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME")
+                + "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
         envList.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
         envList.add("PYTHONUNBUFFERED=1");
         envList.add("INDEX=" + this.index);
         envList.add("HADOOP_VERSION=" + VersionInfo.getVersion());
         envList.add("HADOOP_CONF_DIR=./:" + System.getenv("HADOOP_CONF_DIR"));
-        envList.add("HBOX_CONTAINER_LOG_DIR=" + System.getenv(HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR.toString()));
+        envList.add(
+                "HBOX_CONTAINER_LOG_DIR=" + System.getenv(HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR.toString()));
 
         if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) {
             envList.add(HboxConstants.Environment.HBOX_TF_INDEX.toString() + "=" + this.index);
@@ -974,11 +1107,14 @@ public class HboxContainer {
             envList.add("DMLC_TASK_ID=" + this.index);
             envList.add("DMLC_ROLE=" + this.role);
         } else if (hboxAppType.equals("DISTLIGHTGBM")) {
-            envList.add("LIGHTGBM_NUM_MACHINE=" + System.getenv(HboxConstants.Environment.HBOX_LIGHTGBM_WORKER_NUM.toString()));
+            envList.add("LIGHTGBM_NUM_MACHINE="
+                    + System.getenv(HboxConstants.Environment.HBOX_LIGHTGBM_WORKER_NUM.toString()));
             envList.add("LIGHTGBM_LOCAL_LISTEN_PORT=" + this.lightGBMLocalPort);
         } else if (hboxAppType.equals("DISTLIGHTLDA")) {
-            envList.add("LIGHTLDA_WORKER_NUM=" + System.getenv(HboxConstants.Environment.HBOX_LIGHTLDA_WORKER_NUM.toString()));
-            envList.add("LIGHTLDA_SERVER_NUM=" + System.getenv(HboxConstants.Environment.HBOX_LIGHTLDA_PS_NUM.toString()));
+            envList.add("LIGHTLDA_WORKER_NUM="
+                    + System.getenv(HboxConstants.Environment.HBOX_LIGHTLDA_WORKER_NUM.toString()));
+            envList.add(
+                    "LIGHTLDA_SERVER_NUM=" + System.getenv(HboxConstants.Environment.HBOX_LIGHTLDA_PS_NUM.toString()));
             envList.add("LIGHTLDA_RANK=" + this.index);
             envList.add("LIGHTLDA_SERVER_ENDPOINT=" + this.lightLDAEndpoint);
             envList.add("LIGHTLDA_ROLE=" + this.role);
@@ -994,7 +1130,10 @@ public class HboxContainer {
                 LOG.info("add " + ldLibraryPath + " to LD_LIBRARY_PATH");
             }
 
-            String mpiInstallDir = Paths.get(conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR)).toAbsolutePath().toString();
+            String mpiInstallDir = Paths.get(conf.get(
+                            HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR))
+                    .toAbsolutePath()
+                    .toString();
 
             ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib");
             ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib/openmpi");
@@ -1008,7 +1147,8 @@ public class HboxContainer {
             envList.add("PATH=" + System.getenv("PATH"));
             envList.add("PWD=" + this.mpiAppDir);
             envList.add(HboxConstants.Environment.HBOX_TF_INDEX + "=" + this.index);
-            envList.add("HBOX_CUSTOM_EXIT=" + conf.get(HboxConfiguration.HBOX_CUSTOM_EXIT, HboxConfiguration.DEFAULT_HBOX_CUSTOM_EXIT));
+            envList.add("HBOX_CUSTOM_EXIT="
+                    + conf.get(HboxConfiguration.HBOX_CUSTOM_EXIT, HboxConfiguration.DEFAULT_HBOX_CUSTOM_EXIT));
             envList.add("LD_LIBRARY_PATH=" + ldLibraryPath.toString());
         } else if (hboxAppType.equals("XFLOW")) {
             String dmlcID;
@@ -1035,7 +1175,8 @@ public class HboxContainer {
             envList.add("master_addr=" + torchRank0IPs[0]);
             envList.add("master_port=" + torchRank0IPs[1]);
         } else if (hboxAppType.equals("XDL")) {
-            if (!conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
+            if (!conf.getBoolean(
+                    HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
                 envList.add("TASK_NAME=" + this.role);
                 envList.add("TASK_INDEX=" + this.index);
                 envList.add("ZK_ADDR=" + envs.get("ZK_ADDR"));
@@ -1048,12 +1189,21 @@ public class HboxContainer {
                 }
             }
         }
-        //if user's environments too long, write environments to file inputFileList.txt, s3 input to file s3InputFileList.txt
-        if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("PLACEHOLDER")) {
+        // if user's environments too long, write environments to file inputFileList.txt, s3 input to file
+        // s3InputFileList.txt
+        if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY)
+                .equals("PLACEHOLDER")) {
             if (this.inputFileList != null && this.inputFileList.trim() != "") {
                 envList.add(HboxConstants.Environment.HBOX_INPUT_FILE_LIST.toString() + "=" + this.inputFileList);
-                if (envList.toString().length() > conf.getInt(HboxConfiguration.HBOX_ENV_MAXLENGTH, HboxConfiguration.DEFAULT_HBOX_ENV_MAXLENGTH)) {
-                    LOG.warn("Current container environments length " + envList.toString().length() + " exceed the configuration " + HboxConfiguration.HBOX_ENV_MAXLENGTH + " " + conf.getInt(HboxConfiguration.HBOX_ENV_MAXLENGTH, HboxConfiguration.DEFAULT_HBOX_ENV_MAXLENGTH));
+                if (envList.toString().length()
+                        > conf.getInt(
+                                HboxConfiguration.HBOX_ENV_MAXLENGTH, HboxConfiguration.DEFAULT_HBOX_ENV_MAXLENGTH)) {
+                    LOG.warn("Current container environments length "
+                            + envList.toString().length() + " exceed the configuration "
+                            + HboxConfiguration.HBOX_ENV_MAXLENGTH + " "
+                            + conf.getInt(
+                                    HboxConfiguration.HBOX_ENV_MAXLENGTH,
+                                    HboxConfiguration.DEFAULT_HBOX_ENV_MAXLENGTH));
                     envList.remove(envList.size() - 1);
                     LOG.warn("InputFile list had written to local file: inputFileList.txt !!");
                     PrintWriter writer = new PrintWriter("inputFileList.txt", "UTF-8");
@@ -1063,8 +1213,15 @@ public class HboxContainer {
             }
             if (this.s3InputUrlList != null && this.s3InputUrlList.trim() != "") {
                 envList.add(HboxConstants.Environment.HBOX_S3_INPUT_FILE_LIST.toString() + "=" + this.s3InputUrlList);
-                if (envList.toString().length() > conf.getInt(HboxConfiguration.HBOX_ENV_MAXLENGTH, HboxConfiguration.DEFAULT_HBOX_ENV_MAXLENGTH)) {
-                    LOG.warn("Current container environments length " + envList.toString().length() + " exceed the configuration " + HboxConfiguration.HBOX_ENV_MAXLENGTH + " " + conf.getInt(HboxConfiguration.HBOX_ENV_MAXLENGTH, HboxConfiguration.DEFAULT_HBOX_ENV_MAXLENGTH));
+                if (envList.toString().length()
+                        > conf.getInt(
+                                HboxConfiguration.HBOX_ENV_MAXLENGTH, HboxConfiguration.DEFAULT_HBOX_ENV_MAXLENGTH)) {
+                    LOG.warn("Current container environments length "
+                            + envList.toString().length() + " exceed the configuration "
+                            + HboxConfiguration.HBOX_ENV_MAXLENGTH + " "
+                            + conf.getInt(
+                                    HboxConfiguration.HBOX_ENV_MAXLENGTH,
+                                    HboxConfiguration.DEFAULT_HBOX_ENV_MAXLENGTH));
                     envList.remove(envList.size() - 1);
                     LOG.warn("InputFile list had written to local file: s3InputFileList.txt !!");
                     PrintWriter writer = new PrintWriter("s3InputFileList.txt", "UTF-8");
@@ -1074,23 +1231,27 @@ public class HboxContainer {
             }
         }
 
-        //String containerType = conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE).toUpperCase();
+        // String containerType = conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE,
+        // HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE).toUpperCase();
         if (hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS")) {
             String dockerPort = envs.get("DOCKER_PORT");
             String password = envs.get("DOCKER_PASSWORD");
-            String vpcCommandAndPasswd = "root@" + envs.get(ApplicationConstants.Environment.NM_HOST.toString()) + " -p " + dockerPort + ":" + password;
+            String vpcCommandAndPasswd = "root@" + envs.get(ApplicationConstants.Environment.NM_HOST.toString())
+                    + " -p " + dockerPort + ":" + password;
             amClient.reportVPCCommandAndPasswd(containerId, vpcCommandAndPasswd);
-            String duration = this.conf.get(HboxConfiguration.HBOX_VPC_DURATION, HboxConfiguration.DEFAULT_HBOX_VPC_DURATION);
+            String duration =
+                    this.conf.get(HboxConfiguration.HBOX_VPC_DURATION, HboxConfiguration.DEFAULT_HBOX_VPC_DURATION);
             if (hboxAppType.equals("VPC")) {
                 if (duration.equals("0")) {
-                    args = new String[] { "sleep", "32767d" };
+                    args = new String[] {"sleep", "32767d"};
                 } else {
-                    args = new String[] { "sleep", duration };
+                    args = new String[] {"sleep", duration};
                 }
             } else {
                 int digitsPort = reservedSocket.getLocalPort();
                 LOG.info("Reserved digits available port: " + digitsPort);
-                String digitsUrl = "http://" + envs.get(ApplicationConstants.Environment.NM_HOST.toString()) + ":" + digitsPort;
+                String digitsUrl =
+                        "http://" + envs.get(ApplicationConstants.Environment.NM_HOST.toString()) + ":" + digitsPort;
                 amClient.reportDigitsUrl(containerId, digitsUrl);
                 String digitsShellname = "digits_" + containerId.toString() + ".sh";
                 String digitsServerCmd = "python -m digits -p " + digitsPort + " &";
@@ -1104,14 +1265,17 @@ public class HboxContainer {
                 writer.println(digitsServerCmd);
                 writer.println(digitsSleepCmd);
                 writer.close();
-                args = new String[] { "/bin/sh", digitsShellname };
+                args = new String[] {"/bin/sh", digitsShellname};
             }
         } else if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
 
-            String mpiInstallDir = Paths.get(conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR)).toAbsolutePath().toString();
+            String mpiInstallDir = Paths.get(conf.get(
+                            HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR))
+                    .toAbsolutePath()
+                    .toString();
 
             // If command not starts with absolute path, should add mpiInstallDir prefix to command
-            if(args.length > 0 && !args[0].startsWith("/")){
+            if (args.length > 0 && !args[0].startsWith("/")) {
                 args[0] = mpiInstallDir + File.separator + "bin" + File.separator + args[0];
             }
 
@@ -1119,7 +1283,8 @@ public class HboxContainer {
             if (containerExecType.equals("DOCKER")) {
                 String dockerPort = envs.get("DOCKER_PORT");
                 String password = envs.get("DOCKER_PASSWORD");
-                String vpcCommandAndPasswd = "root@" + envs.get(ApplicationConstants.Environment.NM_HOST.toString()) + " -p " + dockerPort + ":" + password;
+                String vpcCommandAndPasswd = "root@" + envs.get(ApplicationConstants.Environment.NM_HOST.toString())
+                        + " -p " + dockerPort + ":" + password;
                 amClient.reportVPCCommandAndPasswd(containerId, vpcCommandAndPasswd);
             }
         }
@@ -1127,7 +1292,7 @@ public class HboxContainer {
 
         Runtime rt = Runtime.getRuntime();
 
-        //close reserved socket as tf will bind this port later
+        // close reserved socket as tf will bind this port later
         this.reservedSocket.close();
         String[] env = envList.toArray(new String[envList.size()]);
         File dir = null;
@@ -1139,8 +1304,9 @@ public class HboxContainer {
         Date now = new Date();
         heartbeatThread.setContainersStartTime(now.toString());
 
-        if (this.conf.getBoolean(HboxConfiguration.HBOX_INPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM) ||
-                conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("STREAM")) {
+        if (this.conf.getBoolean(HboxConfiguration.HBOX_INPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM)
+                || conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY)
+                        .equals("STREAM")) {
             LOG.info("Starting thread to redirect stdin of hbox process");
             Thread stdinRedirectThread = new Thread(new Runnable() {
                 @Override
@@ -1149,13 +1315,24 @@ public class HboxContainer {
                         OutputStreamWriter osw = new OutputStreamWriter(hboxProcess.getOutputStream());
                         File gzFile = new File("inputformatCache.gz");
                         GZIPOutputStream gos = new GZIPOutputStream(new FileOutputStream(gzFile));
-                        boolean isCache = conf.getBoolean(HboxConfiguration.HBOX_INPUTFORMAT_CACHE, HboxConfiguration.DEFAULT_HBOX_INPUTFORMAT_CACHE);
+                        boolean isCache = conf.getBoolean(
+                                HboxConfiguration.HBOX_INPUTFORMAT_CACHE,
+                                HboxConfiguration.DEFAULT_HBOX_INPUTFORMAT_CACHE);
                         List<InputSplit> inputs = Arrays.asList(amClient.getStreamInputSplit(containerId));
                         JobConf jobConf = new JobConf(conf);
                         RecordReader reader;
-                        InputFormat inputFormat = ReflectionUtils.newInstance(conf.getClass(HboxConfiguration2.HBOX_INPUTF0RMAT_CLASS, HboxConfiguration2.DEFAULT_HBOX_INPUTF0RMAT_CLASS, InputFormat.class),
+                        InputFormat inputFormat = ReflectionUtils.newInstance(
+                                conf.getClass(
+                                        HboxConfiguration2.HBOX_INPUTF0RMAT_CLASS,
+                                        HboxConfiguration2.DEFAULT_HBOX_INPUTF0RMAT_CLASS,
+                                        InputFormat.class),
                                 jobConf);
-                        for (int j = 0; j < conf.getInt(HboxConfiguration.HBOX_STREAM_EPOCH, HboxConfiguration.DEFAULT_HBOX_STREAM_EPOCH); j++) {
+                        for (int j = 0;
+                                j
+                                        < conf.getInt(
+                                                HboxConfiguration.HBOX_STREAM_EPOCH,
+                                                HboxConfiguration.DEFAULT_HBOX_STREAM_EPOCH);
+                                j++) {
                             LOG.info("Epoch " + (j + 1) + " starting...");
                             for (int i = 0, len = inputs.size(); i < len; i++) {
                                 LOG.info("split " + (i + 1) + " is handling...");
@@ -1172,12 +1349,25 @@ public class HboxContainer {
                                         osw.write(value.toString());
                                         osw.write("\n");
                                         if (j == 0 && isCache) {
-                                            if (conf.getInt(HboxConfiguration.HBOX_STREAM_EPOCH, HboxConfiguration.DEFAULT_HBOX_STREAM_EPOCH) > 1) {
+                                            if (conf.getInt(
+                                                            HboxConfiguration.HBOX_STREAM_EPOCH,
+                                                            HboxConfiguration.DEFAULT_HBOX_STREAM_EPOCH)
+                                                    > 1) {
                                                 gos.write(value.toString().getBytes());
                                                 gos.write("\n".getBytes());
-                                                if ((gzFile.length() / 1024 / 1024) > conf.getInt(HboxConfiguration.HBOX_INPUTFORMAT_CACHESIZE_LIMIT, HboxConfiguration.DEFAULT_HBOX_INPUTFORMAT_CACHESIZE_LIMIT)) {
-                                                    LOG.info("Inputformat cache file size is:" + gzFile.length() / 1024 / 1024 + "M "
-                                                            + "beyond the limit size:" + conf.getInt(HboxConfiguration.HBOX_INPUTFORMAT_CACHESIZE_LIMIT, HboxConfiguration.DEFAULT_HBOX_INPUTFORMAT_CACHESIZE_LIMIT) + "M.");
+                                                if ((gzFile.length() / 1024 / 1024)
+                                                        > conf.getInt(
+                                                                HboxConfiguration.HBOX_INPUTFORMAT_CACHESIZE_LIMIT,
+                                                                HboxConfiguration
+                                                                        .DEFAULT_HBOX_INPUTFORMAT_CACHESIZE_LIMIT)) {
+                                                    LOG.info("Inputformat cache file size is:"
+                                                            + gzFile.length() / 1024 / 1024 + "M "
+                                                            + "beyond the limit size:"
+                                                            + conf.getInt(
+                                                                    HboxConfiguration.HBOX_INPUTFORMAT_CACHESIZE_LIMIT,
+                                                                    HboxConfiguration
+                                                                            .DEFAULT_HBOX_INPUTFORMAT_CACHESIZE_LIMIT)
+                                                            + "M.");
                                                     gzFile.delete();
                                                     LOG.info("Local cache file deleted and will not use cache.");
                                                     isCache = false;
@@ -1210,7 +1400,12 @@ public class HboxContainer {
 
         List<OutputInfo> outputs = Arrays.asList(amClient.getOutputLocation());
         if ((this.conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STREAM)
-                || this.conf.get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY).equals("STREAM")) && outputs.size() > 0) {
+                        || this.conf
+                                .get(
+                                        HboxConfiguration.HBOX_OUTPUT_STRATEGY,
+                                        HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY)
+                                .equals("STREAM"))
+                && outputs.size() > 0) {
             LOG.info("Starting thread to redirect stream stdout of hbox process");
             final Thread stdoutRedirectThread = new Thread(new Runnable() {
                 @Override
@@ -1225,12 +1420,19 @@ public class HboxContainer {
                         jobConf.setBoolean("mapred.output.compress", true);
                         jobConf.set("mapred.output.compression.codec", "org.apache.hadoop.io.compress.GzipCodec");
                         jobConf.setOutputFormat(TextOutputFormat.class);
-                        Path remotePath = new Path(outputs.get(0).getDfsLocation() + "/_temporary/" + containerId.toString());
+                        Path remotePath =
+                                new Path(outputs.get(0).getDfsLocation() + "/_temporary/" + containerId.toString());
                         FileSystem dfs = remotePath.getFileSystem(jobConf);
-                        //FileOutputFormat.setOutputPath(jobConf, remotePath.makeQualified(dfs));
-                        jobConf.set(HboxConstants.STREAM_OUTPUT_DIR, remotePath.makeQualified(dfs).toString());
+                        // FileOutputFormat.setOutputPath(jobConf, remotePath.makeQualified(dfs));
+                        jobConf.set(
+                                HboxConstants.STREAM_OUTPUT_DIR,
+                                remotePath.makeQualified(dfs).toString());
 
-                        OutputFormat outputFormat = ReflectionUtils.newInstance(conf.getClass(HboxConfiguration2.HBOX_OUTPUTFORMAT_CLASS, HboxConfiguration2.DEFAULT_HBOX_OUTPUTF0RMAT_CLASS, OutputFormat.class),
+                        OutputFormat outputFormat = ReflectionUtils.newInstance(
+                                conf.getClass(
+                                        HboxConfiguration2.HBOX_OUTPUTFORMAT_CLASS,
+                                        HboxConfiguration2.DEFAULT_HBOX_OUTPUTF0RMAT_CLASS,
+                                        OutputFormat.class),
                                 jobConf);
                         outputFormat.checkOutputSpecs(dfs, jobConf);
                         JobID jobID = new JobID(new SimpleDateFormat("yyyyMMddHHmm").format(new Date()), 0);
@@ -1242,9 +1444,9 @@ public class HboxContainer {
                         RecordWriter writer = outputFormat.getRecordWriter(dfs, jobConf, "part-r", Reporter.NULL);
                         String hboxStreamResultLine;
                         while ((hboxStreamResultLine = reader.readLine()) != null) {
-                            //LOG.info(hboxStreamResultLine);
+                            // LOG.info(hboxStreamResultLine);
                             writer.write(null, hboxStreamResultLine);
-                            //reader.skip(1);
+                            // reader.skip(1);
                         }
                         writer.close(Reporter.NULL);
                         reader.close();
@@ -1266,7 +1468,9 @@ public class HboxContainer {
                         String hboxStdoutLog;
                         while ((hboxStdoutLog = reader.readLine()) != null) {
                             LOG.info(hboxStdoutLog);
-                            if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                            if (conf.getBoolean(
+                                    HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                                    HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                                 heartbeatThread.appendContainerStdOut(hboxStdoutLog);
                             }
                         }
@@ -1288,16 +1492,28 @@ public class HboxContainer {
                     reader = new BufferedReader(new InputStreamReader(hboxProcess.getErrorStream()));
                     String hboxStderrLog;
                     while ((hboxStderrLog = reader.readLine()) != null) {
-                        if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE) && !(hboxAppType.equals("HOROVOD") || hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS"))) {
+                        if (conf.getBoolean(
+                                        HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)
+                                && !(hboxAppType.equals("HOROVOD")
+                                        || hboxAppType.equals("MPI")
+                                        || hboxAppType.equals("TENSORNET")
+                                        || hboxAppType.equals("VPC")
+                                        || hboxAppType.equals("DIGITS"))) {
                             heartbeatThread.appendContainerStdErr(hboxStderrLog);
                         }
                         if (hboxStderrLog.contains("reporter progress")) {
                             heartbeatThread.setProgressLog(hboxStderrLog);
-                        } else if (hboxStderrLog.contains("FSDataInputStream#read error") || hboxStderrLog.contains("Byte-buffer read unsupported by input stream") || hboxStderrLog.contains("org.apache.hadoop.fs.FSDataInputStream.read(FSDataInputStream.java")) {
+                        } else if (hboxStderrLog.contains("FSDataInputStream#read error")
+                                || hboxStderrLog.contains("Byte-buffer read unsupported by input stream")
+                                || hboxStderrLog.contains(
+                                        "org.apache.hadoop.fs.FSDataInputStream.read(FSDataInputStream.java")) {
                             continue;
                         } else {
                             LOG.info(hboxStderrLog);
-                            if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
+                            if (hboxAppType.equals("MPI")
+                                    || hboxAppType.equals("TENSORNET")
+                                    || hboxAppType.equals("HOROVOD")) {
                                 if (hboxStderrLog.contains("Permission denied")) {
                                     LOG.info("bind failed, now am retry.");
                                     reportFailedAndExit();
@@ -1313,14 +1529,17 @@ public class HboxContainer {
         });
         stderrRedirectThread.start();
 
-        //amClient.reportStatus(containerId, HboxContainerStatus.RUNNING);
+        // amClient.reportStatus(containerId, HboxContainerStatus.RUNNING);
         heartbeatThread.setContainerStatus(HboxContainerStatus.RUNNING);
 
         if (!(hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS"))) {
-            //Start Board process
-            int boardIndex = this.conf.getInt(HboxConfiguration.HBOX_TF_BOARD_WORKER_INDEX, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_WORKER_INDEX);
-            Boolean boardEnable = this.conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_ENABLE);
-            Boolean boardPsEnable = this.conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_PS_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_PS_ENABLE);
+            // Start Board process
+            int boardIndex = this.conf.getInt(
+                    HboxConfiguration.HBOX_TF_BOARD_WORKER_INDEX, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_WORKER_INDEX);
+            Boolean boardEnable = this.conf.getBoolean(
+                    HboxConfiguration.HBOX_TF_BOARD_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_ENABLE);
+            Boolean boardPsEnable = this.conf.getBoolean(
+                    HboxConfiguration.HBOX_TF_BOARD_PS_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_PS_ENABLE);
             if ("TENSORNET".equals(hboxAppType)) {
                 boardIndex += 1;
             }
@@ -1329,26 +1548,44 @@ public class HboxContainer {
                     if (this.role.equals(HboxConstants.PS) && boardIndex == this.index) {
                         Socket boardReservedSocket = new Socket();
                         try {
-                            Utilities.getReservePort(boardReservedSocket, InetAddress.getByName(localHost).getHostAddress(), reservePortBegin, reservePortEnd);
+                            Utilities.getReservePort(
+                                    boardReservedSocket,
+                                    InetAddress.getByName(localHost).getHostAddress(),
+                                    reservePortBegin,
+                                    reservePortEnd);
                         } catch (IOException e) {
                             LOG.error("Can not get available port");
                             reportFailedAndExit();
                         }
                         String boardHost = envs.get(ApplicationConstants.Environment.NM_HOST.toString());
-                        String boardLogDir = this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR);
+                        String boardLogDir = this.conf.get(
+                                HboxConfiguration.HBOX_TF_BOARD_LOG_DIR,
+                                HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR);
                         int boardPort = boardReservedSocket.getLocalPort();
                         String boardCommand;
                         if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) {
-                            int boardReloadInterval = this.conf.getInt(HboxConfiguration.HBOX_TF_BOARD_RELOAD_INTERVAL, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_RELOAD_INTERVAL);
-                            boardCommand = "tensorboard --host=" + boardHost + " --port=" + boardPort + " --reload_interval=" + boardReloadInterval + " --logdir=" + boardLogDir;
+                            int boardReloadInterval = this.conf.getInt(
+                                    HboxConfiguration.HBOX_TF_BOARD_RELOAD_INTERVAL,
+                                    HboxConfiguration.DEFAULT_HBOX_TF_BOARD_RELOAD_INTERVAL);
+                            boardCommand = "tensorboard --host=" + boardHost + " --port=" + boardPort
+                                    + " --reload_interval=" + boardReloadInterval + " --logdir=" + boardLogDir;
                         } else if ("TENSORNET".equals(hboxAppType)) {
-                            String pythonHome = conf.get(HboxConfiguration.HBOX_PYTHON_HOME, HboxConfiguration.DEFAULT_HBOX_PYTHON_HOME);
-                            int boardReloadInterval = this.conf.getInt(HboxConfiguration.HBOX_TF_BOARD_RELOAD_INTERVAL, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_RELOAD_INTERVAL);
-                            boardCommand = pythonHome + "python " + pythonHome + "tensorboard --host=" + boardHost + " --port=" + boardPort + " --reload_interval=" + boardReloadInterval + " --logdir=" + boardLogDir;
+                            String pythonHome = conf.get(
+                                    HboxConfiguration.HBOX_PYTHON_HOME, HboxConfiguration.DEFAULT_HBOX_PYTHON_HOME);
+                            int boardReloadInterval = this.conf.getInt(
+                                    HboxConfiguration.HBOX_TF_BOARD_RELOAD_INTERVAL,
+                                    HboxConfiguration.DEFAULT_HBOX_TF_BOARD_RELOAD_INTERVAL);
+                            boardCommand = pythonHome + "python " + pythonHome + "tensorboard --host=" + boardHost
+                                    + " --port=" + boardPort + " --reload_interval=" + boardReloadInterval
+                                    + " --logdir=" + boardLogDir;
                         } else {
-                            int boardCacheTimeout = this.conf.getInt(HboxConfiguration.HBOX_BOARD_CACHE_TIMEOUT, HboxConfiguration.DEFAULT_HBOX_BOARD_CACHE_TIMEOUT);
-                            boardCommand = "visualDL --host=" + boardHost + " --port=" + boardPort + " --logdir=" + boardLogDir + " --cache_timeout=" + boardCacheTimeout;
-                            String modelpb = this.conf.get(HboxConfiguration.HBOX_BOARD_MODELPB, HboxConfiguration.DEFAULT_HBOX_BOARD_MODELPB);
+                            int boardCacheTimeout = this.conf.getInt(
+                                    HboxConfiguration.HBOX_BOARD_CACHE_TIMEOUT,
+                                    HboxConfiguration.DEFAULT_HBOX_BOARD_CACHE_TIMEOUT);
+                            boardCommand = "visualDL --host=" + boardHost + " --port=" + boardPort + " --logdir="
+                                    + boardLogDir + " --cache_timeout=" + boardCacheTimeout;
+                            String modelpb = this.conf.get(
+                                    HboxConfiguration.HBOX_BOARD_MODELPB, HboxConfiguration.DEFAULT_HBOX_BOARD_MODELPB);
                             if (!(modelpb.equals("") || modelpb == null)) {
                                 boardCommand = boardCommand + " --model_pb=" + modelpb;
                             }
@@ -1364,7 +1601,8 @@ public class HboxContainer {
                                 public void run() {
                                     try {
                                         BufferedReader reader;
-                                        reader = new BufferedReader(new InputStreamReader(boardProcess.getInputStream()));
+                                        reader = new BufferedReader(
+                                                new InputStreamReader(boardProcess.getInputStream()));
                                         String boardStdoutLog;
                                         while ((boardStdoutLog = reader.readLine()) != null) {
                                             LOG.debug(boardStdoutLog);
@@ -1383,7 +1621,8 @@ public class HboxContainer {
                                 public void run() {
                                     try {
                                         BufferedReader reader;
-                                        reader = new BufferedReader(new InputStreamReader(boardProcess.getErrorStream()));
+                                        reader = new BufferedReader(
+                                                new InputStreamReader(boardProcess.getErrorStream()));
                                         String boardStderrLog;
                                         while ((boardStderrLog = reader.readLine()) != null) {
                                             LOG.debug(boardStderrLog);
@@ -1405,26 +1644,44 @@ public class HboxContainer {
                     if (this.role.equals(HboxConstants.WORKER) && boardIndex == this.index) {
                         Socket boardReservedSocket = new Socket();
                         try {
-                            Utilities.getReservePort(boardReservedSocket, InetAddress.getByName(localHost).getHostAddress(), reservePortBegin, reservePortEnd);
+                            Utilities.getReservePort(
+                                    boardReservedSocket,
+                                    InetAddress.getByName(localHost).getHostAddress(),
+                                    reservePortBegin,
+                                    reservePortEnd);
                         } catch (IOException e) {
                             LOG.error("Can not get available port");
                             reportFailedAndExit();
                         }
                         String boardHost = envs.get(ApplicationConstants.Environment.NM_HOST.toString());
-                        String boardLogDir = this.conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR);
+                        String boardLogDir = this.conf.get(
+                                HboxConfiguration.HBOX_TF_BOARD_LOG_DIR,
+                                HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR);
                         int boardPort = boardReservedSocket.getLocalPort();
                         String boardCommand;
                         if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) {
-                            int boardReloadInterval = this.conf.getInt(HboxConfiguration.HBOX_TF_BOARD_RELOAD_INTERVAL, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_RELOAD_INTERVAL);
-                            boardCommand = "tensorboard --host=" + boardHost + " --port=" + boardPort + " --reload_interval=" + boardReloadInterval + " --logdir=" + boardLogDir;
+                            int boardReloadInterval = this.conf.getInt(
+                                    HboxConfiguration.HBOX_TF_BOARD_RELOAD_INTERVAL,
+                                    HboxConfiguration.DEFAULT_HBOX_TF_BOARD_RELOAD_INTERVAL);
+                            boardCommand = "tensorboard --host=" + boardHost + " --port=" + boardPort
+                                    + " --reload_interval=" + boardReloadInterval + " --logdir=" + boardLogDir;
                         } else if ("TENSORNET".equals(hboxAppType)) {
-                            String pythonHome = conf.get(HboxConfiguration.HBOX_PYTHON_HOME, HboxConfiguration.DEFAULT_HBOX_PYTHON_HOME);
-                            int boardReloadInterval = this.conf.getInt(HboxConfiguration.HBOX_TF_BOARD_RELOAD_INTERVAL, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_RELOAD_INTERVAL);
-                            boardCommand = pythonHome + "/python " + pythonHome + "/tensorboard --host=" + boardHost + " --port=" + boardPort + " --reload_interval=" + boardReloadInterval + " --logdir=" + boardLogDir;
+                            String pythonHome = conf.get(
+                                    HboxConfiguration.HBOX_PYTHON_HOME, HboxConfiguration.DEFAULT_HBOX_PYTHON_HOME);
+                            int boardReloadInterval = this.conf.getInt(
+                                    HboxConfiguration.HBOX_TF_BOARD_RELOAD_INTERVAL,
+                                    HboxConfiguration.DEFAULT_HBOX_TF_BOARD_RELOAD_INTERVAL);
+                            boardCommand = pythonHome + "/python " + pythonHome + "/tensorboard --host=" + boardHost
+                                    + " --port=" + boardPort + " --reload_interval=" + boardReloadInterval
+                                    + " --logdir=" + boardLogDir;
                         } else {
-                            int boardCacheTimeout = this.conf.getInt(HboxConfiguration.HBOX_BOARD_CACHE_TIMEOUT, HboxConfiguration.DEFAULT_HBOX_BOARD_CACHE_TIMEOUT);
-                            boardCommand = "visualDL --host=" + boardHost + " --port=" + boardPort + " --logdir=" + boardLogDir + " --cache_timeout=" + boardCacheTimeout;
-                            String modelpb = this.conf.get(HboxConfiguration.HBOX_BOARD_MODELPB, HboxConfiguration.DEFAULT_HBOX_BOARD_MODELPB);
+                            int boardCacheTimeout = this.conf.getInt(
+                                    HboxConfiguration.HBOX_BOARD_CACHE_TIMEOUT,
+                                    HboxConfiguration.DEFAULT_HBOX_BOARD_CACHE_TIMEOUT);
+                            boardCommand = "visualDL --host=" + boardHost + " --port=" + boardPort + " --logdir="
+                                    + boardLogDir + " --cache_timeout=" + boardCacheTimeout;
+                            String modelpb = this.conf.get(
+                                    HboxConfiguration.HBOX_BOARD_MODELPB, HboxConfiguration.DEFAULT_HBOX_BOARD_MODELPB);
                             if (!(modelpb.equals("") || modelpb == null)) {
                                 boardCommand = boardCommand + " --model_pb=" + modelpb;
                             }
@@ -1440,7 +1697,8 @@ public class HboxContainer {
                                 public void run() {
                                     try {
                                         BufferedReader reader;
-                                        reader = new BufferedReader(new InputStreamReader(boardProcess.getInputStream()));
+                                        reader = new BufferedReader(
+                                                new InputStreamReader(boardProcess.getInputStream()));
                                         String boardStdoutLog;
                                         while ((boardStdoutLog = reader.readLine()) != null) {
                                             LOG.debug(boardStdoutLog);
@@ -1459,7 +1717,8 @@ public class HboxContainer {
                                 public void run() {
                                     try {
                                         BufferedReader reader;
-                                        reader = new BufferedReader(new InputStreamReader(boardProcess.getErrorStream()));
+                                        reader = new BufferedReader(
+                                                new InputStreamReader(boardProcess.getErrorStream()));
                                         String boardStderrLog;
                                         while ((boardStderrLog = reader.readLine()) != null) {
                                             LOG.debug(boardStderrLog);
@@ -1483,8 +1742,11 @@ public class HboxContainer {
         String cudaEnv = "";
         if (Long.parseLong(envs.get(HboxConstants.Environment.HBOX_CONTAIENR_GPU_NUM.toString())) > 0) {
             // get the container gpu assigned info
-            String gpuUsedCommand = "curl --compressed -H Accept:application/json -XGET http://" + envs.get(ApplicationConstants.Environment.NM_HOST.toString())
-                    + ":" + String.valueOf(conf.getInt(HboxConfiguration.HOBX_NM_WEBAPP_PORT, HboxConfiguration.DEFAULT_HOBX_NM_WEBAPP_PORT)) + "/ws/v1/node/resources/yarn.io%2Fgpu";
+            String gpuUsedCommand = "curl --compressed -H Accept:application/json -XGET http://"
+                    + envs.get(ApplicationConstants.Environment.NM_HOST.toString()) + ":"
+                    + String.valueOf(conf.getInt(
+                            HboxConfiguration.HOBX_NM_WEBAPP_PORT, HboxConfiguration.DEFAULT_HOBX_NM_WEBAPP_PORT))
+                    + "/ws/v1/node/resources/yarn.io%2Fgpu";
             LOG.info("get gpu info cmd: " + gpuUsedCommand);
             final Process getGPUUsedProcess = Runtime.getRuntime().exec(gpuUsedCommand, env);
             LOG.info("Starting thread to get the gpu used info");
@@ -1497,15 +1759,14 @@ public class HboxContainer {
                 if (line == null) {
                     LOG.error("Can't get the gpu info from nodemanager.");
                 } else {
-                    Gson gson = new GsonBuilder().
-                            registerTypeAdapter(
-                                    new TypeToken<Map<String, Object>>() {
-                                    }.getType(),
+                    Gson gson = new GsonBuilder()
+                            .registerTypeAdapter(
+                                    new TypeToken<Map<String, Object>>() {}.getType(),
                                     new JsonDeserializer<Map<String, Object>>() {
                                         @Override
                                         public Map<String, Object> deserialize(
-                                                JsonElement json, Type typeOfT,
-                                                JsonDeserializationContext context) throws JsonParseException {
+                                                JsonElement json, Type typeOfT, JsonDeserializationContext context)
+                                                throws JsonParseException {
                                             Map<String, Object> treeMap = new HashMap<String, Object>();
                                             JsonObject jsonObject = json.getAsJsonObject();
                                             Set<Map.Entry<String, JsonElement>> entrySet = jsonObject.entrySet();
@@ -1514,16 +1775,24 @@ public class HboxContainer {
                                             }
                                             return treeMap;
                                         }
-                                    }).
-                            create();
-                    Map<String, Object> gpuInfo = gson.fromJson(line, new TypeToken<Map<String, Object>>() {
-                    }.getType());
+                                    })
+                            .create();
+                    Map<String, Object> gpuInfo =
+                            gson.fromJson(line, new TypeToken<Map<String, Object>>() {}.getType());
                     if (gpuInfo.containsKey(HboxConstants.ASSIGNED_GPU_DEVICES.toString())) {
-                        List<Map> assignedInfo = gson.fromJson(gpuInfo.get(HboxConstants.ASSIGNED_GPU_DEVICES.toString()).toString(), List.class);
+                        List<Map> assignedInfo = gson.fromJson(
+                                gpuInfo.get(HboxConstants.ASSIGNED_GPU_DEVICES.toString())
+                                        .toString(),
+                                List.class);
                         for (Map info : assignedInfo) {
                             if (info.get("containerId").equals(containerId.toString())) {
-                                gpuDevice.append(StringUtils.split(info.get("index").toString(), ".")[0]).append(",");
-                                LOG.info("container: " + containerId.toString() + " assigned gpu: " + info.get("index").toString());
+                                gpuDevice
+                                        .append(
+                                                StringUtils.split(
+                                                        info.get("index").toString(), ".")[0])
+                                        .append(",");
+                                LOG.info("container: " + containerId.toString() + " assigned gpu: "
+                                        + info.get("index").toString());
                             }
                         }
                     } else {
@@ -1543,16 +1812,20 @@ public class HboxContainer {
         }
         amClient.reportGPUDevice(containerId, cudaEnv);
 
-        int updateAppStatusInterval = this.conf.getInt(HboxConfiguration.HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL);
+        int updateAppStatusInterval = this.conf.getInt(
+                HboxConfiguration.HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL,
+                HboxConfiguration.DEFAULT_HBOX_CONTAINER_UPDATE_APP_STATUS_INTERVAL);
         // add cpu,gpu,memory metrics
         this.hboxCmdProcessId = getPidOfProcess(hboxProcess);
         LOG.info("hboxCmdProcessId is:" + this.hboxCmdProcessId);
-        containerReporter = new ContainerReporter(amClient, conf, containerId, cudaEnv, this.hboxCmdProcessId, containerExecType.equals("DOCKER"));
+        containerReporter = new ContainerReporter(
+                amClient, conf, containerId, cudaEnv, this.hboxCmdProcessId, containerExecType.equals("DOCKER"));
         containerReporter.setDaemon(true);
         containerReporter.start();
 
         if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
-            int updateAppStatusRetry = this.conf.getInt(HboxConfiguration.HBOX_MPI_CONTAINER_UPDATE_APP_STATUS_RETRY,
+            int updateAppStatusRetry = this.conf.getInt(
+                    HboxConfiguration.HBOX_MPI_CONTAINER_UPDATE_APP_STATUS_RETRY,
                     HboxConfiguration.DEFAULT_HBOX_MPI_CONTAINER_UPDATE_APP_STATUS_RETRY);
             boolean isAppFinished = false;
             while (true) {
@@ -1567,15 +1840,17 @@ public class HboxContainer {
                             LOG.info("Getting application status failed in retry " + retry);
                             Utilities.sleep(updateAppStatusInterval);
                         } else {
-                            LOG.info("Getting application status failed in retry " + retry
-                                    + ", container will suicide!", e);
+                            LOG.info(
+                                    "Getting application status failed in retry " + retry + ", container will suicide!",
+                                    e);
                             return false;
                         }
                     }
                 }
                 if (isAppFinished) {
                     this.uploadOutputFiles();
-                    File customExit = new File(this.mpiAppDir + "/" + conf.get(HboxConfiguration.HBOX_CUSTOM_EXIT, HboxConfiguration.DEFAULT_HBOX_CUSTOM_EXIT));
+                    File customExit = new File(this.mpiAppDir + "/"
+                            + conf.get(HboxConfiguration.HBOX_CUSTOM_EXIT, HboxConfiguration.DEFAULT_HBOX_CUSTOM_EXIT));
                     if (customExit.exists()) {
                         int code = 0;
                         try {
@@ -1608,21 +1883,22 @@ public class HboxContainer {
                     }
                 }
             }
-            //code status:
+            // code status:
             /**
              * code=0: container is successful
              * code>0: container is failed, for example: python 137 means being kill SIGKILL
              * code=-1: container is killed by website
              */
             this.exitCode = code;
-            boolean uploadWhenFailed = this.conf.getBoolean(HboxConfiguration.HBOX_FAILED_UPLOAD, HboxConfiguration.DEFAULT_HBOX_FAILED_UPLOAD);
+            boolean uploadWhenFailed = this.conf.getBoolean(
+                    HboxConfiguration.HBOX_FAILED_UPLOAD, HboxConfiguration.DEFAULT_HBOX_FAILED_UPLOAD);
             if (uploadWhenFailed && code > 0) {
                 this.uploadOutputFiles();
                 return false;
             }
 
-            if ((this.role.equals(HboxConstants.PS) || this.role.equals(HboxConstants.SCHEDULER)) &&
-                    !this.hboxAppType.equals("DISTLIGHTLDA")) {
+            if ((this.role.equals(HboxConstants.PS) || this.role.equals(HboxConstants.SCHEDULER))
+                    && !this.hboxAppType.equals("DISTLIGHTLDA")) {
                 if (code == -1) {
                     this.uploadOutputFiles();
                     hboxProcess.destroy();
@@ -1643,7 +1919,7 @@ public class HboxContainer {
                 }
                 return false;
             }
-            //As role is worker
+            // As role is worker
             if (code == 0) {
                 this.uploadOutputFiles();
             } else {
@@ -1669,8 +1945,7 @@ public class HboxContainer {
         if (!conf.getBoolean(HboxConfiguration.HBOX_LOG_SAMPLING, HboxConfiguration.DEFAULT_HBOX_LOG_SAMPLING)) {
             LOG.info("HBox log sampling is disabled! Container exit with code -1.");
             System.exit(-1);
-        } else
-            System.exit(0);
+        } else System.exit(0);
     }
 
     public static void main(String[] args) {

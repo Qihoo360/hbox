@@ -15,7 +15,9 @@ public final class HboxVersion {
 
     private static Attributes getJarAttributes() {
         try {
-            for (final Enumeration<URL> urls = HboxVersion.class.getClassLoader().getResources("META-INF/MANIFEST.MF"); urls.hasMoreElements();) {
+            for (final Enumeration<URL> urls =
+                            HboxVersion.class.getClassLoader().getResources("META-INF/MANIFEST.MF");
+                    urls.hasMoreElements(); ) {
                 final URL url = urls.nextElement();
                 if (null == url) {
                     continue;

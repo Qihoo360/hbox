@@ -2,6 +2,16 @@ package net.qihoo.hbox.AM;
 
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicLong;
 import net.qihoo.hbox.api.*;
 import net.qihoo.hbox.common.*;
 import net.qihoo.hbox.common.exceptions.ContainerRuntimeException;
@@ -16,24 +26,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.apache.hadoop.mapred.InputSplit;
 
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.atomic.AtomicLong;
-
-public class ApplicationContainerListener extends AbstractService implements ApplicationContainerProtocol,
-        ContainerListener {
+public class ApplicationContainerListener extends AbstractService
+        implements ApplicationContainerProtocol, ContainerListener {
 
     private static final Log LOG = LogFactory.getLog(ApplicationContainerListener.class);
 
@@ -67,17 +66,22 @@ public class ApplicationContainerListener extends AbstractService implements App
 
     private final Map<HboxContainerId, String> containersAppFinishTimeMap;
 
-    private final Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> containersGpuMemMetrics;
+    private final Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>>
+            containersGpuMemMetrics;
 
-    private final Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> containersGpuUtilMetrics;
+    private final Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>>
+            containersGpuUtilMetrics;
 
     private final Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<Object>>> containersCpuMetrics;
 
-    private final Map<HboxContainerId, ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>> containersGpuMemStatistics;
+    private final Map<HboxContainerId, ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>>
+            containersGpuMemStatistics;
 
-    private final Map<HboxContainerId, ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>> containersGpuUtilStatistics;
+    private final Map<HboxContainerId, ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>>
+            containersGpuUtilStatistics;
 
-    private final Map<HboxContainerId, ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>> containersCpuStatistics;
+    private final Map<HboxContainerId, ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>>
+            containersCpuStatistics;
 
     private final Map<HboxContainerId, String> lightGBMIpPortMap;
 
@@ -137,23 +141,31 @@ public class ApplicationContainerListener extends AbstractService implements App
         this.digitsUrlMap = new ConcurrentHashMap<>();
         this.containersAppStartTimeMap = new ConcurrentHashMap<>();
         this.containersAppFinishTimeMap = new ConcurrentHashMap<>();
-        this.single = conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE);
+        this.single =
+                conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE);
         this.clusterDef = new ConcurrentHashMap<>();
         this.clusterDef.put(HboxConstants.WORKER, Collections.synchronizedList(new ArrayList<ContainerHostPair>()));
         this.clusterDef.put(HboxConstants.PS, Collections.synchronizedList(new ArrayList<ContainerHostPair>()));
         this.clusterDef.put(HboxConstants.EVALUATOR, Collections.synchronizedList(new ArrayList<ContainerHostPair>()));
         this.clusterDefStr = null;
-        this.tfDistributionStrategy = conf.getBoolean(HboxConfiguration.HBOX_TF_DISTRIBUTION_STRATEGY, HboxConfiguration.DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY);
-        this.tfEvaluator = conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR);
+        this.tfDistributionStrategy = conf.getBoolean(
+                HboxConfiguration.HBOX_TF_DISTRIBUTION_STRATEGY,
+                HboxConfiguration.DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY);
+        this.tfEvaluator =
+                conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR);
         this.lightGBMIpPortStr = null;
         this.lightLDAIpPortStr = null;
         this.torchRank0IP = null;
         this.applicationContext = applicationContext;
         this.clock = new SystemClock();
         this.runningContainers = new ConcurrentHashMap<>();
-        this.containerTimeOut = conf.getInt(HboxConfiguration.HBOX_TASK_TIMEOUT, HboxConfiguration.DEFAULT_HBOX_TASK_TIMEOUT);
-        this.localResourceTimeOut = conf.getInt(HboxConfiguration.HBOX_LOCALRESOURCE_TIMEOUT, HboxConfiguration.DEFAULT_HBOX_LOCALRESOURCE_TIMEOUT);
-        this.monitorInterval = conf.getInt(HboxConfiguration.HBOX_TASK_TIMEOUT_CHECK_INTERVAL_MS, HboxConfiguration.DEFAULT_HBOX_TASK_TIMEOUT_CHECK_INTERVAL_MS);
+        this.containerTimeOut =
+                conf.getInt(HboxConfiguration.HBOX_TASK_TIMEOUT, HboxConfiguration.DEFAULT_HBOX_TASK_TIMEOUT);
+        this.localResourceTimeOut = conf.getInt(
+                HboxConfiguration.HBOX_LOCALRESOURCE_TIMEOUT, HboxConfiguration.DEFAULT_HBOX_LOCALRESOURCE_TIMEOUT);
+        this.monitorInterval = conf.getInt(
+                HboxConfiguration.HBOX_TASK_TIMEOUT_CHECK_INTERVAL_MS,
+                HboxConfiguration.DEFAULT_HBOX_TASK_TIMEOUT_CHECK_INTERVAL_MS);
         this.isHboxTrainFinished = false;
         this.tensorboardUrl = null;
         this.isSaveInnerModel = false;
@@ -171,7 +183,8 @@ public class ApplicationContainerListener extends AbstractService implements App
         this.containerId2StdOut = new ConcurrentHashMap<>();
         this.containerId2StdErr = new ConcurrentHashMap<>();
         if (System.getenv().containsKey(HboxConstants.Environment.HBOX_APP_TYPE.toString())) {
-            hboxAppType = System.getenv(HboxConstants.Environment.HBOX_APP_TYPE.toString()).toUpperCase();
+            hboxAppType = System.getenv(HboxConstants.Environment.HBOX_APP_TYPE.toString())
+                    .toUpperCase();
         } else {
             hboxAppType = "HBOX";
         }
@@ -231,11 +244,13 @@ public class ApplicationContainerListener extends AbstractService implements App
         return this.mapedTaskID;
     }
 
-    public Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuMemMetrics() {
+    public Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>>
+            getContainersGpuMemMetrics() {
         return this.containersGpuMemMetrics;
     }
 
-    public Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuUtilMetrics() {
+    public Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>>
+            getContainersGpuUtilMetrics() {
         return this.containersGpuUtilMetrics;
     }
 
@@ -303,8 +318,11 @@ public class ApplicationContainerListener extends AbstractService implements App
                     Configuration conf = this.getConfig();
                     for (OutputInfo output : this.applicationContext.getOutputs()) {
                         Path innerResult = new Path(output.getDfsLocation()
-                                + conf.get(HboxConfiguration.HBOX_INTERRESULT_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
-                                + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date(this.interResultTimeStamp)));
+                                + conf.get(
+                                        HboxConfiguration.HBOX_INTERRESULT_DIR,
+                                        HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
+                                + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss")
+                                        .format(new Date(this.interResultTimeStamp)));
                         FileSystem fs = innerResult.getFileSystem(conf);
                         fs.mkdirs(innerResult);
                         fs.close();
@@ -366,7 +384,12 @@ public class ApplicationContainerListener extends AbstractService implements App
         containersGpuMemStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
         containersGpuUtilStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
         containersCpuStatistics.put(containerId, new ConcurrentHashMap<String, ContainerMetricsStatisticsTuple>());
-        if (role.equals(HboxConstants.WORKER) || (role.equals(HboxConstants.PS) && (hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("TENSORFLOW") || hboxAppType.equals("TENSOR2TENSOR") || hboxAppType.equals("XDL")))) {
+        if (role.equals(HboxConstants.WORKER)
+                || (role.equals(HboxConstants.PS)
+                        && (hboxAppType.equals("DISTLIGHTLDA")
+                                || hboxAppType.equals("TENSORFLOW")
+                                || hboxAppType.equals("TENSOR2TENSOR")
+                                || hboxAppType.equals("XDL")))) {
             containerId2InnerModel.put(containerId, new InnerModelSavedPair());
         }
         runningContainers.put(containerId, new LastTime(clock.getTime()));
@@ -402,9 +425,13 @@ public class ApplicationContainerListener extends AbstractService implements App
 
         for (Entry<HboxContainerId, HboxContainerStatus> e : containerId2Status.entrySet()) {
             if (e.getValue().equals(HboxContainerStatus.FAILED)) {
-                //LOG.error("Container " + e.getKey().toString() + " run failed!");
+                // LOG.error("Container " + e.getKey().toString() + " run failed!");
                 failedNum += 1;
-                if (this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR) && e.getKey().toString().equals(applicationContext.getTfEvaluatorId())) {
+                if (this.getConfig()
+                                .getBoolean(
+                                        HboxConfiguration.HBOX_TF_EVALUATOR,
+                                        HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR)
+                        && e.getKey().toString().equals(applicationContext.getTfEvaluatorId())) {
                     failedNum -= 1;
                 }
             } else if (containerId2Role.get(e.getKey()).equals(HboxConstants.WORKER)) {
@@ -416,11 +443,18 @@ public class ApplicationContainerListener extends AbstractService implements App
             }
         }
 
-        if (("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) && !this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
+        if (("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType))
+                && !this.getConfig()
+                        .getBoolean(
+                                HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
             if (failedNum > 0) {
                 return true;
             }
-        } else if ("MXNET".equals(hboxAppType) && !this.getConfig().getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE)) {
+        } else if ("MXNET".equals(hboxAppType)
+                && !this.getConfig()
+                        .getBoolean(
+                                HboxConfiguration.HBOX_MXNET_MODE_SINGLE,
+                                HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE)) {
             if (failedNum > 0) {
                 return true;
             }
@@ -436,7 +470,7 @@ public class ApplicationContainerListener extends AbstractService implements App
             if (failedNum > 0) {
                 return true;
             }
-        } else if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+        } else if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
             if (failedNum > 0) {
                 return true;
             }
@@ -444,12 +478,19 @@ public class ApplicationContainerListener extends AbstractService implements App
             if (failedNum > 0) {
                 return true;
             }
-        } else if (hboxAppType.equals("XDL") && !this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
+        } else if (hboxAppType.equals("XDL")
+                && !this.getConfig()
+                        .getBoolean(
+                                HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
             if (failedNum > 0) {
                 return true;
             }
         } else {
-            Double jobFailedNum = containerId2Status.size() * this.getConfig().getDouble(HboxConfiguration.HBOX_CONTAINER_MAX_FAILURES_RATE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_FAILURES_RATE);
+            Double jobFailedNum = containerId2Status.size()
+                    * this.getConfig()
+                            .getDouble(
+                                    HboxConfiguration.HBOX_CONTAINER_MAX_FAILURES_RATE,
+                                    HboxConfiguration.DEFAULT_HBOX_CONTAINER_FAILURES_RATE);
             if (failedNum >= jobFailedNum) {
                 return true;
             }
@@ -464,15 +505,16 @@ public class ApplicationContainerListener extends AbstractService implements App
 
     @Override
     public boolean isAllContainerStarted() throws HboxExecException {
-        Iterator<Entry<HboxContainerId, HboxContainerStatus>> i = containerId2Status.entrySet()
-                .iterator();
+        Iterator<Entry<HboxContainerId, HboxContainerStatus>> i =
+                containerId2Status.entrySet().iterator();
         if (containerId2Status.isEmpty()) {
             return false;
         }
         while (i.hasNext()) {
             Entry<HboxContainerId, HboxContainerStatus> e = i.next();
             if (e.getValue().equals(HboxContainerStatus.FAILED)) {
-                throw new ContainerRuntimeException("Hbox Container " + e.getKey().toString() + " run failed!");
+                throw new ContainerRuntimeException(
+                        "Hbox Container " + e.getKey().toString() + " run failed!");
             } else if (e.getValue().equals(HboxContainerStatus.UNDEFINED)
                     || e.getValue().equals(HboxContainerStatus.INITIALIZING)) {
                 return false;
@@ -490,16 +532,27 @@ public class ApplicationContainerListener extends AbstractService implements App
         for (Entry<HboxContainerId, HboxContainerStatus> e : containerId2Status.entrySet()) {
             if (!e.getValue().equals(HboxContainerStatus.SUCCEEDED)) {
                 failedNum += 1;
-                if (this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR) && e.getKey().toString().equals(applicationContext.getTfEvaluatorId())) {
+                if (this.getConfig()
+                                .getBoolean(
+                                        HboxConfiguration.HBOX_TF_EVALUATOR,
+                                        HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR)
+                        && e.getKey().toString().equals(applicationContext.getTfEvaluatorId())) {
                     failedNum -= 1;
                 }
             }
         }
-        if (("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) && !this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
+        if (("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType))
+                && !this.getConfig()
+                        .getBoolean(
+                                HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
             if (failedNum > 0) {
                 return false;
             }
-        } else if ("MXNET".equals(hboxAppType) && !this.getConfig().getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE)) {
+        } else if ("MXNET".equals(hboxAppType)
+                && !this.getConfig()
+                        .getBoolean(
+                                HboxConfiguration.HBOX_MXNET_MODE_SINGLE,
+                                HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE)) {
             if (failedNum > 0) {
                 return false;
             }
@@ -507,12 +560,19 @@ public class ApplicationContainerListener extends AbstractService implements App
             if (failedNum > 0) {
                 return false;
             }
-        } else if ("XDL".equals(hboxAppType) && !this.getConfig().getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
+        } else if ("XDL".equals(hboxAppType)
+                && !this.getConfig()
+                        .getBoolean(
+                                HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) {
             if (failedNum > 0) {
                 return false;
             }
         } else {
-            Double jobFailedNum = containerId2Status.size() * this.getConfig().getDouble(HboxConfiguration.HBOX_CONTAINER_MAX_FAILURES_RATE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_FAILURES_RATE);
+            Double jobFailedNum = containerId2Status.size()
+                    * this.getConfig()
+                            .getDouble(
+                                    HboxConfiguration.HBOX_CONTAINER_MAX_FAILURES_RATE,
+                                    HboxConfiguration.DEFAULT_HBOX_CONTAINER_FAILURES_RATE);
             if (failedNum >= jobFailedNum) {
                 return false;
             }
@@ -528,7 +588,8 @@ public class ApplicationContainerListener extends AbstractService implements App
 
         int completedNum = 0;
         for (Entry<HboxContainerId, InnerModelSavedPair> e : containerId2InnerModel.entrySet()) {
-            if (e.getValue().getInnerModelTimeStamp().equals(lastInnerModelStr) && e.getValue().getModelSavedStatus()) {
+            if (e.getValue().getInnerModelTimeStamp().equals(lastInnerModelStr)
+                    && e.getValue().getModelSavedStatus()) {
                 completedNum++;
             }
         }
@@ -540,8 +601,7 @@ public class ApplicationContainerListener extends AbstractService implements App
     public void reportReservedPort(String host, int port, String role, int index) {
         if (this.clusterDef.keySet().contains(role)) {
             this.clusterDef.get(role).add(new ContainerHostPair(index, host + ":" + port));
-            LOG.info("Received reserved port report from " + host + " role is " +
-                    role + " reserved port is " + port);
+            LOG.info("Received reserved port report from " + host + " role is " + role + " reserved port is " + port);
         } else {
             LOG.warn("Unknow role " + role + " reported from " + host);
         }
@@ -596,18 +656,21 @@ public class ApplicationContainerListener extends AbstractService implements App
     @Override
     public void reportGpuMemeoryUsed(HboxContainerId containerId, String gpuMemeoryUsed) {
         if (this.containersGpuMemMetrics.get(containerId).size() == 0) {
-            Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {
-            }.getType();
+            Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {}.getType();
             ConcurrentHashMap<String, List<Long>> map = new Gson().fromJson(gpuMemeoryUsed, type);
             for (String str : map.keySet()) {
                 LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
                 queue.add(map.get(str));
                 this.containersGpuMemMetrics.get(containerId).put(str, queue);
-                this.containersGpuMemStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(map.get(str).get(1).doubleValue()));
+                this.containersGpuMemStatistics
+                        .get(containerId)
+                        .put(
+                                str,
+                                new ContainerMetricsStatisticsTuple(
+                                        map.get(str).get(1).doubleValue()));
             }
         } else {
-            Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {
-            }.getType();
+            Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {}.getType();
             ConcurrentHashMap<String, List<Long>> map = new Gson().fromJson(gpuMemeoryUsed, type);
             for (String str : map.keySet()) {
                 if (this.containersGpuMemMetrics.get(containerId).keySet().contains(str)) {
@@ -617,12 +680,20 @@ public class ApplicationContainerListener extends AbstractService implements App
                         this.containersGpuMemMetrics.get(containerId).get(str).poll();
                         this.containersGpuMemMetrics.get(containerId).get(str).add(map.get(str));
                     }
-                    this.containersGpuMemStatistics.get(containerId).get(str).update(map.get(str).get(1).doubleValue());
+                    this.containersGpuMemStatistics
+                            .get(containerId)
+                            .get(str)
+                            .update(map.get(str).get(1).doubleValue());
                 } else {
                     LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
                     queue.add(map.get(str));
                     this.containersGpuMemMetrics.get(containerId).put(str, queue);
-                    this.containersGpuMemStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(map.get(str).get(1).doubleValue()));
+                    this.containersGpuMemStatistics
+                            .get(containerId)
+                            .put(
+                                    str,
+                                    new ContainerMetricsStatisticsTuple(
+                                            map.get(str).get(1).doubleValue()));
                 }
             }
         }
@@ -631,18 +702,21 @@ public class ApplicationContainerListener extends AbstractService implements App
     @Override
     public void reportGpuUtilization(HboxContainerId containerId, String gpuUtilization) {
         if (this.containersGpuUtilMetrics.get(containerId).size() == 0) {
-            Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {
-            }.getType();
+            Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {}.getType();
             ConcurrentHashMap<String, List<Long>> map = new Gson().fromJson(gpuUtilization, type);
             for (String str : map.keySet()) {
                 LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
                 queue.add(map.get(str));
                 this.containersGpuUtilMetrics.get(containerId).put(str, queue);
-                this.containersGpuUtilStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(map.get(str).get(1).doubleValue()));
+                this.containersGpuUtilStatistics
+                        .get(containerId)
+                        .put(
+                                str,
+                                new ContainerMetricsStatisticsTuple(
+                                        map.get(str).get(1).doubleValue()));
             }
         } else {
-            Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {
-            }.getType();
+            Type type = new TypeToken<ConcurrentHashMap<String, List<Long>>>() {}.getType();
             ConcurrentHashMap<String, List<Long>> map = new Gson().fromJson(gpuUtilization, type);
             for (String str : map.keySet()) {
                 if (this.containersGpuUtilMetrics.get(containerId).keySet().contains(str)) {
@@ -652,12 +726,20 @@ public class ApplicationContainerListener extends AbstractService implements App
                         this.containersGpuUtilMetrics.get(containerId).get(str).poll();
                         this.containersGpuUtilMetrics.get(containerId).get(str).add(map.get(str));
                     }
-                    this.containersGpuUtilStatistics.get(containerId).get(str).update(map.get(str).get(1).doubleValue());
+                    this.containersGpuUtilStatistics
+                            .get(containerId)
+                            .get(str)
+                            .update(map.get(str).get(1).doubleValue());
                 } else {
                     LinkedBlockingDeque<List<Long>> queue = new LinkedBlockingDeque<>();
                     queue.add(map.get(str));
                     this.containersGpuUtilMetrics.get(containerId).put(str, queue);
-                    this.containersGpuUtilStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(map.get(str).get(1).doubleValue()));
+                    this.containersGpuUtilStatistics
+                            .get(containerId)
+                            .put(
+                                    str,
+                                    new ContainerMetricsStatisticsTuple(
+                                            map.get(str).get(1).doubleValue()));
                 }
             }
         }
@@ -668,13 +750,12 @@ public class ApplicationContainerListener extends AbstractService implements App
         if (this.containersCpuMetrics.get(containerId).size() == 0) {
             Gson gson = new GsonBuilder()
                     .registerTypeAdapter(
-                            new TypeToken<ConcurrentHashMap<String, Object>>() {
-                            }.getType(),
+                            new TypeToken<ConcurrentHashMap<String, Object>>() {}.getType(),
                             new JsonDeserializer<ConcurrentHashMap<String, Object>>() {
                                 @Override
                                 public ConcurrentHashMap<String, Object> deserialize(
-                                        JsonElement json, Type typeOfT,
-                                        JsonDeserializationContext context) throws JsonParseException {
+                                        JsonElement json, Type typeOfT, JsonDeserializationContext context)
+                                        throws JsonParseException {
 
                                     ConcurrentHashMap<String, Object> treeMap = new ConcurrentHashMap<>();
                                     JsonObject jsonObject = json.getAsJsonObject();
@@ -684,27 +765,33 @@ public class ApplicationContainerListener extends AbstractService implements App
                                     }
                                     return treeMap;
                                 }
-                            }).create();
+                            })
+                    .create();
 
-            Type type = new TypeToken<ConcurrentHashMap<String, Object>>() {
-            }.getType();
+            Type type = new TypeToken<ConcurrentHashMap<String, Object>>() {}.getType();
             ConcurrentHashMap<String, Object> map = gson.fromJson(cpuMetrics, type);
             for (String str : map.keySet()) {
                 LinkedBlockingDeque<Object> queue = new LinkedBlockingDeque<>();
                 queue.add(map.get(str));
                 this.containersCpuMetrics.get(containerId).put(str, queue);
-                this.containersCpuStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(Double.parseDouble(new Gson().fromJson((JsonArray) map.get(str), ArrayList.class).get(1).toString())));
+                this.containersCpuStatistics
+                        .get(containerId)
+                        .put(
+                                str,
+                                new ContainerMetricsStatisticsTuple(Double.parseDouble(new Gson()
+                                        .fromJson((JsonArray) map.get(str), ArrayList.class)
+                                        .get(1)
+                                        .toString())));
             }
         } else {
             Gson gson = new GsonBuilder()
                     .registerTypeAdapter(
-                            new TypeToken<ConcurrentHashMap<String, Object>>() {
-                            }.getType(),
+                            new TypeToken<ConcurrentHashMap<String, Object>>() {}.getType(),
                             new JsonDeserializer<ConcurrentHashMap<String, Object>>() {
                                 @Override
                                 public ConcurrentHashMap<String, Object> deserialize(
-                                        JsonElement json, Type typeOfT,
-                                        JsonDeserializationContext context) throws JsonParseException {
+                                        JsonElement json, Type typeOfT, JsonDeserializationContext context)
+                                        throws JsonParseException {
 
                                     ConcurrentHashMap<String, Object> treeMap = new ConcurrentHashMap<>();
                                     JsonObject jsonObject = json.getAsJsonObject();
@@ -714,10 +801,10 @@ public class ApplicationContainerListener extends AbstractService implements App
                                     }
                                     return treeMap;
                                 }
-                            }).create();
+                            })
+                    .create();
 
-            Type type = new TypeToken<ConcurrentHashMap<String, Object>>() {
-            }.getType();
+            Type type = new TypeToken<ConcurrentHashMap<String, Object>>() {}.getType();
             ConcurrentHashMap<String, Object> map = gson.fromJson(cpuMetrics, type);
             for (String str : map.keySet()) {
                 if (this.containersCpuMetrics.get(containerId).keySet().contains(str)) {
@@ -727,12 +814,25 @@ public class ApplicationContainerListener extends AbstractService implements App
                         this.containersCpuMetrics.get(containerId).get(str).poll();
                         this.containersCpuMetrics.get(containerId).get(str).add(map.get(str));
                     }
-                    this.containersCpuStatistics.get(containerId).get(str).update(Double.parseDouble(new Gson().fromJson((JsonArray) map.get(str), ArrayList.class).get(1).toString()));
+                    this.containersCpuStatistics
+                            .get(containerId)
+                            .get(str)
+                            .update(Double.parseDouble(new Gson()
+                                    .fromJson((JsonArray) map.get(str), ArrayList.class)
+                                    .get(1)
+                                    .toString()));
                 } else {
                     LinkedBlockingDeque<Object> queue = new LinkedBlockingDeque<>();
                     queue.add(map.get(str));
                     this.containersCpuMetrics.get(containerId).put(str, queue);
-                    this.containersCpuStatistics.get(containerId).put(str, new ContainerMetricsStatisticsTuple(Double.parseDouble(new Gson().fromJson((JsonArray) map.get(str), ArrayList.class).get(1).toString())));
+                    this.containersCpuStatistics
+                            .get(containerId)
+                            .put(
+                                    str,
+                                    new ContainerMetricsStatisticsTuple(Double.parseDouble(new Gson()
+                                            .fromJson((JsonArray) map.get(str), ArrayList.class)
+                                            .get(1)
+                                            .toString())));
                 }
             }
         }
@@ -766,10 +866,15 @@ public class ApplicationContainerListener extends AbstractService implements App
 
     @Override
     public synchronized String getClusterDef() {
-        boolean correctWorker = this.clusterDef.get(HboxConstants.WORKER.toString()).size() == applicationContext.getWorkerNum();
-        boolean notDistModeButHavePs = !tfDistributionStrategy && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum();
-        boolean correctPs = applicationContext.getPsNum() == 0 || (applicationContext.getPsNum() > 0 && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum());
-        boolean correctEvaluator = !tfEvaluator || this.clusterDef.get(HboxConstants.EVALUATOR.toString()).size() == 1;
+        boolean correctWorker =
+                this.clusterDef.get(HboxConstants.WORKER.toString()).size() == applicationContext.getWorkerNum();
+        boolean notDistModeButHavePs = !tfDistributionStrategy
+                && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum();
+        boolean correctPs = applicationContext.getPsNum() == 0
+                || (applicationContext.getPsNum() > 0
+                        && this.clusterDef.get(HboxConstants.PS.toString()).size() == applicationContext.getPsNum());
+        boolean correctEvaluator = !tfEvaluator
+                || this.clusterDef.get(HboxConstants.EVALUATOR.toString()).size() == 1;
         boolean validDistMode = tfDistributionStrategy && correctPs && correctEvaluator;
         if (correctWorker) {
             if (notDistModeButHavePs || validDistMode) {
@@ -778,20 +883,29 @@ public class ApplicationContainerListener extends AbstractService implements App
                     Collections.sort(this.clusterDef.get(HboxConstants.WORKER.toString()), new compairIndex());
                     List workerList = new ArrayList<String>();
                     for (int i = 0; i < applicationContext.getWorkerNum(); i++) {
-                        workerList.add(this.clusterDef.get(HboxConstants.WORKER.toString()).get(i).getHost());
+                        workerList.add(this.clusterDef
+                                .get(HboxConstants.WORKER.toString())
+                                .get(i)
+                                .getHost());
                     }
                     Map<String, List<String>> clusterMessage = new HashMap<>();
                     clusterMessage.put(HboxConstants.WORKER, workerList);
                     if (applicationContext.getPsNum() > 0) {
                         List psList = new ArrayList<String>();
                         for (int i = 0; i < applicationContext.getPsNum(); i++) {
-                            psList.add(this.clusterDef.get(HboxConstants.PS.toString()).get(i).getHost());
+                            psList.add(this.clusterDef
+                                    .get(HboxConstants.PS.toString())
+                                    .get(i)
+                                    .getHost());
                         }
                         clusterMessage.put(HboxConstants.PS, psList);
                     }
                     if (tfDistributionStrategy && tfEvaluator) {
                         List evaluatorList = new ArrayList<String>();
-                        evaluatorList.add(this.clusterDef.get(HboxConstants.EVALUATOR.toString()).get(0).getHost());
+                        evaluatorList.add(this.clusterDef
+                                .get(HboxConstants.EVALUATOR.toString())
+                                .get(0)
+                                .getHost());
                         clusterMessage.put(HboxConstants.EVALUATOR, evaluatorList);
                     }
                     LOG.info("Sending cluster def \"" + new Gson().toJson(clusterMessage) + "\"to container");
@@ -825,8 +939,10 @@ public class ApplicationContainerListener extends AbstractService implements App
         try {
             LOG.info("Update container " + containerId.toString() + " status to " + containerStatus);
             containerId2Status.put(containerId, containerStatus);
-            if (containerStatus.equals(HboxContainerStatus.SUCCEEDED) || containerStatus.equals(HboxContainerStatus.FAILED)) {
-                LOG.info("container " + containerId.toString() + " is " + containerStatus + ", now remove from running containers");
+            if (containerStatus.equals(HboxContainerStatus.SUCCEEDED)
+                    || containerStatus.equals(HboxContainerStatus.FAILED)) {
+                LOG.info("container " + containerId.toString() + " is " + containerStatus
+                        + ", now remove from running containers");
                 runningContainers.remove(containerId);
             }
         } catch (Exception e) {
@@ -852,13 +968,17 @@ public class ApplicationContainerListener extends AbstractService implements App
         }
 
         HboxContainerStatus currentContainerStatus = heartbeatRequest.getHboxContainerStatus();
-        LOG.debug("Received heartbeat from container " + containerId.toString() + ", status is " + currentContainerStatus.toString());
-        if (containerId2Status.get(containerId) == null || containerId2Status.get(containerId) != currentContainerStatus) {
+        LOG.debug("Received heartbeat from container " + containerId.toString() + ", status is "
+                + currentContainerStatus.toString());
+        if (containerId2Status.get(containerId) == null
+                || containerId2Status.get(containerId) != currentContainerStatus) {
             try {
                 LOG.info("Update container " + containerId.toString() + " status to " + currentContainerStatus);
                 containerId2Status.put(containerId, currentContainerStatus);
-                if (currentContainerStatus.equals(HboxContainerStatus.SUCCEEDED) || currentContainerStatus.equals(HboxContainerStatus.FAILED)) {
-                    LOG.info("container " + containerId.toString() + " is " + currentContainerStatus + ", now remove from running containers");
+                if (currentContainerStatus.equals(HboxContainerStatus.SUCCEEDED)
+                        || currentContainerStatus.equals(HboxContainerStatus.FAILED)) {
+                    LOG.info("container " + containerId.toString() + " is " + currentContainerStatus
+                            + ", now remove from running containers");
                     runningContainers.remove(containerId);
                     if (containerId2InnerModel.containsKey(containerId)) {
                         containerId2InnerModel.remove(containerId);
@@ -869,12 +989,22 @@ public class ApplicationContainerListener extends AbstractService implements App
             }
         }
 
-        if (this.getConfig().getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE) && !(hboxAppType.equals("HOROVOD") || hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS"))) {
+        if (this.getConfig()
+                        .getBoolean(
+                                HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                                HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)
+                && !(hboxAppType.equals("HOROVOD")
+                        || hboxAppType.equals("MPI")
+                        || hboxAppType.equals("TENSORNET")
+                        || hboxAppType.equals("VPC")
+                        || hboxAppType.equals("DIGITS"))) {
             if (heartbeatRequest.getContainerStdOut() != null && heartbeatRequest.getContainerStdOut() != "") {
-                containerId2StdOut.put(containerId, containerId2StdOut.get(containerId).append(heartbeatRequest.getContainerStdOut()));
+                containerId2StdOut.put(
+                        containerId, containerId2StdOut.get(containerId).append(heartbeatRequest.getContainerStdOut()));
             }
             if (heartbeatRequest.getContainerStdErr() != null && heartbeatRequest.getContainerStdErr() != "") {
-                containerId2StdErr.put(containerId, containerId2StdErr.get(containerId).append(heartbeatRequest.getContainerStdErr()));
+                containerId2StdErr.put(
+                        containerId, containerId2StdErr.get(containerId).append(heartbeatRequest.getContainerStdErr()));
             }
         }
 
@@ -908,18 +1038,25 @@ public class ApplicationContainerListener extends AbstractService implements App
         }
         if (this.isSaveInnerModel) {
             if (containerId2InnerModel.containsKey(containerId)) {
-                if (!containerId2InnerModel.get(containerId).getInnerModelTimeStamp().equals(this.interResultTimeStamp)) {
+                if (!containerId2InnerModel
+                        .get(containerId)
+                        .getInnerModelTimeStamp()
+                        .equals(this.interResultTimeStamp)) {
                     try {
-                        LOG.info("Update container " + containerId.toString() + " interResult to " + this.interResultTimeStamp + ", waiting ...");
-                        containerId2InnerModel.put(containerId, new InnerModelSavedPair(this.interResultTimeStamp, false));
+                        LOG.info("Update container " + containerId.toString() + " interResult to "
+                                + this.interResultTimeStamp + ", waiting ...");
+                        containerId2InnerModel.put(
+                                containerId, new InnerModelSavedPair(this.interResultTimeStamp, false));
                     } catch (Exception e) {
                         LOG.error("Update container " + containerId.toString() + " interResult failed, ", e);
                     }
                 } else {
                     if (heartbeatRequest.getInnerModelSavedStatus()) {
                         if (!containerId2InnerModel.get(containerId).getModelSavedStatus()) {
-                            LOG.info("container " + containerId.toString() + "saves the interResult " + this.interResultTimeStamp + " finished.");
-                            containerId2InnerModel.put(containerId, new InnerModelSavedPair(this.interResultTimeStamp, true));
+                            LOG.info("container " + containerId.toString() + "saves the interResult "
+                                    + this.interResultTimeStamp + " finished.");
+                            containerId2InnerModel.put(
+                                    containerId, new InnerModelSavedPair(this.interResultTimeStamp, true));
                         }
                     }
                 }
@@ -962,10 +1099,9 @@ public class ApplicationContainerListener extends AbstractService implements App
     }
 
     @Override
-    public ProtocolSignature getProtocolSignature(
-            String protocol, long clientVersion, int clientMethodsHash) throws IOException {
-        return ProtocolSignature.getProtocolSignature(this, protocol,
-                clientVersion, clientMethodsHash);
+    public ProtocolSignature getProtocolSignature(String protocol, long clientVersion, int clientMethodsHash)
+            throws IOException {
+        return ProtocolSignature.getProtocolSignature(this, protocol, clientVersion, clientMethodsHash);
     }
 
     private static class LastTime {
@@ -982,7 +1118,6 @@ public class ApplicationContainerListener extends AbstractService implements App
         public synchronized long getLastTime() {
             return lastTime;
         }
-
     }
 
     private class TimeoutMonitor implements Runnable {
@@ -1052,12 +1187,9 @@ public class ApplicationContainerListener extends AbstractService implements App
         public int compare(ContainerHostPair a, ContainerHostPair b) {
             Integer p1 = a.getId();
             Integer p2 = b.getId();
-            if (p1 < p2)
-                return -1;
-            else if (p1 == p2)
-                return 0;
-            else
-                return 1;
+            if (p1 < p2) return -1;
+            else if (p1 == p2) return 0;
+            else return 1;
         }
     }
 
@@ -1065,8 +1197,7 @@ public class ApplicationContainerListener extends AbstractService implements App
         private Long interResultTimeStamp = Long.MIN_VALUE;
         private Boolean savedStatus = false;
 
-        public InnerModelSavedPair() {
-        }
+        public InnerModelSavedPair() {}
 
         public InnerModelSavedPair(Long interResultTimeStamp, Boolean savedStatus) {
             this.interResultTimeStamp = interResultTimeStamp;
@@ -1084,7 +1215,6 @@ public class ApplicationContainerListener extends AbstractService implements App
         public void setModelSavedStatus(Boolean savedStatus) {
             this.savedStatus = savedStatus;
         }
-
     }
 
     private class ContainerMetricsStatisticsTuple {
@@ -1092,8 +1222,7 @@ public class ApplicationContainerListener extends AbstractService implements App
         private Double maxUsed = 0.0;
         private AtomicLong count = new AtomicLong(0);
 
-        public ContainerMetricsStatisticsTuple() {
-        }
+        public ContainerMetricsStatisticsTuple() {}
 
         public ContainerMetricsStatisticsTuple(Double resourceUsed) {
             totalUsed = resourceUsed;

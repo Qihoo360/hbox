@@ -1,7 +1,7 @@
 package net.qihoo.hbox.api;
 
-import org.apache.hadoop.ipc.VersionedProtocol;
 import net.qihoo.hbox.common.Message;
+import org.apache.hadoop.ipc.VersionedProtocol;
 
 /**
  * The Protocal between clients and ApplicationMaster to fetch Application Messages.

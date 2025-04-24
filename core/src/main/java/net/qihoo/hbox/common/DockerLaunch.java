@@ -1,16 +1,13 @@
 package net.qihoo.hbox.common;
 
-import net.qihoo.hbox.conf.HboxConfiguration;
-import net.qihoo.hbox.container.HboxContainerId;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Map;
+import net.qihoo.hbox.conf.HboxConfiguration;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 public class DockerLaunch implements ILaunch {
 
@@ -45,10 +42,11 @@ public class DockerLaunch implements ILaunch {
         Runtime rt = Runtime.getRuntime();
         String port = conf.get("RESERVED_PORT", "");
         String containerPort = conf.get("DOCKER_PORT", "");
-        String workDir = "/" + conf.get(HboxConfiguration.HBOX_DOCKER_WORK_DIR, HboxConfiguration.DEFAULT_HBOX_DOCKER_WORK_DIR);
+        String workDir =
+                "/" + conf.get(HboxConfiguration.HBOX_DOCKER_WORK_DIR, HboxConfiguration.DEFAULT_HBOX_DOCKER_WORK_DIR);
         String path = new File("").getAbsolutePath();
         StringBuilder envsParam = new StringBuilder();
-        //把container的环境变量添加到docker中去
+        // 把container的环境变量添加到docker中去
         for (String keyValue : envp) {
             if (keyValue.startsWith("PATH") || keyValue.startsWith("CLASSPATH")) {
                 continue;
@@ -63,12 +61,10 @@ public class DockerLaunch implements ILaunch {
                 envsParam.append(" --env " + keyValue + "");
             }
         }
-        //xdl 作业指定zk端口
+        // xdl 作业指定zk端口
         if (port != null && !port.trim().equals("")) {
-            if (containerPort != null && !containerPort.trim().equals(""))
-                port = " -p " + port + ":" + containerPort;
-            else
-                port = " -p " + port;
+            if (containerPort != null && !containerPort.trim().equals("")) port = " -p " + port + ":" + containerPort;
+            else port = " -p " + port;
         }
         String containerMemory = envs.get("DOCKER_CONTAINER_MEMORY");
         String containerCpu = envs.get("DOCKER_CONTAINER_CPU");
@@ -83,13 +79,14 @@ public class DockerLaunch implements ILaunch {
         String mount = " -v " + path + ":" + workDir;
         mount = mount + " -v /etc/passwd:/etc/passwd:ro";
         String homePath = envs.get("HADOOP_HDFS_HOME");
-        if (homePath != null && homePath != "")
-            mount += " -v " + homePath + ":" + homePath + ":ro";
+        if (homePath != null && homePath != "") mount += " -v " + homePath + ":" + homePath + ":ro";
         String javaPath = envs.get("JAVA_HOME");
-        if (javaPath != null && javaPath != "")
-            mount += " -v " + javaPath + ":" + javaPath + ":ro";
+        if (javaPath != null && javaPath != "") mount += " -v " + javaPath + ":" + javaPath + ":ro";
         String[] localDirs = envs.get("LOCAL_DIRS").split(",");
-        Boolean publicFlag = conf.get(HboxConfiguration.HBOX_LOCAL_RESOURCE_VISIBILITY, HboxConfiguration.DEFAULT_HBOX_LOCAL_RESOURCE_VISIBILITY).equalsIgnoreCase("public");
+        Boolean publicFlag = conf.get(
+                        HboxConfiguration.HBOX_LOCAL_RESOURCE_VISIBILITY,
+                        HboxConfiguration.DEFAULT_HBOX_LOCAL_RESOURCE_VISIBILITY)
+                .equalsIgnoreCase("public");
         if (localDirs.length > 0) {
             for (String perPath : localDirs) {
                 if (publicFlag) {
@@ -108,7 +105,7 @@ public class DockerLaunch implements ILaunch {
         }
 
         String dockerImageName = conf.get(HboxConfiguration.HBOX_DOCKER_IMAGE_NAME);
-        //从仓库拉取镜像文件
+        // 从仓库拉取镜像文件
         try {
             String dockerPullCommand = "docker pull " + dockerImageName;
             LOG.info("Docker Pull command:" + dockerPullCommand);
@@ -125,7 +122,7 @@ public class DockerLaunch implements ILaunch {
         }
 
         String dockerCommand = dockerType + " run";
-        //如果提交用户不是root的话，使用指定的用户启动docker作业
+        // 如果提交用户不是root的话，使用指定的用户启动docker作业
         if (!user.equalsIgnoreCase("root")) {
             String userId = "";
             try {
@@ -151,17 +148,15 @@ public class DockerLaunch implements ILaunch {
         if (network != null && network.equalsIgnoreCase("host")) {
             dockerCommand += " --network host";
         }
-        dockerCommand +=
-                " --rm " +
-                        " --cpus " + containerCpu +
-                        " -m " + containerMemory + "m " +
-                        port +
-                        " -w " + workDir +
-                        mount +
-                        envsParam.toString() +
-                        " --name " + containerId + " " +
-                        runArgs + " " +
-                        dockerImageName;
+        dockerCommand += " --rm " + " --cpus "
+                + containerCpu + " -m "
+                + containerMemory + "m " + port
+                + " -w "
+                + workDir + mount
+                + envsParam.toString()
+                + " --name "
+                + containerId + " " + runArgs
+                + " " + dockerImageName;
         dockerCommand += " " + command;
         LOG.info("Docker command:" + dockerCommand);
         hboxProcess = rt.exec(dockerCommand, envp);

@@ -1,13 +1,12 @@
 package net.qihoo.hbox.common;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 
 public class HeartbeatRequest implements Writable {
     private HboxContainerStatus hboxContainerStatus;
@@ -113,5 +112,4 @@ public class HeartbeatRequest implements Writable {
         this.containerStdOut.append(Text.readString(dataInput));
         this.containerStdErr.append(Text.readString(dataInput));
     }
-
 }

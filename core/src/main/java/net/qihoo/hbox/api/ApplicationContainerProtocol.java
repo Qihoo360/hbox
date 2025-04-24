@@ -5,9 +5,6 @@ import net.qihoo.hbox.container.HboxContainerId;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.mapred.InputSplit;
 
-import java.util.Map;
-
-
 public interface ApplicationContainerProtocol extends VersionedProtocol {
 
     public static final long versionID = 1L;
@@ -67,5 +64,4 @@ public interface ApplicationContainerProtocol extends VersionedProtocol {
     int getSignal();
 
     void sendSignal(int sid);
-
 }

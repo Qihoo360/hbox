@@ -1,12 +1,11 @@
 package net.qihoo.hbox.common;
 
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 
 public class Message implements Writable {
     private LogType logType;
@@ -29,7 +28,6 @@ public class Message implements Writable {
     public String getMessage() {
         return message;
     }
-
 
     @Override
     public void write(DataOutput dataOutput) throws IOException {

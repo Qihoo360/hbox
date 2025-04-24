@@ -5,7 +5,7 @@ public class S3File {
     private String key;
     private String url;
 
-    public S3File(String bucket, String key, String url){
+    public S3File(String bucket, String key, String url) {
         this.bucket = bucket;
         this.key = key;
         this.url = url;
@@ -36,8 +36,7 @@ public class S3File {
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         return this.url;
     }
-
 }

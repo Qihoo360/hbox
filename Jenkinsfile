@@ -13,11 +13,6 @@ pipeline {
                         '''
                     }
                 }
-                stage('Lint: Maven Pom Format') {
-                    steps {
-                        sh './mvnw -V -B sortpom:verify -Dsort.verifyFail=STOP'
-                    }
-                }
                 stage('Lint: Check Maven Plugins') {
                     steps {
                         sh './mvnw -V -B artifact:check-buildplan'

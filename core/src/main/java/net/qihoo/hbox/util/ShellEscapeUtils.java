@@ -1,5 +1,7 @@
 package net.qihoo.hbox.util;
 
+import static org.apache.commons.text.StringEscapeUtils.escapeXSI;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -8,12 +10,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.text.translate.CharSequenceTranslator;
 import org.apache.commons.text.translate.LookupTranslator;
 
-import static org.apache.commons.text.StringEscapeUtils.escapeXSI;
-
 public final class ShellEscapeUtils {
     private static Log LOG = LogFactory.getLog(ShellEscapeUtils.class);
 
     public static final CharSequenceTranslator ESCAPE_DQUOTE;
+
     static {
         final Map<CharSequence, CharSequence> escapeMap = new HashMap<>();
         escapeMap.put("\"", "\\\"");

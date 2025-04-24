@@ -1,9 +1,8 @@
 package net.qihoo.hbox.webapp;
 
-import net.qihoo.hbox.api.ApplicationContext;
-
 import com.google.inject.Inject;
 import com.google.inject.servlet.RequestScoped;
+import net.qihoo.hbox.api.ApplicationContext;
 
 @RequestScoped
 public class App {

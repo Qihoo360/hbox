@@ -1,18 +1,17 @@
 package net.qihoo.hbox.client;
 
+import java.io.IOException;
+import java.util.Properties;
 import net.qihoo.hbox.AM.ApplicationMaster;
 import net.qihoo.hbox.common.JobPriority;
-import net.qihoo.hbox.conf.HboxConfiguration2;
 import net.qihoo.hbox.conf.HboxConfiguration;
+import net.qihoo.hbox.conf.HboxConfiguration2;
 import net.qihoo.hbox.util.HboxVersion;
 import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.StringUtils;
-
-import java.io.IOException;
-import java.util.Properties;
 
 class ClientArguments {
     private static final Log LOG = LogFactory.getLog(ClientArguments.class);
@@ -124,111 +123,167 @@ class ClientArguments {
         outputIndex = -1;
 
         allOptions = new Options();
-        allOptions.addOption("appName", "app-name", true,
-                "set the Application name");
-        allOptions.addOption("appType", "app-type", true,
-                "set the Application type, default \"hbox\"");
-        allOptions.addOption("cluster", "cluster", true,
-                "set the cluster that application submit to");
+        allOptions.addOption("appName", "app-name", true, "set the Application name");
+        allOptions.addOption("appType", "app-type", true, "set the Application type, default \"hbox\"");
+        allOptions.addOption("cluster", "cluster", true, "set the cluster that application submit to");
 
-        allOptions.addOption("driverMemory", "driver-memory", true,
+        allOptions.addOption(
+                "driverMemory",
+                "driver-memory",
+                true,
                 "Amount of memory in MB to be requested to run the application master");
-        allOptions.addOption("driverCores", "driver-cores", true,
-                "Amount of vcores to be requested to run the application master");
+        allOptions.addOption(
+                "driverCores", "driver-cores", true, "Amount of vcores to be requested to run the application master");
 
-        allOptions.addOption("workerMemory", "worker-memory", true,
-                "Amount of memory in MB to be requested to run worker");
-        allOptions.addOption("workerCores", "worker-cores", true,
-                "Amount of vcores to be requested to run worker");
-        allOptions.addOption("workerGpus", "worker-gpus", true,
-                "Amount of gpu cores to be requested to run worker");
-        allOptions.addOption("workerNum", "worker-num", true,
-                "No. of containers on which the worker needs to be executed");
+        allOptions.addOption(
+                "workerMemory", "worker-memory", true, "Amount of memory in MB to be requested to run worker");
+        allOptions.addOption("workerCores", "worker-cores", true, "Amount of vcores to be requested to run worker");
+        allOptions.addOption("workerGpus", "worker-gpus", true, "Amount of gpu cores to be requested to run worker");
+        allOptions.addOption(
+                "workerNum", "worker-num", true, "No. of containers on which the worker needs to be executed");
 
-        allOptions.addOption("chiefWorkerMemory", "chiefworker-memory", true,
+        allOptions.addOption(
+                "chiefWorkerMemory",
+                "chiefworker-memory",
+                true,
                 "Amount of memory in MB to be requested to run the chief worker");
-        allOptions.addOption("evaluatorWorkerMemory", "evaluatorworker-memory", true,
+        allOptions.addOption(
+                "evaluatorWorkerMemory",
+                "evaluatorworker-memory",
+                true,
                 "Amount of memory in MB to be requested to run the evaluator worker");
 
-        allOptions.addOption("duration", "duration", true,
-                "Duration when use vpc and digits mode, default:1(hours)");
+        allOptions.addOption("duration", "duration", true, "Duration when use vpc and digits mode, default:1(hours)");
 
-        allOptions.addOption("psMemory", "ps-memory", true,
-                "Amount of memory in MB to be requested to run ps");
-        allOptions.addOption("psCores", "ps-cores", true,
-                "Amount of vcores to be requested to run ps");
-        allOptions.addOption("psGpus", "ps-gpus", true,
-                "Amount of gpu cores to be requested to run ps");
-        allOptions.addOption("psNum", "ps-num", true,
-                "No. of containers on which the ps needs to be executed");
+        allOptions.addOption("psMemory", "ps-memory", true, "Amount of memory in MB to be requested to run ps");
+        allOptions.addOption("psCores", "ps-cores", true, "Amount of vcores to be requested to run ps");
+        allOptions.addOption("psGpus", "ps-gpus", true, "Amount of gpu cores to be requested to run ps");
+        allOptions.addOption("psNum", "ps-num", true, "No. of containers on which the ps needs to be executed");
 
-        allOptions.addOption("files", "files", true,
-                "Location of the hbox files used in container");
+        allOptions.addOption("files", "files", true, "Location of the hbox files used in container");
 
-        allOptions.addOption("archiveFiles", "archiveFiles", true,
+        allOptions.addOption(
+                "archiveFiles",
+                "archiveFiles",
+                true,
                 "Location of local archive files will be uploaded to container and be decompressed");
 
-        allOptions.addOption("jars", "jars", true,
-                "Location of the hbox lib jars used in container");
+        allOptions.addOption("jars", "jars", true, "Location of the hbox lib jars used in container");
 
-        allOptions.addOption("hboxCmd", "hbox-cmd", true, "(Deprecated) Cmd for hbox program, use position arguments: hbox-submit [options] command args...");
-        allOptions.addOption("launchCmd", "launch-cmd", true, "(Deprecated) Cmd for hbox program, use position arguments: hbox-submit [options] command args...");
-        allOptions.addOption("userPath", "user-path", true,
-                "add the user set PATH");
-        allOptions.addOption("cacheFile", "cacheFile", true,
-                "add the hbox hdfsFile PATH");
-        allOptions.addOption("cacheArchive", "cacheArchive", true,
-                "add the hbox hdfsPackage PATH");
+        allOptions.addOption(
+                "hboxCmd",
+                "hbox-cmd",
+                true,
+                "(Deprecated) Cmd for hbox program, use position arguments: hbox-submit [options] command args...");
+        allOptions.addOption(
+                "launchCmd",
+                "launch-cmd",
+                true,
+                "(Deprecated) Cmd for hbox program, use position arguments: hbox-submit [options] command args...");
+        allOptions.addOption("userPath", "user-path", true, "add the user set PATH");
+        allOptions.addOption("cacheFile", "cacheFile", true, "add the hbox hdfsFile PATH");
+        allOptions.addOption("cacheArchive", "cacheArchive", true, "add the hbox hdfsPackage PATH");
         allOptions.addOption("priority", "priority", true, "Application Priority. Default DEFAULT");
-        allOptions.addOption("queue", "queue", true,
-                "RM Queue in which this application is to be submitted");
+        allOptions.addOption("queue", "queue", true, "RM Queue in which this application is to be submitted");
 
-        allOptions.addOption("boardIndex", "board-index", true,
+        allOptions.addOption(
+                "boardIndex",
+                "board-index",
+                true,
                 "if app type is tensorflow or tensor2tensor, worker index for run tensorboard, default:0");
-        allOptions.addOption("boardReloadInterval", "board-reloadinterval", true,
+        allOptions.addOption(
+                "boardReloadInterval",
+                "board-reloadinterval",
+                true,
                 "if app type is tensorflow or tensor2tensor, How often the backend should load more data for tensorboard, default:1");
-        allOptions.addOption("boardLogDir", "board-logdir", true,
+        allOptions.addOption(
+                "boardLogDir",
+                "board-logdir",
+                true,
                 "if app type is tensorflow or tensor2tensor, tensorflow log dir, default:eventLog");
-        allOptions.addOption("boardEnable", "board-enable", true,
+        allOptions.addOption(
+                "boardEnable",
+                "board-enable",
+                true,
                 "if app type is tensorflow or tensor2tensor, enable to run tensorboard, default:false");
-        allOptions.addOption("boardHistoryDir", "board-historydir", true,
+        allOptions.addOption(
+                "boardHistoryDir",
+                "board-historydir",
+                true,
                 "if app type is not vpc or digistic, hdfs path for board event log");
-        allOptions.addOption("boardModelPB", "board-modelpb", true,
+        allOptions.addOption(
+                "boardModelPB",
+                "board-modelpb",
+                true,
                 "if app type is not tensorflow or tensor2tensor, model pb for visualDL");
-        allOptions.addOption("boardCacheTimeout", "board-cacheTimeout", true,
+        allOptions.addOption(
+                "boardCacheTimeout",
+                "board-cacheTimeout",
+                true,
                 "if app type is not tensorflow or tensor2tensor, visualDL memory cache timeout duration in seconds, default:20");
 
-        allOptions.addOption("isRenameInputFile", "isRenameInputFile", true,
+        allOptions.addOption(
+                "isRenameInputFile",
+                "isRenameInputFile",
+                true,
                 "whether rename the inputFiles when download from hdfs");
-        allOptions.addOption("createContaineridDir", "create-containerid-dir", true,
+        allOptions.addOption(
+                "createContaineridDir",
+                "create-containerid-dir",
+                true,
                 "if worker num is 1, this param to enable create container id dir in output path, default:true");
-        allOptions.addOption("userClasspathFirst", "user-classpath-first", true,
+        allOptions.addOption(
+                "userClasspathFirst",
+                "user-classpath-first",
+                true,
                 "whether user add classpath first or not, default:true");
-        allOptions.addOption("hostLocalEnable", "host-local-enable", true,
-                "whether host local or not, default:false");
+        allOptions.addOption("hostLocalEnable", "host-local-enable", true, "whether host local or not, default:false");
 
-        allOptions.addOption("inputformatEnable", "inputformat-enable", true,
+        allOptions.addOption(
+                "inputformatEnable",
+                "inputformat-enable",
+                true,
                 "whether read data from hdfs in stream way or not, default:false");
-        allOptions.addOption("outputformatEnable", "outputformat-enable", true,
+        allOptions.addOption(
+                "outputformatEnable",
+                "outputformat-enable",
+                true,
                 "whether write result to hdfs in stream way or not, default:false");
-        allOptions.addOption("inputformatShuffle", "inputformat-shuffle", true,
+        allOptions.addOption(
+                "inputformatShuffle",
+                "inputformat-shuffle",
+                true,
                 "If inputformat-enable is true, whether shuffle data in worker or not, default:false");
-        allOptions.addOption("inputFormatClass", "inputformat", true,
+        allOptions.addOption(
+                "inputFormatClass",
+                "inputformat",
+                true,
                 "The inputformat class, default:org.apache.hadoop.mapred.TextInputFormat");
-        allOptions.addOption("outputFormatClass", "outputformat", true,
+        allOptions.addOption(
+                "outputFormatClass",
+                "outputformat",
+                true,
                 "The outputformat class, default:org.apache.hadoop.mapred.lib.TextOutputFormat");
-        allOptions.addOption("streamEpoch", "stream-epoch", true,
-                "The num of epoch for stream input.");
+        allOptions.addOption("streamEpoch", "stream-epoch", true, "The num of epoch for stream input.");
 
-        allOptions.addOption("inputStrategy", "input-strategy", true,
+        allOptions.addOption(
+                "inputStrategy",
+                "input-strategy",
+                true,
                 "The input strategy for user data input, DOWNLOAD,PLACEHOLDER or STREAM, default:DOWNLOAD");
-        allOptions.addOption("outputStrategy", "output-strategy", true,
+        allOptions.addOption(
+                "outputStrategy",
+                "output-strategy",
+                true,
                 "The output strategy for user result ouput, UPLOAD or STREAM, default:UPLOAD");
 
-        allOptions.addOption("tfEvaluator", "tf-evaluator", true,
-                "Using the evaluator during the tensorflow distribute training.");
+        allOptions.addOption(
+                "tfEvaluator", "tf-evaluator", true, "Using the evaluator during the tensorflow distribute training.");
 
-        allOptions.addOption("outputIndex", "output-index", true,
+        allOptions.addOption(
+                "outputIndex",
+                "output-index",
+                true,
                 "Setting the index of worker which to upload the output, default uploading the output of all the workers.");
 
         allOptions.addOption("help", "help", false, "Print usage");
@@ -236,52 +291,37 @@ class ClientArguments {
 
         OptionBuilder.withArgName("property=value");
         OptionBuilder.hasArgs(Integer.MAX_VALUE);
-        OptionBuilder
-                .withValueSeparator('=');
-        OptionBuilder
-                .withDescription("hbox configure");
-        Option conf = OptionBuilder
-                .create("conf");
+        OptionBuilder.withValueSeparator('=');
+        OptionBuilder.withDescription("hbox configure");
+        Option conf = OptionBuilder.create("conf");
         allOptions.addOption(conf);
 
         OptionBuilder.withArgName("property#value");
         OptionBuilder.hasArgs(Integer.MAX_VALUE);
-        OptionBuilder
-                .withValueSeparator('#');
-        OptionBuilder
-                .withDescription("dfs location,representing the source data of hbox");
-        Option input = OptionBuilder
-                .create("input");
+        OptionBuilder.withValueSeparator('#');
+        OptionBuilder.withDescription("dfs location,representing the source data of hbox");
+        Option input = OptionBuilder.create("input");
         allOptions.addOption(input);
 
         OptionBuilder.withArgName("property#value");
         OptionBuilder.hasArgs(Integer.MAX_VALUE);
-        OptionBuilder
-                .withValueSeparator('#');
-        OptionBuilder
-                .withDescription("amazon s3 location,representing the source data of hbox");
-        Option s3input = OptionBuilder
-                .create("s3input");
+        OptionBuilder.withValueSeparator('#');
+        OptionBuilder.withDescription("amazon s3 location,representing the source data of hbox");
+        Option s3input = OptionBuilder.create("s3input");
         allOptions.addOption(s3input);
 
         OptionBuilder.withArgName("property#value");
         OptionBuilder.hasArgs(Integer.MAX_VALUE);
-        OptionBuilder
-                .withValueSeparator('#');
-        OptionBuilder
-                .withDescription("dfs location,representing the hbox result");
-        Option output = OptionBuilder
-                .create("output");
+        OptionBuilder.withValueSeparator('#');
+        OptionBuilder.withDescription("dfs location,representing the hbox result");
+        Option output = OptionBuilder.create("output");
         allOptions.addOption(output);
         OptionBuilder.withArgName("property#value");
         OptionBuilder.hasArgs(Integer.MAX_VALUE);
-        OptionBuilder
-                .withValueSeparator('#');
-        OptionBuilder
-                .withDescription("amazon s3 location,representing the hbox result");
+        OptionBuilder.withValueSeparator('#');
+        OptionBuilder.withDescription("amazon s3 location,representing the hbox result");
         Option s3output = OptionBuilder.create("s3output");
         allOptions.addOption(s3output);
-
     }
 
     private void cliParser(String[] args) throws ParseException, IOException, ClassNotFoundException {
@@ -311,13 +351,23 @@ class ClientArguments {
             appType = cliParser.getOptionValue("app-type").trim().toUpperCase();
         }
 
-        if (!appType.equals("TENSORFLOW") && !appType.equals("TENSOR2TENSOR") && !appType.equals("MXNET") && !appType.equals("DISTLIGHTLDA") && !appType.equals("XFLOW") && !appType.equals("XDL")) {
+        if (!appType.equals("TENSORFLOW")
+                && !appType.equals("TENSOR2TENSOR")
+                && !appType.equals("MXNET")
+                && !appType.equals("DISTLIGHTLDA")
+                && !appType.equals("XFLOW")
+                && !appType.equals("XDL")) {
             psNum = 0;
         }
 
         if (cliParser.hasOption("conf")) {
             confs = cliParser.getOptionProperties("conf");
-            if (!"TENSORFLOW".equals(appType) && !"TENSOR2TENSOR".equals(appType) && !"MXNET".equals(appType) && !appType.equals("DISTLIGHTLDA") && !appType.equals("XFLOW") && !appType.equals("XDL")) {
+            if (!"TENSORFLOW".equals(appType)
+                    && !"TENSOR2TENSOR".equals(appType)
+                    && !"MXNET".equals(appType)
+                    && !appType.equals("DISTLIGHTLDA")
+                    && !appType.equals("XFLOW")
+                    && !appType.equals("XDL")) {
                 if (confs.containsKey("hbox.ps.num")) {
                     confs.setProperty("hbox.ps.num", "0");
                 }
@@ -357,7 +407,12 @@ class ClientArguments {
             duration = cliParser.getOptionValue("duration");
         }
 
-        if ("TENSORFLOW".equals(appType) || "TENSOR2TENSOR".equals(appType) || "MXNET".equals(appType) || appType.equals("DISTLIGHTLDA") || appType.equals("XFLOW") || appType.equals("XDL")) {
+        if ("TENSORFLOW".equals(appType)
+                || "TENSOR2TENSOR".equals(appType)
+                || "MXNET".equals(appType)
+                || appType.equals("DISTLIGHTLDA")
+                || appType.equals("XFLOW")
+                || appType.equals("XDL")) {
             if (cliParser.hasOption("ps-memory")) {
                 psMemory = getNormalizedMem(cliParser.getOptionValue("ps-memory"));
             }
@@ -510,12 +565,10 @@ class ClientArguments {
             streamEpoch = Integer.parseInt(streamEpochStr);
         }
 
-
         if (cliParser.hasOption("board-index")) {
             String boardIndexStr = cliParser.getOptionValue("board-index");
             boardIndex = Integer.parseInt(boardIndexStr);
         }
-
 
         if (cliParser.hasOption("board-reloadinterval")) {
             String boardReloadIntervalStr = cliParser.getOptionValue("board-reloadinterval");
@@ -584,5 +637,4 @@ class ClientArguments {
             return Integer.parseInt(rawMem);
         }
     }
-
 }

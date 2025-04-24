@@ -3,6 +3,10 @@
  */
 package net.qihoo.hbox.AM;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.concurrent.BlockingQueue;
 import net.qihoo.hbox.api.ApplicationContext;
 import net.qihoo.hbox.api.ApplicationMessageProtocol;
 import net.qihoo.hbox.common.Message;
@@ -15,13 +19,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.AbstractService;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.concurrent.BlockingQueue;
-
-public class ApplicationMessageService extends AbstractService implements
-        ApplicationMessageProtocol {
+public class ApplicationMessageService extends AbstractService implements ApplicationMessageProtocol {
 
     private static final Log LOG = LogFactory.getLog(ApplicationMessageService.class);
 
@@ -95,10 +93,8 @@ public class ApplicationMessageService extends AbstractService implements
     }
 
     @Override
-    public ProtocolSignature getProtocolSignature(String protocol,
-                                                  long clientVersion, int clientMethodsHash) throws IOException {
-        return ProtocolSignature.getProtocolSignature(this, protocol,
-                clientVersion, clientMethodsHash);
+    public ProtocolSignature getProtocolSignature(String protocol, long clientVersion, int clientMethodsHash)
+            throws IOException {
+        return ProtocolSignature.getProtocolSignature(this, protocol, clientVersion, clientMethodsHash);
     }
-
 }
