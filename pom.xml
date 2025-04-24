@@ -35,17 +35,16 @@
     <project.target.release>8</project.target.release>
 
     <hadoop.version>[3.2.4]</hadoop.version>
-    <sortpom.version>4.0.0</sortpom.version>
-    <sort.verifyFail>warn</sort.verifyFail>
 
     <project.effective.version>${project.version}</project.effective.version>
+    <spotless.version>2.44.4</spotless.version>
 
     <!-- release, only deploy the tgz archive -->
     <autoVersionSubmodules>true</autoVersionSubmodules>
     <tagNameFormat>v@{project.version}</tagNameFormat>
     <projectVersionPolicyId>SemVerVersionPolicy</projectVersionPolicyId>
-    <preparationGoals>-pl . sortpom:sort resources:copy-resources@update-ver-for-tests scm:add -Dincludes=tests/ver.sh</preparationGoals>
-    <completionGoals>-pl . sortpom:sort resources:copy-resources@update-ver-for-tests scm:add -Dincludes=tests/ver.sh</completionGoals>
+    <preparationGoals>-pl . spotless:apply resources:copy-resources@update-ver-for-tests scm:add -Dincludes=tests/ver.sh</preparationGoals>
+    <completionGoals>-pl . spotless:apply resources:copy-resources@update-ver-for-tests scm:add -Dincludes=tests/ver.sh</completionGoals>
     <checkModificationExcludeList>${project.basedir}/tests/ver.sh</checkModificationExcludeList>
     <maven.deploy.skip>true</maven.deploy.skip>
     <maven.deploy.file.skip>snapshots</maven.deploy.file.skip>
@@ -343,26 +342,48 @@
       </plugin>
 
       <plugin>
-        <groupId>com.github.ekryd.sortpom</groupId>
-        <artifactId>sortpom-maven-plugin</artifactId>
-        <version>${sortpom.version}</version>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless.version}</version>
+        <inherited>false</inherited>
         <configuration>
-          <predefinedSortOrder>custom_1</predefinedSortOrder>
-          <lineSeparator>\n</lineSeparator>
-          <encoding>${project.build.sourceEncoding}</encoding>
-          <keepBlankLines>true</keepBlankLines>
-          <!-- Now we only warning the pom style; to sort, add cmd arg: '-Dsort.verifyFail=sort' -->
-          <verifyFail>${sort.verifyFail}</verifyFail>
+          <upToDateChecking>
+            <enabled>false</enabled>
+          </upToDateChecking>
+          <pom>
+            <!-- These are the defaults, you can override if you want -->
+            <includes>
+              <include>**/pom.xml</include>
+              <include>plugin-version-ruleset-before-jdk11.xml</include>
+            </includes>
+            <sortPom>
+              <predefinedSortOrder>custom_1</predefinedSortOrder>
+              <lineSeparator>\n</lineSeparator>
+              <encoding>${project.build.sourceEncoding}</encoding>
+              <keepBlankLines>true</keepBlankLines>
+            </sortPom>
+          </pom>
+          <java>
+            <includes>
+              <include>**/*.java</include>
+            </includes>
+            <palantirJavaFormat>
+              <version>1.1.0</version>
+            </palantirJavaFormat>
+            <importOrder></importOrder>
+            <removeUnusedImports></removeUnusedImports>
+            <formatAnnotations></formatAnnotations>
+          </java>
         </configuration>
         <executions>
           <execution>
             <goals>
-              <goal>verify</goal>
+              <goal>check</goal>
             </goals>
-            <phase>verify</phase>
           </execution>
         </executions>
       </plugin>
+
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
@@ -434,8 +455,8 @@
       </activation>
       <properties>
         <maven.version.rules>file://${project.basedir}/plugin-version-ruleset-before-jdk11.xml</maven.version.rules>
-        <!-- 3.1.0+ dropped support for jdk 8 -->
-        <sortpom.version>3.0.1</sortpom.version>
+        <!-- from 2.31.0, spotless dropped support for jdk 8 -->
+        <spotless.version>2.30.0</spotless.version>
       </properties>
     </profile>
     <profile>

@@ -1,5 +1,14 @@
 package net.qihoo.hbox.client;
 
+import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 import net.qihoo.hbox.AM.ApplicationMaster;
 import net.qihoo.hbox.api.ApplicationMessageProtocol;
 import net.qihoo.hbox.api.HboxConstants;
@@ -7,10 +16,10 @@ import net.qihoo.hbox.common.HadoopVersion;
 import net.qihoo.hbox.common.LogType;
 import net.qihoo.hbox.common.Message;
 import net.qihoo.hbox.common.exceptions.RequestOverLimitException;
-import net.qihoo.hbox.conf.HboxConfiguration2;
 import net.qihoo.hbox.conf.HboxConfiguration;
-import net.qihoo.hbox.util.Utilities;
+import net.qihoo.hbox.conf.HboxConfiguration2;
 import net.qihoo.hbox.util.ShellEscapeUtils;
+import net.qihoo.hbox.util.Utilities;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -23,7 +32,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.OutputFormat;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
@@ -33,16 +41,6 @@ import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
-
-import java.io.IOException;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
 
 public class Client {
 
@@ -128,11 +126,11 @@ public class Client {
         conf.setBoolean(HboxConfiguration.HBOX_OUTPUT_STREAM, clientArguments.outputStream);
         conf.setBoolean(HboxConfiguration.HBOX_INPUT_STREAM_SHUFFLE, clientArguments.inputStreamShuffle);
         conf.setClass(HboxConfiguration2.HBOX_INPUTF0RMAT_CLASS, clientArguments.inputFormatClass, InputFormat.class);
-        conf.setClass(HboxConfiguration2.HBOX_OUTPUTFORMAT_CLASS, clientArguments.outputFormatClass, OutputFormat.class);
+        conf.setClass(
+                HboxConfiguration2.HBOX_OUTPUTFORMAT_CLASS, clientArguments.outputFormatClass, OutputFormat.class);
         conf.set(HboxConfiguration.HBOX_STREAM_EPOCH, String.valueOf(clientArguments.streamEpoch));
         conf.setBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, clientArguments.tfEvaluator);
         conf.set(HboxConfiguration.HBOX_CLIENT_HOSTNAME, this.clientHost);
-
 
         if (clientArguments.queue == null || clientArguments.queue.equals("")) {
             clientArguments.queue = appSubmitterUserName;
@@ -144,8 +142,13 @@ public class Client {
         readClusterConf();
 
         if ("TENSORFLOW".equals(clientArguments.appType) || "TENSOR2TENSOR".equals(clientArguments.appType)) {
-            if (conf.getBoolean(HboxConfiguration.HBOX_TF_DISTRIBUTION_STRATEGY, HboxConfiguration.DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY)) {
-                if ((conf.getInt(HboxConfiguration.HBOX_PS_NUM, HboxConfiguration.DEFAULT_HBOX_PS_NUM) + conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM)) == 1) {
+            if (conf.getBoolean(
+                    HboxConfiguration.HBOX_TF_DISTRIBUTION_STRATEGY,
+                    HboxConfiguration.DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY)) {
+                if ((conf.getInt(HboxConfiguration.HBOX_PS_NUM, HboxConfiguration.DEFAULT_HBOX_PS_NUM)
+                                + conf.getInt(
+                                        HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM))
+                        == 1) {
                     conf.setBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, true);
                 }
             } else {
@@ -154,7 +157,10 @@ public class Client {
                 }
             }
             if (conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR)) {
-                if ((!conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE)) && conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM) > 1) {
+                if ((!conf.getBoolean(
+                                HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))
+                        && conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM)
+                                > 1) {
 
                 } else {
                     conf.setBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, false);
@@ -182,11 +188,16 @@ public class Client {
                 conf.setInt(HboxConfiguration.HBOX_TF_BOARD_WORKER_INDEX, 0);
             }
 
-            if (conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR).indexOf("/") == 0) {
-                Path tf_board_log_dir = new Path(conf.get("fs.defaultFS"), conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR));
+            if (conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR)
+                            .indexOf("/")
+                    == 0) {
+                Path tf_board_log_dir =
+                        new Path(conf.get("fs.defaultFS"), conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR));
                 conf.set(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, tf_board_log_dir.toString());
             }
-            if ((conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR).indexOf("hdfs") == 0) && (!("TENSORFLOW".equals(clientArguments.appType) || "TENSOR2TENSOR".equals(clientArguments.appType)))) {
+            if ((conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR).indexOf("hdfs") == 0)
+                    && (!("TENSORFLOW".equals(clientArguments.appType)
+                            || "TENSOR2TENSOR".equals(clientArguments.appType)))) {
                 LOG.warn("VisualDL not support the hdfs path for logdir. Please ensure the logdir setting is right.");
             }
         }
@@ -194,7 +205,8 @@ public class Client {
         yarnClient = YarnClient.createYarnClient();
         yarnClient.init(conf);
         yarnClient.start();
-        LOG.info("Requesting a new application from cluster with " + yarnClient.getYarnClusterMetrics().getNumNodeManagers() + " NodeManagers");
+        LOG.info("Requesting a new application from cluster with "
+                + yarnClient.getYarnClusterMetrics().getNumNodeManagers() + " NodeManagers");
         newAPP = yarnClient.createApplication();
     }
 
@@ -202,13 +214,14 @@ public class Client {
         if (HadoopVersion.SUPPORTS_GPU) {
             try {
                 // ResourceTypeInfo is added since hadoop 2.10
-                final List<org.apache.hadoop.yarn.api.records.ResourceTypeInfo> typeInfos = yarnClient.getResourceTypeInfo();
+                final List<org.apache.hadoop.yarn.api.records.ResourceTypeInfo> typeInfos =
+                        yarnClient.getResourceTypeInfo();
                 for (final org.apache.hadoop.yarn.api.records.ResourceTypeInfo info : typeInfos) {
                     if (null != info && HboxConstants.GPU.equals(info.getName())) {
                         return true;
                     }
                 }
-            } catch (final YarnException|IOException e) {
+            } catch (final YarnException | IOException e) {
                 LOG.error("Fail when get RM resource type infos:", e);
                 return false;
             }
@@ -217,11 +230,10 @@ public class Client {
     }
 
     private static void showWelcome() {
-        System.err.println("Welcome to\n " +
-                "\t _  _   ___\n" +
-                "\t| || | | _ )  ___  __ __\n" +
-                "\t| __ | | _ \\ / _ \\ \\ \\ /\n" +
-                "\t|_||_| |___/ \\___/ /_\\_\\\n");
+        System.err.println("Welcome to\n " + "\t _  _   ___\n"
+                + "\t| || | | _ )  ___  __ __\n"
+                + "\t| __ | | _ \\ / _ \\ \\ \\ /\n"
+                + "\t|_||_| |___/ \\___/ /_\\_\\\n");
     }
 
     private void setConf() {
@@ -240,12 +252,14 @@ public class Client {
             final String value = entry.getValue();
             if (null != key && null != value) {
                 if (key.startsWith(HboxConstants.AM_ENV_PREFIX)) {
-                    final String envName = key.substring(HboxConstants.AM_ENV_PREFIX.length()).trim();
+                    final String envName =
+                            key.substring(HboxConstants.AM_ENV_PREFIX.length()).trim();
                     if (!envName.isEmpty()) {
                         appMasterUserEnv.put(envName, value);
                     }
                 } else if (key.startsWith(HboxConstants.CONTAINER_ENV_PREFIX)) {
-                    final String envName = key.substring(HboxConstants.CONTAINER_ENV_PREFIX.length()).trim();
+                    final String envName = key.substring(HboxConstants.CONTAINER_ENV_PREFIX.length())
+                            .trim();
                     if (!envName.isEmpty()) {
                         containerUserEnv.put(envName, value);
                     }
@@ -260,16 +274,20 @@ public class Client {
                 userEnv.append(containerUserEnv.get(key));
                 userEnv.append("|");
             }
-            conf.set(HboxConfiguration.HBOX_CONTAINER_ENV, userEnv.deleteCharAt(userEnv.length() - 1).toString());
+            conf.set(
+                    HboxConfiguration.HBOX_CONTAINER_ENV,
+                    userEnv.deleteCharAt(userEnv.length() - 1).toString());
         }
     }
 
     private void readClusterConf() {
         String cluster = conf.get(HboxConfiguration.HBOX_CLUSTER_NAME, HboxConfiguration.DEFAULT_HBOX_CLUSTER_NAME);
         if (!cluster.equals("")) {
-            String[] clusterConfPath = conf.getStrings(HboxConfiguration.HBOX_CLUSTER_CONF_PATH.replace("cluster.name", cluster));
+            String[] clusterConfPath =
+                    conf.getStrings(HboxConfiguration.HBOX_CLUSTER_CONF_PATH.replace("cluster.name", cluster));
             if (clusterConfPath == null || clusterConfPath.length == 0) {
-                LOG.warn("Note that not set the cluster yarn-site.xml path. Current application is submitted to default cluster");
+                LOG.warn(
+                        "Note that not set the cluster yarn-site.xml path. Current application is submitted to default cluster");
             } else {
                 for (String confPath : clusterConfPath) {
                     LOG.info("update the conf : " + confPath);
@@ -283,17 +301,17 @@ public class Client {
     @SuppressWarnings("unchecked")
     private void addOutputPath(String type, Properties outputProperty) throws IOException {
         ConcurrentHashMap<String, String> outputMap;
-        if (type.equals(HboxConstants.S3))
-            outputMap = this.s3OutputPaths;
-        else
-            outputMap = this.outputPaths;
+        if (type.equals(HboxConstants.S3)) outputMap = this.s3OutputPaths;
+        else outputMap = this.outputPaths;
         Enumeration<String> outputs = (Enumeration<String>) outputProperty.propertyNames();
         while (outputs.hasMoreElements()) {
             String outputRemote = outputs.nextElement();
             String outputLocal = outputProperty.getProperty(outputRemote);
             if (outputLocal.equals("true")) {
-                outputLocal = conf.get(HboxConfiguration.HBOX_OUTPUT_LOCAL_DIR, HboxConfiguration.DEFAULT_HBOX_OUTPUT_LOCAL_DIR);
-                LOG.info("Remote output path: " + outputRemote + " not defined the local output path. Default path: output.");
+                outputLocal = conf.get(
+                        HboxConfiguration.HBOX_OUTPUT_LOCAL_DIR, HboxConfiguration.DEFAULT_HBOX_OUTPUT_LOCAL_DIR);
+                LOG.info("Remote output path: " + outputRemote
+                        + " not defined the local output path. Default path: output.");
             }
             if (type.equals(HboxConstants.HDFS)) {
                 Path path = new Path(outputRemote);
@@ -318,16 +336,34 @@ public class Client {
             addOutputPath(HboxConstants.S3, clientArguments.s3Outputs);
         }
         if (conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STREAM)
-                || conf.get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY).equals("STREAM")) {
+                || conf.get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY)
+                        .equals("STREAM")) {
             boardUpload = false;
         } else {
             if (outputPaths.size() > 0) {
-                String boardLogDir = conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR);
+                String boardLogDir = conf.get(
+                        HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR);
                 String outputRefBoardDir = null;
                 if (boardUpload && !boardLogDir.contains("hdfs://")) {
-                    String replaceBoardLogDir = "/" + boardLogDir.replaceAll("\\.", " ").trim().replaceAll(" ", ".").replaceAll("/", " ").trim().replaceAll(" ", "/") + "/";
+                    String replaceBoardLogDir = "/"
+                            + boardLogDir
+                                    .replaceAll("\\.", " ")
+                                    .trim()
+                                    .replaceAll(" ", ".")
+                                    .replaceAll("/", " ")
+                                    .trim()
+                                    .replaceAll(" ", "/")
+                            + "/";
                     for (String outputInfo : outputPaths.keySet()) {
-                        String replaceOutputDir = "/" + outputInfo.replaceAll("\\.", " ").trim().replaceAll(" ", ".").replaceAll("/", " ").trim().replaceAll(" ", "/") + "/";
+                        String replaceOutputDir = "/"
+                                + outputInfo
+                                        .replaceAll("\\.", " ")
+                                        .trim()
+                                        .replaceAll(" ", ".")
+                                        .replaceAll("/", " ")
+                                        .trim()
+                                        .replaceAll(" ", "/")
+                                + "/";
                         if (replaceBoardLogDir.indexOf(replaceOutputDir) == 0) {
                             boardUpload = false;
                             outputRefBoardDir = outputPaths.get(outputInfo).split(",")[0];
@@ -335,7 +371,13 @@ public class Client {
                         }
                     }
                     if (!boardUpload) {
-                        if (conf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR).equals(new HboxConfiguration().get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR))) {
+                        if (conf.get(
+                                        HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
+                                        HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR)
+                                .equals(new HboxConfiguration()
+                                        .get(
+                                                HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
+                                                HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR))) {
                             LOG.info("Set the Board History: " + outputRefBoardDir);
                             conf.set(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR, outputRefBoardDir);
                         } else {
@@ -351,10 +393,8 @@ public class Client {
     @SuppressWarnings("unchecked")
     private void addInputPath(String type, Properties inputProperty) throws IOException {
         ConcurrentHashMap<String, String> inputMap;
-        if (type.equals(HboxConstants.S3))
-            inputMap = this.s3InputPaths;
-        else
-            inputMap = this.inputPaths;
+        if (type.equals(HboxConstants.S3)) inputMap = this.s3InputPaths;
+        else inputMap = this.inputPaths;
         Enumeration<String> inputs = (Enumeration<String>) inputProperty.propertyNames();
         while (inputs.hasMoreElements()) {
             String inputRemote = inputs.nextElement();
@@ -402,7 +442,8 @@ public class Client {
         ApplicationMessageProtocol appMessageHandler = null;
         if (!StringUtils.isBlank(appMasterAddress) && !appMasterAddress.equalsIgnoreCase("N/A")) {
             InetSocketAddress addr = new InetSocketAddress(appMasterAddress, appMasterPort);
-            appMessageHandler = RPC.getProxy(ApplicationMessageProtocol.class, ApplicationMessageProtocol.versionID, addr, conf);
+            appMessageHandler =
+                    RPC.getProxy(ApplicationMessageProtocol.class, ApplicationMessageProtocol.versionID, addr, conf);
         }
         return appMessageHandler;
     }
@@ -421,113 +462,117 @@ public class Client {
         int driverMem = conf.getInt(HboxConfiguration.HBOX_DRIVER_MEMORY, HboxConfiguration.DEFAULT_HBOX_DRIVER_MEMORY);
         int driverCores = conf.getInt(HboxConfiguration.HBOX_DRIVER_CORES, HboxConfiguration.DEFAULT_HBOX_DRIVER_CORES);
         if (driverMem > maxMem) {
-            throw new RequestOverLimitException("AM memory requested " + driverMem +
-                    " above the max threshold of yarn cluster " + maxMem);
+            throw new RequestOverLimitException(
+                    "AM memory requested " + driverMem + " above the max threshold of yarn cluster " + maxMem);
         }
         if (driverMem <= 0) {
             throw new IllegalArgumentException(
-                    "Invalid memory specified for application master, exiting."
-                            + " Specified memory=" + driverMem);
+                    "Invalid memory specified for application master, exiting." + " Specified memory=" + driverMem);
         }
         LOG.info("Apply for am Memory " + driverMem + "M");
         if (driverCores > maxVCores) {
-            throw new RequestOverLimitException("driver vcores requested " + driverCores +
-                    " above the max threshold of yarn cluster " + maxVCores);
+            throw new RequestOverLimitException(
+                    "driver vcores requested " + driverCores + " above the max threshold of yarn cluster " + maxVCores);
         }
         if (driverCores <= 0) {
             throw new IllegalArgumentException(
-                    "Invalid vcores specified for driver, exiting."
-                            + "Specified vcores=" + driverCores);
+                    "Invalid vcores specified for driver, exiting." + "Specified vcores=" + driverCores);
         }
         LOG.info("Apply for driver vcores " + driverCores);
 
         int workerNum = conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM);
-        int workerMemory = conf.getInt(HboxConfiguration.HBOX_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
-        int workerVcores = conf.getInt(HboxConfiguration.HBOX_WORKER_VCORES, HboxConfiguration.DEFAULT_HBOX_WORKER_VCORES);
+        int workerMemory =
+                conf.getInt(HboxConfiguration.HBOX_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
+        int workerVcores =
+                conf.getInt(HboxConfiguration.HBOX_WORKER_VCORES, HboxConfiguration.DEFAULT_HBOX_WORKER_VCORES);
         int workerGcores = conf.getInt(HboxConfiguration.HBOX_WORKER_GPU, HboxConfiguration.DEFAULT_HBOX_WORKER_GPU);
         if (workerNum < 1) {
             throw new IllegalArgumentException(
-                    "Invalid no. of worker specified, exiting."
-                            + " Specified container number=" + workerNum);
+                    "Invalid no. of worker specified, exiting." + " Specified container number=" + workerNum);
         }
         LOG.info("Apply for worker number " + workerNum);
         if (workerMemory > maxMem) {
-            throw new RequestOverLimitException("Worker memory requested " + workerMemory +
-                    " above the max threshold of yarn cluster " + maxMem);
+            throw new RequestOverLimitException(
+                    "Worker memory requested " + workerMemory + " above the max threshold of yarn cluster " + maxMem);
         }
         if (workerMemory <= 0) {
             throw new IllegalArgumentException(
-                    "Invalid memory specified for worker, exiting."
-                            + "Specified memory=" + workerMemory);
+                    "Invalid memory specified for worker, exiting." + "Specified memory=" + workerMemory);
         }
         LOG.info("Apply for worker Memory " + workerMemory + "M");
 
-        int chiefWorkerMemory = conf.getInt(HboxConfiguration.HBOX_CHIEF_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
+        int chiefWorkerMemory =
+                conf.getInt(HboxConfiguration.HBOX_CHIEF_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
         if (chiefWorkerMemory != workerMemory) {
             if (chiefWorkerMemory > maxMem) {
-                throw new RequestOverLimitException("CHIEF Worker memory requested " + chiefWorkerMemory +
-                        " above the max threshold of yarn cluster " + maxMem);
+                throw new RequestOverLimitException("CHIEF Worker memory requested " + chiefWorkerMemory
+                        + " above the max threshold of yarn cluster " + maxMem);
             }
             if (chiefWorkerMemory <= 0) {
-                throw new IllegalArgumentException(
-                        "Invalid memory specified for chief worker, exiting."
-                                + "Specified memory=" + chiefWorkerMemory);
+                throw new IllegalArgumentException("Invalid memory specified for chief worker, exiting."
+                        + "Specified memory=" + chiefWorkerMemory);
             }
             LOG.info("Apply for chief worker Memory " + chiefWorkerMemory + "M");
         }
 
-        int evaluatorWorkerMemory = conf.getInt(HboxConfiguration.HBOX_EVALUATOR_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
-        if (evaluatorWorkerMemory != workerMemory && conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR)) {
+        int evaluatorWorkerMemory = conf.getInt(
+                HboxConfiguration.HBOX_EVALUATOR_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
+        if (evaluatorWorkerMemory != workerMemory
+                && conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR)) {
             if (evaluatorWorkerMemory > maxMem) {
-                throw new RequestOverLimitException("Evaluator Worker memory requested " + evaluatorWorkerMemory +
-                        " above the max threshold of yarn cluster " + maxMem);
+                throw new RequestOverLimitException("Evaluator Worker memory requested " + evaluatorWorkerMemory
+                        + " above the max threshold of yarn cluster " + maxMem);
             }
             if (evaluatorWorkerMemory <= 0) {
-                throw new IllegalArgumentException(
-                        "Invalid memory specified for evaluator worker, exiting."
-                                + "Specified memory=" + evaluatorWorkerMemory);
+                throw new IllegalArgumentException("Invalid memory specified for evaluator worker, exiting."
+                        + "Specified memory=" + evaluatorWorkerMemory);
             }
             LOG.info("Apply for evaluator worker Memory " + evaluatorWorkerMemory + "M");
         }
 
         if (workerVcores > maxVCores) {
-            throw new RequestOverLimitException("Worker vcores requested " + workerVcores +
-                    " above the max threshold of yarn cluster " + maxVCores);
+            throw new RequestOverLimitException("Worker vcores requested " + workerVcores
+                    + " above the max threshold of yarn cluster " + maxVCores);
         }
         if (workerVcores <= 0) {
             throw new IllegalArgumentException(
-                    "Invalid vcores specified for worker, exiting."
-                            + "Specified vcores=" + workerVcores);
+                    "Invalid vcores specified for worker, exiting." + "Specified vcores=" + workerVcores);
         }
         LOG.info("Apply for worker vcores " + workerVcores);
         if (workerGcores > maxGCores) {
-            throw new RequestOverLimitException("Worker gpu cores requested " + workerGcores +
-                    " above the max threshold of yarn cluster " + maxGCores);
+            throw new RequestOverLimitException("Worker gpu cores requested " + workerGcores
+                    + " above the max threshold of yarn cluster " + maxGCores);
         }
         if (workerGcores < 0) {
             throw new IllegalArgumentException(
-                    "Invalid gpu cores specified for worker, exiting."
-                            + "Specified gpu cores=" + workerGcores);
+                    "Invalid gpu cores specified for worker, exiting." + "Specified gpu cores=" + workerGcores);
         }
         LOG.info("Apply for worker gpu cores " + workerGcores);
 
         if (clientArguments.appType.equals("VPC") || clientArguments.appType.equals("DIGITS")) {
-            String durationStr = conf.get(HboxConfiguration.HBOX_VPC_DURATION, HboxConfiguration.DEFAULT_HBOX_VPC_DURATION);
+            String durationStr =
+                    conf.get(HboxConfiguration.HBOX_VPC_DURATION, HboxConfiguration.DEFAULT_HBOX_VPC_DURATION);
             String pattern = "^\\d+(\\.\\d+)?([smhd])?";
             boolean isMatch = Pattern.matches(pattern, durationStr);
             if (!isMatch) {
-                throw new IllegalArgumentException(
-                        "Invalid no. of debug duration specified, exiting."
-                                + " Specified debug duration=" + durationStr);
+                throw new IllegalArgumentException("Invalid no. of debug duration specified, exiting."
+                        + " Specified debug duration=" + durationStr);
             }
         }
 
-        if ("TENSORFLOW".equals(clientArguments.appType) || "TENSOR2TENSOR".equals(clientArguments.appType) || "MXNET".equals(clientArguments.appType) || "DISTLIGHTLDA".equals(clientArguments.appType) || "XFLOW".equals(clientArguments.appType) || "XDL".equals(clientArguments.appType)) {
+        if ("TENSORFLOW".equals(clientArguments.appType)
+                || "TENSOR2TENSOR".equals(clientArguments.appType)
+                || "MXNET".equals(clientArguments.appType)
+                || "DISTLIGHTLDA".equals(clientArguments.appType)
+                || "XFLOW".equals(clientArguments.appType)
+                || "XDL".equals(clientArguments.appType)) {
             Boolean single;
             if ("TENSORFLOW".equals(clientArguments.appType) || "TENSOR2TENSOR".equals(clientArguments.appType)) {
-                single = conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE);
+                single = conf.getBoolean(
+                        HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE);
             } else {
-                single = conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE);
+                single = conf.getBoolean(
+                        HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE);
             }
             if ("DISTLIGHTLDA".equals(clientArguments.appType)) {
                 single = false;
@@ -538,53 +583,53 @@ public class Client {
             int psNum = conf.getInt(HboxConfiguration.HBOX_PS_NUM, HboxConfiguration.DEFAULT_HBOX_PS_NUM);
             if (psNum < 0) {
                 throw new IllegalArgumentException(
-                        "Invalid no. of ps specified, exiting."
-                                + " Specified container number=" + psNum);
+                        "Invalid no. of ps specified, exiting." + " Specified container number=" + psNum);
             }
             LOG.info("Apply for ps number " + psNum);
             if (!single) {
-                if (!conf.getBoolean(HboxConfiguration.HBOX_TF_DISTRIBUTION_STRATEGY, HboxConfiguration.DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY)) {
+                if (!conf.getBoolean(
+                        HboxConfiguration.HBOX_TF_DISTRIBUTION_STRATEGY,
+                        HboxConfiguration.DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY)) {
                     if (psNum < 1) {
-                        throw new IllegalArgumentException(
-                                "Invalid no. of ps specified for distributed job, exiting."
-                                        + " Specified container number=" + psNum);
+                        throw new IllegalArgumentException("Invalid no. of ps specified for distributed job, exiting."
+                                + " Specified container number=" + psNum);
                     }
-                    int psMemory = conf.getInt(HboxConfiguration.HBOX_PS_MEMORY, HboxConfiguration.DEFAULT_HBOX_PS_MEMORY);
-                    int psVcores = conf.getInt(HboxConfiguration.HBOX_PS_VCORES, HboxConfiguration.DEFAULT_HBOX_PS_VCORES);
+                    int psMemory =
+                            conf.getInt(HboxConfiguration.HBOX_PS_MEMORY, HboxConfiguration.DEFAULT_HBOX_PS_MEMORY);
+                    int psVcores =
+                            conf.getInt(HboxConfiguration.HBOX_PS_VCORES, HboxConfiguration.DEFAULT_HBOX_PS_VCORES);
                     int psGcores = conf.getInt(HboxConfiguration.HBOX_PS_GPU, HboxConfiguration.DEFAULT_HBOX_PS_GPU);
                     if (psMemory > maxMem) {
-                        throw new RequestOverLimitException("ps memory requested " + psMemory +
-                                " above the max threshold of yarn cluster " + maxMem);
+                        throw new RequestOverLimitException("ps memory requested " + psMemory
+                                + " above the max threshold of yarn cluster " + maxMem);
                     }
                     if (psMemory <= 0) {
                         throw new IllegalArgumentException(
-                                "Invalid memory specified for ps, exiting."
-                                        + "Specified memory=" + psMemory);
+                                "Invalid memory specified for ps, exiting." + "Specified memory=" + psMemory);
                     }
                     LOG.info("Apply for ps Memory " + psMemory + "M");
                     if (psVcores > maxVCores) {
-                        throw new RequestOverLimitException("ps vcores requested " + psVcores +
-                                " above the max threshold of yarn cluster " + maxVCores);
+                        throw new RequestOverLimitException("ps vcores requested " + psVcores
+                                + " above the max threshold of yarn cluster " + maxVCores);
                     }
                     if (psVcores <= 0) {
                         throw new IllegalArgumentException(
-                                "Invalid vcores specified for ps, exiting."
-                                        + "Specified vcores=" + psVcores);
+                                "Invalid vcores specified for ps, exiting." + "Specified vcores=" + psVcores);
                     }
                     LOG.info("Apply for ps vcores " + psVcores);
                     if (psGcores > maxGCores) {
-                        throw new RequestOverLimitException("ps gpu cores requested " + psGcores +
-                                " above the max threshold of yarn cluster " + maxGCores);
+                        throw new RequestOverLimitException("ps gpu cores requested " + psGcores
+                                + " above the max threshold of yarn cluster " + maxGCores);
                     }
                     if (psGcores < 0) {
                         throw new IllegalArgumentException(
-                                "Invalid gpu cores specified for ps, exiting."
-                                        + "Specified gpu cores=" + psGcores);
+                                "Invalid gpu cores specified for ps, exiting." + "Specified gpu cores=" + psGcores);
                     }
                     LOG.info("Apply for ps gpu cores " + psGcores);
                 }
             }
-            int limitNode = conf.getInt(HboxConfiguration.HBOX_EXECUTE_NODE_LIMIT, HboxConfiguration.DEFAULT_HBOX_EXECUTENODE_LIMIT);
+            int limitNode = conf.getInt(
+                    HboxConfiguration.HBOX_EXECUTE_NODE_LIMIT, HboxConfiguration.DEFAULT_HBOX_EXECUTENODE_LIMIT);
             if (workerNum + psNum > limitNode) {
                 throw new RequestOverLimitException("Container num requested over the limit " + limitNode);
             }
@@ -596,8 +641,8 @@ public class Client {
         conf.set("DOCKER_CONTAINER_NETWORK", "host");
         conf.set("DOCKER_PORT", "");
         conf.set("RESERVED_PORT", "");
-        String imageName = conf.get(HboxConfiguration.HBOX_DOCKER_IMAGE_NAME,
-                HboxConfiguration.DEFAULT_HBOX_DOCKER_IMAGE_NAME);
+        String imageName =
+                conf.get(HboxConfiguration.HBOX_DOCKER_IMAGE_NAME, HboxConfiguration.DEFAULT_HBOX_DOCKER_IMAGE_NAME);
         LOG.info("Docker image name is:" + imageName);
         if (imageName == null || imageName.equals("")) {
             LOG.info("Docker image name is empty");
@@ -618,7 +663,9 @@ public class Client {
             } else {
                 pathRemote = new Path(path);
             }
-            if (Boolean.parseBoolean(conf.get(HboxConfiguration.HBOX_CACHEFILE_CHECK_ENABLE, String.valueOf(HboxConfiguration.DEFAULT_HBOX_CACHEFILE_CHECK_ENABLE)))) {
+            if (Boolean.parseBoolean(conf.get(
+                    HboxConfiguration.HBOX_CACHEFILE_CHECK_ENABLE,
+                    String.valueOf(HboxConfiguration.DEFAULT_HBOX_CACHEFILE_CHECK_ENABLE)))) {
                 if (!pathRemote.getFileSystem(conf).exists(pathRemote)) {
                     throw new IOException("cacheFile path " + pathRemote + " not existed!");
                 }
@@ -627,9 +674,10 @@ public class Client {
     }
 
     private void convertHdfsCommonCacheArchive() throws IOException {
-        String commomCacheArchiveHDFS = conf.get(HboxConfiguration.HBOX_COMMON_CACHE_ARCHIVE_HDFS, HboxConfiguration.DEFAULT_HBOX_COMMON_CACHE_ARCHIVE_HDFS);
-        if (commomCacheArchiveHDFS.equals(""))
-            throw new RuntimeException("Error common HDFS cache archives is empty!");
+        String commomCacheArchiveHDFS = conf.get(
+                HboxConfiguration.HBOX_COMMON_CACHE_ARCHIVE_HDFS,
+                HboxConfiguration.DEFAULT_HBOX_COMMON_CACHE_ARCHIVE_HDFS);
+        if (commomCacheArchiveHDFS.equals("")) throw new RuntimeException("Error common HDFS cache archives is empty!");
         StringBuilder newHboxCacheArchives = new StringBuilder();
         String[] cacheArchives = StringUtils.split(clientArguments.hboxCacheArchives, ",");
         for (String path : cacheArchives) {
@@ -660,21 +708,28 @@ public class Client {
     private void assignCacheArchives() throws IOException {
 
         // append cached mpi package to cacheArchive list
-        if ((clientArguments.appType.equals("MPI") || clientArguments.appType.equals("TENSORNET")  || clientArguments.appType.equals("HOROVOD"))
+        if ((clientArguments.appType.equals("MPI")
+                        || clientArguments.appType.equals("TENSORNET")
+                        || clientArguments.appType.equals("HOROVOD"))
                 && conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH) != null) {
             String mpiPackagePath = conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH);
-            if(mpiPackagePath.contains("#")){
+            if (mpiPackagePath.contains("#")) {
                 String[] mpiPackagePathArr = mpiPackagePath.split("#");
                 conf.set(HboxConfiguration.HBOX_MPI_INSTALL_DIR, mpiPackagePathArr[1]);
-                clientArguments.hboxCacheArchives = clientArguments.hboxCacheArchives + "," + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH);
+                clientArguments.hboxCacheArchives = clientArguments.hboxCacheArchives + ","
+                        + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH);
             } else {
-                String fileName = java.nio.file.Paths.get(mpiPackagePath).getFileName().toString();
+                String fileName =
+                        java.nio.file.Paths.get(mpiPackagePath).getFileName().toString();
                 conf.set(HboxConfiguration.HBOX_MPI_INSTALL_DIR, fileName);
-                clientArguments.hboxCacheArchives = clientArguments.hboxCacheArchives + "," + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH) + "#" + fileName;
+                clientArguments.hboxCacheArchives = clientArguments.hboxCacheArchives + ","
+                        + conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH) + "#" + fileName;
             }
         }
 
-        if (conf.getBoolean(HboxConfiguration.HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE, HboxConfiguration.DEFAULT_HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE))
+        if (conf.getBoolean(
+                HboxConfiguration.HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE,
+                HboxConfiguration.DEFAULT_HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE))
             convertHdfsCommonCacheArchive();
         String[] cacheArchives = StringUtils.split(clientArguments.hboxCacheArchives, ",");
         for (String path : cacheArchives) {
@@ -688,7 +743,9 @@ public class Client {
             } else {
                 pathRemote = new Path(path);
             }
-            if (Boolean.parseBoolean(conf.get(HboxConfiguration.HBOX_CACHEFILE_CHECK_ENABLE, String.valueOf(HboxConfiguration.DEFAULT_HBOX_CACHEFILE_CHECK_ENABLE)))) {
+            if (Boolean.parseBoolean(conf.get(
+                    HboxConfiguration.HBOX_CACHEFILE_CHECK_ENABLE,
+                    String.valueOf(HboxConfiguration.DEFAULT_HBOX_CACHEFILE_CHECK_ENABLE)))) {
                 if (!pathRemote.getFileSystem(conf).exists(pathRemote)) {
                     throw new IOException("cacheArchive path " + pathRemote + " not existed!");
                 }
@@ -696,40 +753,51 @@ public class Client {
         }
     }
 
-    private void prepareFilesForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
+    private void prepareFilesForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources)
+            throws IOException {
         Path[] tfFilesDst = new Path[clientArguments.hboxFiles.length];
         LOG.info("Copy hbox files from local filesystem to remote.");
         for (int i = 0; i < clientArguments.hboxFiles.length; i++) {
             assert (!clientArguments.hboxFiles[i].isEmpty());
             Path tfFilesSrc = new Path(clientArguments.hboxFiles[i]);
-            tfFilesDst[i] = Utilities.getRemotePath(
-                    conf, applicationId, new Path(clientArguments.hboxFiles[i]).getName());
+            tfFilesDst[i] =
+                    Utilities.getRemotePath(conf, applicationId, new Path(clientArguments.hboxFiles[i]).getName());
             LOG.info("Copying " + clientArguments.hboxFiles[i] + " to remote path " + tfFilesDst[i].toString());
             dfs.copyFromLocalFile(false, true, tfFilesSrc, tfFilesDst[i]);
             appFilesRemotePath.append(tfFilesDst[i].toUri().toString()).append(",");
         }
-        appMasterEnv.put(HboxConstants.Environment.HBOX_FILES_LOCATION.toString(),
+        appMasterEnv.put(
+                HboxConstants.Environment.HBOX_FILES_LOCATION.toString(),
                 appFilesRemotePath.deleteCharAt(appFilesRemotePath.length() - 1).toString());
-        boolean amEnableFiles = conf.getBoolean(HboxConfiguration.HBOX_AM_CMD_ENABLE, HboxConfiguration.DEFAULT_HBOX_AM_ENABLE);
-        if (amEnableFiles || (clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
+        boolean amEnableFiles =
+                conf.getBoolean(HboxConfiguration.HBOX_AM_CMD_ENABLE, HboxConfiguration.DEFAULT_HBOX_AM_ENABLE);
+        if (amEnableFiles
+                || (clientArguments.appType.equals("MXNET")
+                        && !conf.getBoolean(
+                                HboxConfiguration.HBOX_MXNET_MODE_SINGLE,
+                                HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
                 || clientArguments.appType.equals("XFLOW")
-                || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
+                || (clientArguments.appType.equals("XDL")
+                        && !conf.getBoolean(
+                                HboxConfiguration.HBOX_TF_MODE_SINGLE,
+                                HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
             String appFilesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_FILES_LOCATION.toString());
             String[] tfFiles = StringUtils.split(appFilesRemoteLocation, ",");
             for (String file : tfFiles) {
                 Path path = new Path(file);
-                localResources.put(path.getName(),
-                        Utilities.createApplicationResource(path.getFileSystem(conf),
-                                path,
-                                LocalResourceType.FILE));
+                localResources.put(
+                        path.getName(),
+                        Utilities.createApplicationResource(path.getFileSystem(conf), path, LocalResourceType.FILE));
             }
         }
     }
 
-    private void prepareArchiveFilesForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
+    private void prepareArchiveFilesForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources)
+            throws IOException {
         Path[] filesDst = new Path[clientArguments.hboxArchiveFiles.length];
         LOG.info("Copy hbox archive files from local filesystem to remote.");
-        boolean amEnableFiles = conf.getBoolean(HboxConfiguration.HBOX_AM_CMD_ENABLE, HboxConfiguration.DEFAULT_HBOX_AM_ENABLE);
+        boolean amEnableFiles =
+                conf.getBoolean(HboxConfiguration.HBOX_AM_CMD_ENABLE, HboxConfiguration.DEFAULT_HBOX_AM_ENABLE);
         for (int i = 0; i < clientArguments.hboxArchiveFiles.length; i++) {
             assert (!clientArguments.hboxArchiveFiles[i].isEmpty());
             Path filesSrc;
@@ -746,35 +814,49 @@ public class Client {
                 aliasName = filesSrc.getName();
             }
 
-            filesDst[i] = Utilities.getRemotePath(
-                    conf, applicationId, filesSrc.getName());
+            filesDst[i] = Utilities.getRemotePath(conf, applicationId, filesSrc.getName());
             LOG.info("Copying " + filesSrc + " to remote path " + filesDst[i].toString());
             dfs.copyFromLocalFile(false, true, filesSrc, filesDst[i]);
-            appArchiveFilesRemotePath.append(filesDst[i].toUri().toString() + "#" + aliasName).append(",");
+            appArchiveFilesRemotePath
+                    .append(filesDst[i].toUri().toString() + "#" + aliasName)
+                    .append(",");
 
-            if (amEnableFiles || (clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
+            if (amEnableFiles
+                    || (clientArguments.appType.equals("MXNET")
+                            && !conf.getBoolean(
+                                    HboxConfiguration.HBOX_MXNET_MODE_SINGLE,
+                                    HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
                     || clientArguments.appType.equals("XFLOW")
-                    || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
-                localResources.put(aliasName,
-                        Utilities.createApplicationResource(filesDst[i].getFileSystem(conf),
+                    || (clientArguments.appType.equals("XDL")
+                            && !conf.getBoolean(
+                                    HboxConfiguration.HBOX_TF_MODE_SINGLE,
+                                    HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
+                localResources.put(
+                        aliasName,
+                        Utilities.createApplicationResource(
+                                filesDst[i].getFileSystem(conf),
                                 filesDst[i],
                                 LocalResourceType.ARCHIVE,
                                 LocalResourceVisibility.APPLICATION));
             }
         }
-        appMasterEnv.put(HboxConstants.Environment.HBOX_ARCHIVE_FILES_LOCATION.toString(),
-                appArchiveFilesRemotePath.deleteCharAt(appArchiveFilesRemotePath.length() - 1).toString());
+        appMasterEnv.put(
+                HboxConstants.Environment.HBOX_ARCHIVE_FILES_LOCATION.toString(),
+                appArchiveFilesRemotePath
+                        .deleteCharAt(appArchiveFilesRemotePath.length() - 1)
+                        .toString());
     }
 
-    private void prepareJarsForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
+    private void prepareJarsForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources)
+            throws IOException {
         Path[] tfFilesDst = new Path[clientArguments.libJars.length];
         LOG.info("Copy hbox lib jars from local filesystem to remote.");
         for (int i = 0; i < clientArguments.libJars.length; i++) {
             assert (!clientArguments.libJars[i].isEmpty());
             if (!clientArguments.libJars[i].startsWith("hdfs://")) {
                 Path tfFilesSrc = new Path(clientArguments.libJars[i]);
-                tfFilesDst[i] = Utilities.getRemotePath(
-                        conf, applicationId, new Path(clientArguments.libJars[i]).getName());
+                tfFilesDst[i] =
+                        Utilities.getRemotePath(conf, applicationId, new Path(clientArguments.libJars[i]).getName());
                 LOG.info("Copying " + clientArguments.libJars[i] + " to remote path " + tfFilesDst[i].toString());
                 dfs.copyFromLocalFile(false, true, tfFilesSrc, tfFilesDst[i]);
                 appLibJarsRemotePath.append(tfFilesDst[i].toUri().toString()).append(",");
@@ -786,49 +868,61 @@ public class Client {
                 appLibJarsRemotePath.append(clientArguments.libJars[i]).append(",");
             }
         }
-        appMasterEnv.put(HboxConstants.Environment.HBOX_LIBJARS_LOCATION.toString(),
-                appLibJarsRemotePath.deleteCharAt(appLibJarsRemotePath.length() - 1).toString());
+        appMasterEnv.put(
+                HboxConstants.Environment.HBOX_LIBJARS_LOCATION.toString(),
+                appLibJarsRemotePath
+                        .deleteCharAt(appLibJarsRemotePath.length() - 1)
+                        .toString());
 
-//        if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
-//                || clientArguments.appType.equals("XFLOW")
-//                || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
+        //        if ((clientArguments.appType.equals("MXNET") &&
+        // !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
+        //                || clientArguments.appType.equals("XFLOW")
+        //                || (clientArguments.appType.equals("XDL") &&
+        // !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))) {
         String appFilesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_LIBJARS_LOCATION.toString());
         String[] tfFiles = StringUtils.split(appFilesRemoteLocation, ",");
         for (String file : tfFiles) {
             Path path = new Path(file);
-            localResources.put(path.getName(),
-                    Utilities.createApplicationResource(path.getFileSystem(conf),
-                            path,
-                            LocalResourceType.FILE));
+            localResources.put(
+                    path.getName(),
+                    Utilities.createApplicationResource(path.getFileSystem(conf), path, LocalResourceType.FILE));
         }
-//        }
+        //        }
     }
 
-    private void prepareJobConfForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
-        Path jobConfPath = Utilities
-                .getRemotePath(conf, applicationId, HboxConstants.HBOX_JOB_CONFIGURATION);
+    private void prepareJobConfForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources)
+            throws IOException {
+        Path jobConfPath = Utilities.getRemotePath(conf, applicationId, HboxConstants.HBOX_JOB_CONFIGURATION);
         FSDataOutputStream out =
-                FileSystem.create(jobConfPath.getFileSystem(conf), jobConfPath,
-                        new FsPermission(JOB_FILE_PERMISSION));
-        //write conf to hbox hdfs
+                FileSystem.create(jobConfPath.getFileSystem(conf), jobConfPath, new FsPermission(JOB_FILE_PERMISSION));
+        // write conf to hbox hdfs
         conf.writeXml(out);
         out.close();
-        localResources.put(HboxConstants.HBOX_JOB_CONFIGURATION,
+        localResources.put(
+                HboxConstants.HBOX_JOB_CONFIGURATION,
                 Utilities.createApplicationResource(dfs, jobConfPath, LocalResourceType.FILE));
 
         appMasterEnv.put(HboxConstants.Environment.HBOX_JOB_CONF_LOCATION.toString(), jobConfPath.toString());
     }
 
-    private void prepareCacheFiles(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
+    private void prepareCacheFiles(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources)
+            throws IOException {
         appMasterEnv.put(HboxConstants.Environment.HBOX_CACHE_FILE_LOCATION.toString(), clientArguments.hboxCacheFiles);
-        if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
-                || clientArguments.appType.equals("DISTXGBOOST") || clientArguments.appType.equals("XFLOW")
-                || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))
+        if ((clientArguments.appType.equals("MXNET")
+                        && !conf.getBoolean(
+                                HboxConfiguration.HBOX_MXNET_MODE_SINGLE,
+                                HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
+                || clientArguments.appType.equals("DISTXGBOOST")
+                || clientArguments.appType.equals("XFLOW")
+                || (clientArguments.appType.equals("XDL")
+                        && !conf.getBoolean(
+                                HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))
                 || clientArguments.appType.equals("TENSORNET")
                 || clientArguments.appType.equals("MPI")) {
             URI defaultUri = new Path(conf.get("fs.defaultFS")).toUri();
             LOG.info("default URI is " + defaultUri.toString());
-            String appCacheFilesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_CACHE_FILE_LOCATION.toString());
+            String appCacheFilesRemoteLocation =
+                    appMasterEnv.get(HboxConstants.Environment.HBOX_CACHE_FILE_LOCATION.toString());
             String[] cacheFiles = StringUtils.split(appCacheFilesRemoteLocation, ",");
             for (String path : cacheFiles) {
                 Path pathRemote;
@@ -845,29 +939,40 @@ public class Client {
                     aliasName = pathRemote.getName();
                 }
                 URI pathRemoteUri = pathRemote.toUri();
-                if (Boolean.parseBoolean(conf.get(HboxConfiguration.HBOX_APPEND_DEFAULTFS_ENABLE, String.valueOf(HboxConfiguration.DEFAULT_HBOX_APPEND_DEFAULTFS_ENABLE)))) {
+                if (Boolean.parseBoolean(conf.get(
+                        HboxConfiguration.HBOX_APPEND_DEFAULTFS_ENABLE,
+                        String.valueOf(HboxConfiguration.DEFAULT_HBOX_APPEND_DEFAULTFS_ENABLE)))) {
                     if (pathRemoteUri.getScheme() == null || pathRemoteUri.getHost() == null) {
                         pathRemote = new Path(defaultUri.toString(), pathRemote.toString());
                     }
                 }
                 LOG.info("Cache file remote path is " + pathRemote + " and alias name is " + aliasName);
-                localResources.put(aliasName,
-                        Utilities.createApplicationResource(pathRemote.getFileSystem(conf),
-                                pathRemote,
-                                LocalResourceType.FILE));
+                localResources.put(
+                        aliasName,
+                        Utilities.createApplicationResource(
+                                pathRemote.getFileSystem(conf), pathRemote, LocalResourceType.FILE));
             }
         }
     }
 
-    private void prepareCacheArchives(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
-        appMasterEnv.put(HboxConstants.Environment.HBOX_CACHE_ARCHIVE_LOCATION.toString(), clientArguments.hboxCacheArchives);
-        if ((clientArguments.appType.equals("MXNET") && !conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
-                || clientArguments.appType.equals("DISTXGBOOST") || clientArguments.appType.equals("XFLOW")
-                || (clientArguments.appType.equals("XDL") && !conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))
+    private void prepareCacheArchives(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources)
+            throws IOException {
+        appMasterEnv.put(
+                HboxConstants.Environment.HBOX_CACHE_ARCHIVE_LOCATION.toString(), clientArguments.hboxCacheArchives);
+        if ((clientArguments.appType.equals("MXNET")
+                        && !conf.getBoolean(
+                                HboxConfiguration.HBOX_MXNET_MODE_SINGLE,
+                                HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE))
+                || clientArguments.appType.equals("DISTXGBOOST")
+                || clientArguments.appType.equals("XFLOW")
+                || (clientArguments.appType.equals("XDL")
+                        && !conf.getBoolean(
+                                HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE))
                 || clientArguments.appType.equals("TENSORNET")
                 || clientArguments.appType.equals("MPI")) {
             URI defaultUri = new Path(conf.get("fs.defaultFS")).toUri();
-            String appCacheArchivesRemoteLocation = appMasterEnv.get(HboxConstants.Environment.HBOX_CACHE_ARCHIVE_LOCATION.toString());
+            String appCacheArchivesRemoteLocation =
+                    appMasterEnv.get(HboxConstants.Environment.HBOX_CACHE_ARCHIVE_LOCATION.toString());
             String[] cacheArchives = StringUtils.split(appCacheArchivesRemoteLocation, ",");
             for (String path : cacheArchives) {
                 Path pathRemote;
@@ -884,30 +989,35 @@ public class Client {
                     aliasName = pathRemote.getName();
                 }
                 URI pathRemoteUri = pathRemote.toUri();
-                if (Boolean.parseBoolean(conf.get(HboxConfiguration.HBOX_APPEND_DEFAULTFS_ENABLE, String.valueOf(HboxConfiguration.DEFAULT_HBOX_APPEND_DEFAULTFS_ENABLE)))) {
+                if (Boolean.parseBoolean(conf.get(
+                        HboxConfiguration.HBOX_APPEND_DEFAULTFS_ENABLE,
+                        String.valueOf(HboxConfiguration.DEFAULT_HBOX_APPEND_DEFAULTFS_ENABLE)))) {
                     if (pathRemoteUri.getScheme() == null || pathRemoteUri.getHost() == null) {
                         pathRemote = new Path(defaultUri.toString(), pathRemote.toString());
                     }
                 }
                 LOG.info("Cache archive remote path is " + pathRemote + " and alias name is " + aliasName);
-                localResources.put(aliasName,
-                        Utilities.createApplicationResource(pathRemote.getFileSystem(conf),
-                                pathRemote,
-                                LocalResourceType.ARCHIVE));
+                localResources.put(
+                        aliasName,
+                        Utilities.createApplicationResource(
+                                pathRemote.getFileSystem(conf), pathRemote, LocalResourceType.ARCHIVE));
             }
         }
     }
 
-    private void prepareAppMasterJar(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
+    private void prepareAppMasterJar(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources)
+            throws IOException {
         Path appJarSrc = new Path(clientArguments.appMasterJar);
-        Path appJarDst = Utilities
-                .getRemotePath(conf, applicationId, HboxConstants.HBOX_APPLICATION_JAR);
+        Path appJarDst = Utilities.getRemotePath(conf, applicationId, HboxConstants.HBOX_APPLICATION_JAR);
         LOG.info("Copying " + appJarSrc + " to remote path " + appJarDst.toString());
         dfs.copyFromLocalFile(false, true, appJarSrc, appJarDst);
 
-        localResources.put(HboxConstants.HBOX_APPLICATION_JAR,
+        localResources.put(
+                HboxConstants.HBOX_APPLICATION_JAR,
                 Utilities.createApplicationResource(dfs, appJarDst, LocalResourceType.FILE));
-        appMasterEnv.put(HboxConstants.Environment.APP_JAR_LOCATION.toString(), appJarDst.toUri().toString());
+        appMasterEnv.put(
+                HboxConstants.Environment.APP_JAR_LOCATION.toString(),
+                appJarDst.toUri().toString());
     }
 
     private void prepareInputEnvForAM(Map<String, String> appMasterEnv) {
@@ -929,12 +1039,10 @@ public class Client {
         StringBuilder inputLocation = new StringBuilder(1000);
         if (inputPathKeys.size() > 0) {
             for (String key : inputPathKeys) {
-                inputLocation.append(inputMap.get(key)).
-                        append("#").
-                        append(key).
-                        append("|");
+                inputLocation.append(inputMap.get(key)).append("#").append(key).append("|");
             }
-            appMasterEnv.put(envName,
+            appMasterEnv.put(
+                    envName,
                     inputLocation.deleteCharAt(inputLocation.length() - 1).toString());
         }
     }
@@ -959,21 +1067,19 @@ public class Client {
         if (outputPathKeys.size() > 0) {
             for (String key : outputPathKeys) {
                 for (String value : StringUtils.split(outputMap.get(key), ",")) {
-                    outputLocation.append(value).
-                            append("#").
-                            append(key).
-                            append("|");
+                    outputLocation.append(value).append("#").append(key).append("|");
                 }
             }
-            appMasterEnv.put(envName, outputLocation.deleteCharAt(outputLocation.length() - 1).toString());
+            appMasterEnv.put(
+                    envName,
+                    outputLocation.deleteCharAt(outputLocation.length() - 1).toString());
         }
     }
 
-
     private void prepareClassPathEnvForAM(Map<String, String> appMasterEnv) {
         StringBuilder classPathEnv = new StringBuilder("${CLASSPATH}:./*");
-        for (String cp : conf.getStrings(HboxConfiguration.YARN_APPLICATION_CLASSPATH,
-                HboxConfiguration.DEFAULT_HBOX_APPLICATION_CLASSPATH)) {
+        for (String cp : conf.getStrings(
+                HboxConfiguration.YARN_APPLICATION_CLASSPATH, HboxConfiguration.DEFAULT_HBOX_APPLICATION_CLASSPATH)) {
             classPathEnv.append(':');
             classPathEnv.append(cp.trim());
         }
@@ -983,13 +1089,15 @@ public class Client {
         }
     }
 
-    private List<String> prepareLaunchCommandForAM(Map<String, String> appMasterEnv, ApplicationSubmissionContext applicationContext) {
+    private List<String> prepareLaunchCommandForAM(
+            Map<String, String> appMasterEnv, ApplicationSubmissionContext applicationContext) {
         LOG.info("Building application master launch command");
         int driverMem = conf.getInt(HboxConfiguration.HBOX_DRIVER_MEMORY, HboxConfiguration.DEFAULT_HBOX_DRIVER_MEMORY);
 
         List<String> appMasterArgs = new ArrayList<>(20);
         appMasterArgs.add("exec");
-        appMasterArgs.add(ShellEscapeUtils.escapeInDoubleQuotes("\"${JAVA_HOME}/bin/java\"")); // expand in the inner bash
+        appMasterArgs.add(
+                ShellEscapeUtils.escapeInDoubleQuotes("\"${JAVA_HOME}/bin/java\"")); // expand in the inner bash
         appMasterArgs.add("-Xms" + Math.min(driverMem, maxContainerMem) + "m");
         appMasterArgs.add("-Xmx" + Math.min(driverMem, maxContainerMem) + "m");
         appMasterArgs.add(ShellEscapeUtils.escapeContainerLaunch(ApplicationMaster.class.getName()));
@@ -1003,8 +1111,14 @@ public class Client {
         appMasterArgs.add("2>>'" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "'/" + ApplicationConstants.STDERR);
 
         Resource capability = Records.newRecord(Resource.class);
-        int overHeadMem = (int) Math.max(driverMem * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
-                conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
+        int overHeadMem = (int) Math.max(
+                driverMem
+                        * conf.getDouble(
+                                HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION,
+                                HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
+                conf.getInt(
+                        HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM,
+                        HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
         driverMem += overHeadMem;
         int driverCores = conf.getInt(HboxConfiguration.HBOX_DRIVER_CORES, HboxConfiguration.DEFAULT_HBOX_DRIVER_CORES);
         capability.setMemory(Math.min(driverMem, maxContainerMem));
@@ -1017,36 +1131,47 @@ public class Client {
         return appMasterArgs;
     }
 
-    private void prepareOtherEnvsForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources) throws IOException {
+    private void prepareOtherEnvsForAM(Map<String, String> appMasterEnv, Map<String, LocalResource> localResources)
+            throws IOException {
         LOG.info("Building environments for the application master");
-        String containerType = conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE,
-                HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);
-        appMasterEnv.put(HboxConstants.Environment.HADOOP_USER_NAME.toString(), conf.get("hadoop.job.ugi").split(",")[0]);
-        //appMasterEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), containerType);
-        appMasterEnv.put(HboxConstants.Environment.HBOX_CONTAINER_MAX_MEMORY.toString(), String.valueOf(maxContainerMem));
+        String containerType =
+                conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);
+        appMasterEnv.put(
+                HboxConstants.Environment.HADOOP_USER_NAME.toString(),
+                conf.get("hadoop.job.ugi").split(",")[0]);
+        // appMasterEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), containerType);
+        appMasterEnv.put(
+                HboxConstants.Environment.HBOX_CONTAINER_MAX_MEMORY.toString(), String.valueOf(maxContainerMem));
 
-        if (clientArguments.appType.equals("VPC") || clientArguments.appType.equals("DIGITS") || containerType.toUpperCase().equals("DOCKER")) {
-            String imageName = conf.get(HboxConfiguration.DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME,
+        if (clientArguments.appType.equals("VPC")
+                || clientArguments.appType.equals("DIGITS")
+                || containerType.toUpperCase().equals("DOCKER")) {
+            String imageName = conf.get(
+                    HboxConfiguration.DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME,
                     HboxConfiguration.DEFALUT_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
             if (clientArguments.appType.equals("DIGITS")) {
-                imageName = conf.get(HboxConfiguration.HBOX_DIGITS_IMAGE_NAME,
-                        HboxConfiguration.DEFAULT_HBOX_DIGITS_IMAGE_NAME);
+                imageName = conf.get(
+                        HboxConfiguration.HBOX_DIGITS_IMAGE_NAME, HboxConfiguration.DEFAULT_HBOX_DIGITS_IMAGE_NAME);
             }
             if (imageName.equals("")) {
                 throw new IllegalArgumentException(
-                        "Invalid image name for docker, exiting."
-                                + "Specified image name=" + imageName);
+                        "Invalid image name for docker, exiting." + "Specified image name=" + imageName);
             }
             appMasterEnv.put(HboxConstants.Environment.HBOX_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME.toString(), imageName);
-            appMasterEnv.put(HboxConstants.Environment.HBOX_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME.toString(), conf.get(HboxConfiguration.DOCKER_CONTAINER_EXECUTOR_EXEC_NAME,
-                    HboxConfiguration.DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME));
-            //appMasterEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), "docker");
+            appMasterEnv.put(
+                    HboxConstants.Environment.HBOX_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME.toString(),
+                    conf.get(
+                            HboxConfiguration.DOCKER_CONTAINER_EXECUTOR_EXEC_NAME,
+                            HboxConfiguration.DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME));
+            // appMasterEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), "docker");
         }
 
         if (clientArguments.appType != null && !clientArguments.appType.equals("")) {
             appMasterEnv.put(HboxConstants.Environment.HBOX_APP_TYPE.toString(), clientArguments.appType);
         } else {
-            appMasterEnv.put(HboxConstants.Environment.HBOX_APP_TYPE.toString(), HboxConfiguration.DEFAULT_HBOX_APP_TYPE.toUpperCase());
+            appMasterEnv.put(
+                    HboxConstants.Environment.HBOX_APP_TYPE.toString(),
+                    HboxConfiguration.DEFAULT_HBOX_APP_TYPE.toUpperCase());
         }
         appMasterEnv.put(HboxConstants.Environment.HBOX_APP_NAME.toString(), clientArguments.appName);
         if (clientArguments.hboxFiles != null) {
@@ -1061,8 +1186,9 @@ public class Client {
             prepareJarsForAM(appMasterEnv, localResources);
         }
 
-        appMasterEnv.put(HboxConstants.Environment.HBOX_STAGING_LOCATION.toString(), Utilities
-                .getRemotePath(conf, applicationId, "").toString());
+        appMasterEnv.put(
+                HboxConstants.Environment.HBOX_STAGING_LOCATION.toString(),
+                Utilities.getRemotePath(conf, applicationId, "").toString());
 
         if (!clientArguments.appType.equals("VPC") && !clientArguments.appType.equals("DIGITS")) {
             if (null == clientArguments.hboxCommandArgs || 0 == clientArguments.hboxCommandArgs.length) {
@@ -1070,9 +1196,11 @@ public class Client {
             }
         }
 
-        //HBOX specific one worker to upload output dir
+        // HBOX specific one worker to upload output dir
         if (clientArguments.outputIndex >= 0) {
-            appMasterEnv.put(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString(), String.valueOf(clientArguments.outputIndex));
+            appMasterEnv.put(
+                    HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString(),
+                    String.valueOf(clientArguments.outputIndex));
         }
     }
 
@@ -1099,13 +1227,18 @@ public class Client {
         conf.set(HboxConfiguration.HBOX_APP_ID, applicationId.toString());
         maxContainerMem = newAppResponse.getMaximumResourceCapability().getMemory();
 
-        if (clientArguments.appType.equals("VPC") || clientArguments.appType.equals("DIGITS") || clientArguments.appType.equals("MPI") || clientArguments.appType.equals("TENSORNET")  || clientArguments.appType.equals("HOROVOD")) {
+        if (clientArguments.appType.equals("VPC")
+                || clientArguments.appType.equals("DIGITS")
+                || clientArguments.appType.equals("MPI")
+                || clientArguments.appType.equals("TENSORNET")
+                || clientArguments.appType.equals("HOROVOD")) {
             conf.set(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE);
         } else if (clientArguments.appType.equals("XDL")) {
             configXDLAmContainer();
         }
 
-        LOG.info("Current container type: " + conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE));
+        LOG.info("Current container type: "
+                + conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE));
 
         dfs = FileSystem.get(conf);
         Map<String, LocalResource> localResources = new HashMap<>();
@@ -1148,9 +1281,11 @@ public class Client {
         applicationContext.setAMContainerSpec(amContainer);
 
         Priority priority = Records.newRecord(Priority.class);
-        priority.setPriority(conf.getInt(HboxConfiguration.HBOX_APP_PRIORITY, HboxConfiguration.DEFAULT_HBOX_APP_PRIORITY));
+        priority.setPriority(
+                conf.getInt(HboxConfiguration.HBOX_APP_PRIORITY, HboxConfiguration.DEFAULT_HBOX_APP_PRIORITY));
         applicationContext.setPriority(priority);
-        applicationContext.setQueue(conf.get(HboxConfiguration.HBOX_APP_QUEUE, HboxConfiguration.DEFAULT_HBOX_APP_QUEUE));
+        applicationContext.setQueue(
+                conf.get(HboxConfiguration.HBOX_APP_QUEUE, HboxConfiguration.DEFAULT_HBOX_APP_QUEUE));
 
         try {
             LOG.info("Submitting application to ResourceManager");
@@ -1168,11 +1303,23 @@ public class Client {
         final String hboxHome = System.getenv("HBOX_HOME");
         final String hboxConf = System.getenv("HBOX_CONF_DIR");
         final String killCmd = null == hboxConf
-            ? String.format("%s/bin/hbox-kill %s", ShellEscapeUtils.escapePlain(hboxHome), ShellEscapeUtils.escapePlain(applicationId.toString()))
-            : String.format("HBOX_CONF_DIR=%s %s/bin/hbox-kill %s", ShellEscapeUtils.escapePlain(hboxConf), ShellEscapeUtils.escapePlain(hboxHome), ShellEscapeUtils.escapePlain(applicationId.toString()));
+                ? String.format(
+                        "%s/bin/hbox-kill %s",
+                        ShellEscapeUtils.escapePlain(hboxHome), ShellEscapeUtils.escapePlain(applicationId.toString()))
+                : String.format(
+                        "HBOX_CONF_DIR=%s %s/bin/hbox-kill %s",
+                        ShellEscapeUtils.escapePlain(hboxConf),
+                        ShellEscapeUtils.escapePlain(hboxHome),
+                        ShellEscapeUtils.escapePlain(applicationId.toString()));
         final String logsCmd = null == hboxConf
-            ? String.format("%s/bin/hbox-logs %s", ShellEscapeUtils.escapePlain(hboxHome), ShellEscapeUtils.escapePlain(applicationId.toString()))
-            : String.format("HBOX_CONF_DIR=%s %s/bin/hbox-logs -applicationId %s", ShellEscapeUtils.escapePlain(hboxConf), ShellEscapeUtils.escapePlain(hboxHome), ShellEscapeUtils.escapePlain(applicationId.toString()));
+                ? String.format(
+                        "%s/bin/hbox-logs %s",
+                        ShellEscapeUtils.escapePlain(hboxHome), ShellEscapeUtils.escapePlain(applicationId.toString()))
+                : String.format(
+                        "HBOX_CONF_DIR=%s %s/bin/hbox-logs -applicationId %s",
+                        ShellEscapeUtils.escapePlain(hboxConf),
+                        ShellEscapeUtils.escapePlain(hboxHome),
+                        ShellEscapeUtils.escapePlain(applicationId.toString()));
         LOG.info("To kill this job: " + killCmd);
         LOG.info("To view job logs: " + logsCmd);
 
@@ -1186,10 +1333,9 @@ public class Client {
         while (true) {
             assert (applicationReport != null);
             if (hboxClient == null && isRunning.get()) {
-                LOG.info("Application report for " + applicationId +
-                        " (state: " + applicationReport.getYarnApplicationState().toString() + ")");
-                hboxClient = getAppMessageHandler(conf, applicationReport.getHost(),
-                        applicationReport.getRpcPort());
+                LOG.info("Application report for " + applicationId + " (state: "
+                        + applicationReport.getYarnApplicationState().toString() + ")");
+                hboxClient = getAppMessageHandler(conf, applicationReport.getHost(), applicationReport.getRpcPort());
             }
 
             YarnApplicationState yarnApplicationState = applicationReport.getYarnApplicationState();
@@ -1200,16 +1346,17 @@ public class Client {
                 if (FinalApplicationStatus.SUCCEEDED == finalApplicationStatus) {
                     return true;
                 } else {
-                    LOG.error("Application has completed failed with YarnApplicationState=" + yarnApplicationState.toString() +
-                            " and FinalApplicationStatus=" + finalApplicationStatus.toString());
+                    LOG.error("Application has completed failed with YarnApplicationState="
+                            + yarnApplicationState.toString() + " and FinalApplicationStatus="
+                            + finalApplicationStatus.toString());
                     return false;
                 }
             } else if (YarnApplicationState.KILLED == yarnApplicationState
                     || YarnApplicationState.FAILED == yarnApplicationState) {
                 hboxClient = null;
                 isRunning.set(false);
-                LOG.error("Application has completed with YarnApplicationState=" + yarnApplicationState.toString() +
-                        " and FinalApplicationStatus=" + finalApplicationStatus.toString());
+                LOG.error("Application has completed with YarnApplicationState=" + yarnApplicationState.toString()
+                        + " and FinalApplicationStatus=" + finalApplicationStatus.toString());
                 return false;
             }
 
@@ -1231,7 +1378,8 @@ public class Client {
                 }
             }
 
-            int logInterval = conf.getInt(HboxConfiguration.HBOX_LOG_PULL_INTERVAL, HboxConfiguration.DEFAULT_HBOX_LOG_PULL_INTERVAL);
+            int logInterval = conf.getInt(
+                    HboxConfiguration.HBOX_LOG_PULL_INTERVAL, HboxConfiguration.DEFAULT_HBOX_LOG_PULL_INTERVAL);
             Utilities.sleep(logInterval);
             applicationReport = getApplicationReport(applicationId, yarnClient);
         }

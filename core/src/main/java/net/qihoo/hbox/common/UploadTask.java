@@ -1,13 +1,12 @@
 package net.qihoo.hbox.common;
 
+import java.io.IOException;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
-import java.io.IOException;
 
 /**
  * Created by jiarunying-it on 2019/2/20.
@@ -28,7 +27,8 @@ public class UploadTask implements Runnable {
         this.conf = conf;
         this.uploadDst = uploadDst;
         this.uploadSrc = uploadSrc;
-        this.downloadRetry = conf.getInt(HboxConfiguration.HBOX_DOWNLOAD_FILE_RETRY, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_RETRY);
+        this.downloadRetry = conf.getInt(
+                HboxConfiguration.HBOX_DOWNLOAD_FILE_RETRY, HboxConfiguration.DEFAULT_HBOX_DOWNLOAD_FILE_RETRY);
     }
 
     @Override
@@ -48,9 +48,15 @@ public class UploadTask implements Runnable {
                 break;
             } catch (Exception e) {
                 if (retry < downloadRetry) {
-                    LOG.warn("Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " failed, retry in " + (++retry), e);
+                    LOG.warn(
+                            "Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " failed, retry in "
+                                    + (++retry),
+                            e);
                 } else {
-                    LOG.error("Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " failed after " + downloadRetry + " retry times!", e);
+                    LOG.error(
+                            "Upload output file from " + this.uploadSrc + " to " + this.uploadDst + " failed after "
+                                    + downloadRetry + " retry times!",
+                            e);
                     break;
                 }
             }

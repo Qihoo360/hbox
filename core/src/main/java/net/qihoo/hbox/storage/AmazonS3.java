@@ -1,10 +1,5 @@
 package net.qihoo.hbox.storage;
 
-import java.io.File;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.List;
-
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
@@ -17,6 +12,10 @@ import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import java.io.File;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.List;
 import net.qihoo.hbox.api.Storage;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,7 +27,7 @@ public class AmazonS3 implements Storage {
     private final String accessKey;
     private final String secretKey;
 
-    public AmazonS3(String cluster, String bucketName, String accessKey, String secretKey){
+    public AmazonS3(String cluster, String bucketName, String accessKey, String secretKey) {
         this.accessKey = accessKey;
         this.secretKey = secretKey;
         this.bucketName = bucketName;
@@ -41,8 +40,7 @@ public class AmazonS3 implements Storage {
         this.s3.setEndpoint(cluster);
         this.s3.setS3ClientOptions(clientOptions);
         if (!doesBucketExist()) {
-            if (createBucket(bucketName))
-                LOG.info("Bucket is not exist! Create new bucket: " + bucketName);
+            if (createBucket(bucketName)) LOG.info("Bucket is not exist! Create new bucket: " + bucketName);
         }
     }
 
@@ -55,8 +53,7 @@ public class AmazonS3 implements Storage {
     public InputStream get(String fileName) {
         if (doesObjectExist(fileName)) {
             return getObject(fileName);
-        } else
-            return null;
+        } else return null;
     }
 
     public String getBucketName() {
@@ -120,7 +117,8 @@ public class AmazonS3 implements Storage {
     public List<S3ObjectSummary> listObjects(String prefix) {
         List<S3ObjectSummary> list = null;
         try {
-            ObjectListing objectListing = s3.listObjects(new ListObjectsRequest().withBucketName(bucketName).withPrefix(prefix));
+            ObjectListing objectListing = s3.listObjects(
+                    new ListObjectsRequest().withBucketName(bucketName).withPrefix(prefix));
             list = objectListing.getObjectSummaries();
         } catch (AmazonServiceException ase) {
             LOG.info("Caught an AmazonServiceException!" + "Error Message:    " + ase.getMessage());
@@ -188,8 +186,7 @@ public class AmazonS3 implements Storage {
         }
 
         @Override
-        public void refresh() {
-        }
+        public void refresh() {}
 
         @Override
         public String toString() {

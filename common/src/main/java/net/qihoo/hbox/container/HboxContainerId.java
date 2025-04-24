@@ -1,12 +1,11 @@
 package net.qihoo.hbox.container;
 
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 
 public class HboxContainerId implements Writable {
 

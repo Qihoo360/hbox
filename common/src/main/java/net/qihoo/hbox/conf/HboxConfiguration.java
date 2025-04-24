@@ -25,7 +25,7 @@ public class HboxConfiguration extends YarnConfiguration {
     /**
      * Configuration used in Client
      */
-    //AM container type
+    // AM container type
     public static final String HBOX_CONTAINER_TYPE = "hbox.container.type";
 
     public static final String DEFAULT_HBOX_CONTAINER_TYPE = "yarn";
@@ -229,15 +229,15 @@ public class HboxConfiguration extends YarnConfiguration {
     public static final Integer DEFAULT_HBOX_ENV_MAXLENGTH = 120240;
 
     public static final String[] DEFAULT_HBOX_APPLICATION_CLASSPATH = {
-            "$HADOOP_CONF_DIR",
-            "$HADOOP_COMMON_HOME/share/hadoop/common/*",
-            "$HADOOP_COMMON_HOME/share/hadoop/common/lib/*",
-            "$HADOOP_HDFS_HOME/share/hadoop/hdfs/*",
-            "$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*",
-            "$HADOOP_YARN_HOME/share/hadoop/yarn/*",
-            "$HADOOP_YARN_HOME/share/hadoop/yarn/lib/*",
-            "$HADOOP_YARN_HOME/share/hadoop/mapreduce/*",
-            "$HADOOP_YARN_HOME/share/hadoop/mapreduce/lib/*"
+        "$HADOOP_CONF_DIR",
+        "$HADOOP_COMMON_HOME/share/hadoop/common/*",
+        "$HADOOP_COMMON_HOME/share/hadoop/common/lib/*",
+        "$HADOOP_HDFS_HOME/share/hadoop/hdfs/*",
+        "$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*",
+        "$HADOOP_YARN_HOME/share/hadoop/yarn/*",
+        "$HADOOP_YARN_HOME/share/hadoop/yarn/lib/*",
+        "$HADOOP_YARN_HOME/share/hadoop/mapreduce/*",
+        "$HADOOP_YARN_HOME/share/hadoop/mapreduce/lib/*"
     };
     public static final String HBOX_TF_DISTRIBUTION_STRATEGY = "hbox.tf.distribution.strategy";
     public static final Boolean DEFAULT_HBOX_TF_DISTRIBUTION_STRATEGY = true;
@@ -395,6 +395,7 @@ public class HboxConfiguration extends YarnConfiguration {
      * Configuration for Amazon S3 storage
      */
     public static final String HBOX_S3_CLUSTER = "hbox.s3.cluster";
+
     public static final String DEFAULT_HBOX_S3_CLUSTER = "";
     public static final String HBOX_S3_CLUSTER_PREFIX = "hbox.s3.cluster.prefix";
     public static final String DEFAULT_HBOX_S3_CLUSTER_PREFIX = "http://";
@@ -412,7 +413,8 @@ public class HboxConfiguration extends YarnConfiguration {
 
     public static final String DEFAULT_HBOX_HISTORY_LOG_DIR = "/tmp/hbox/history";
 
-    public static final String HBOX_HISTORY_LOG_DELETE_MONITOR_TIME_INTERVAL = "hbox.history.log.delete-monitor-time-interval";
+    public static final String HBOX_HISTORY_LOG_DELETE_MONITOR_TIME_INTERVAL =
+            "hbox.history.log.delete-monitor-time-interval";
 
     public static final int DEFAULT_HBOX_HISTORY_LOG_DELETE_MONITOR_TIME_INTERVAL = 24 * 60 * 60 * 1000;
 
@@ -447,7 +449,8 @@ public class HboxConfiguration extends YarnConfiguration {
 
     public static final int DEFAULT_HBOX_HISTORY_WEBAPP_HTTPS_PORT = 19667;
 
-    public static final String DEFAULT_HBOX_HISTORY_WEBAPP_HTTPS_ADDRESS = "0.0.0.0:" + DEFAULT_HBOX_HISTORY_WEBAPP_HTTPS_PORT;
+    public static final String DEFAULT_HBOX_HISTORY_WEBAPP_HTTPS_ADDRESS =
+            "0.0.0.0:" + DEFAULT_HBOX_HISTORY_WEBAPP_HTTPS_PORT;
 
     public static final String HBOX_HISTORY_BIND_HOST = "hbox.history.bind-host";
 
@@ -467,6 +470,7 @@ public class HboxConfiguration extends YarnConfiguration {
      * ACL of who can be admin of Job history server.
      */
     public static final String HBOX_JHS_ADMIN_ACL = "hbox.history.admin.acl";
+
     public static final String DEFAULT_HBOX_JHS_ADMIN_ACL = "*";
 
     public static final String HBOX_HS_RECOVERY_ENABLE = "hbox.history.recovery.enable";
@@ -481,8 +485,8 @@ public class HboxConfiguration extends YarnConfiguration {
      * To enable https in HBOX history server
      */
     public static final String HBOX_HS_HTTP_POLICY = "hbox.history.http.policy";
-    public static String DEFAULT_HBOX_HS_HTTP_POLICY =
-            HttpConfig.Policy.HTTP_ONLY.name();
+
+    public static String DEFAULT_HBOX_HS_HTTP_POLICY = HttpConfig.Policy.HTTP_ONLY.name();
 
     /**
      * The kerberos principal to be used for spnego filter for history server
@@ -494,33 +498,30 @@ public class HboxConfiguration extends YarnConfiguration {
      */
     public static final String HBOX_WEBAPP_SPNEGO_KEYTAB_FILE_KEY = "hbox.webapp.spnego-keytab-file";
 
-    //Delegation token related keys
-    public static final String DELEGATION_KEY_UPDATE_INTERVAL_KEY =
-            "hbox.cluster.delegation.key.update-interval";
-    public static final long DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT =
-            24 * 60 * 60 * 1000; // 1 day
-    public static final String DELEGATION_TOKEN_RENEW_INTERVAL_KEY =
-            "hbox.cluster.delegation.token.renew-interval";
-    public static final long DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT =
-            24 * 60 * 60 * 1000;  // 1 day
-    public static final String DELEGATION_TOKEN_MAX_LIFETIME_KEY =
-            "hbox.cluster.delegation.token.max-lifetime";
-    public static final long DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT =
-            7 * 24 * 60 * 60 * 1000; // 7 days
+    // Delegation token related keys
+    public static final String DELEGATION_KEY_UPDATE_INTERVAL_KEY = "hbox.cluster.delegation.key.update-interval";
+    public static final long DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT = 24 * 60 * 60 * 1000; // 1 day
+    public static final String DELEGATION_TOKEN_RENEW_INTERVAL_KEY = "hbox.cluster.delegation.token.renew-interval";
+    public static final long DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT = 24 * 60 * 60 * 1000; // 1 day
+    public static final String DELEGATION_TOKEN_MAX_LIFETIME_KEY = "hbox.cluster.delegation.token.max-lifetime";
+    public static final long DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT = 7 * 24 * 60 * 60 * 1000; // 7 days
 
     /**
      * docker environment variable
      */
-    public static final String DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME = "yarn.nodemanager.docker-container-executor.image-name";
+    public static final String DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME =
+            "yarn.nodemanager.docker-container-executor.image-name";
+
     public static final String DEFALUT_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME = "";
 
     public static final String HBOX_DIGITS_IMAGE_NAME = "hbox.digits.image-name";
     public static final String DEFAULT_HBOX_DIGITS_IMAGE_NAME = "";
 
-    public static final String DOCKER_CONTAINER_EXECUTOR_EXEC_NAME = "yarn.nodemanager.docker-container-executor.exec-name";
+    public static final String DOCKER_CONTAINER_EXECUTOR_EXEC_NAME =
+            "yarn.nodemanager.docker-container-executor.exec-name";
     public static final String DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME = "/bin/nvidia-docker";
 
-    //container type
+    // container type
     public static final String CONTAINER_EXECUTOR_TYPE = "yarn.nodemanager.container-executor.type";
     public static final String DEFAULT_CONTAINER_EXECUTOR_TYPE = "";
 
@@ -539,6 +540,7 @@ public class HboxConfiguration extends YarnConfiguration {
      * Configuration for mpi app
      */
     public static final String HBOX_MPI_EXEC_DIR_ENABLE = "hbox.mpi.exec.dir.enable";
+
     public static final boolean DEFAULT_HBOX_MPI_EXEC_DIR_ENABLE = false;
 
     public static final String HBOX_MPI_EXEC_DIR = "hbox.mpi.exec.dir";
@@ -558,7 +560,6 @@ public class HboxConfiguration extends YarnConfiguration {
     /**
      * Configuration for horovod app
      */
-
     public static final String HBOX_HOROVOD_EXTRA_LD_LIBRARY_PATH = "hbox.horovod.extra.ld.lirbary.path";
 
     public static final String HBOX_HOROVOD_PROCESS_NUM_PER_WORKER = "hbox.horovod.process.num.per.worker";
@@ -585,12 +586,15 @@ public class HboxConfiguration extends YarnConfiguration {
      * Configuration for Docker number pre worker
      */
     public static final String HBOX_DOCKER_NUM_PER_WORKER = "hbox.docker.num.per.worker";
+
     public static final int DEDAULT_HBOX_DOCKER_NUM_PER_WORKER = 0;
 
     /**
      * Prophet platform special paramters
      */
-    public static final String HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE = "hbox.commom.cache.archive.hdfs.convert.enable";
+    public static final String HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE =
+            "hbox.commom.cache.archive.hdfs.convert.enable";
+
     public static final boolean DEFAULT_HBOX_COMMON_CACHE_ARCHIVE_HDFS_CONVERT_ENABLE = false;
 
     public static final String HBOX_COMMON_CACHE_ARCHIVE_HDFS = "hbox.commom.cache.archive.hdfs";
@@ -606,6 +610,7 @@ public class HboxConfiguration extends YarnConfiguration {
      * AD special paramters
      */
     public static final String HBOX_CLIENT_HOSTNAME = "hbox.client.hostname";
+
     public static final String DEFAULT_HBOX_CLIENT_HOSTNAME = "";
     public static final String HBOX_PYTHON_HOME = "hbox.python.home";
     public static final String DEFAULT_HBOX_PYTHON_HOME = "";

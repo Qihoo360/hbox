@@ -1,5 +1,6 @@
 package net.qihoo.hbox.jobhistory;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.AccessControlException;
@@ -7,7 +8,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
-
 import net.qihoo.hbox.conf.HboxConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,9 +42,6 @@ import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.apache.hadoop.yarn.webapp.WebApps;
-
-import com.google.common.annotations.VisibleForTesting;
-import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.webapp.WebAppContext;
 
@@ -63,9 +60,8 @@ public class HistoryClientService extends AbstractService {
     private HistoryContext history;
     private JHSDelegationTokenSecretManager jhsDTSecretManager;
 
-    public HistoryClientService(HistoryContext history,
-                                JHSDelegationTokenSecretManager jhsDTSecretManager,
-                                final Configuration conf) {
+    public HistoryClientService(
+            HistoryContext history, JHSDelegationTokenSecretManager jhsDTSecretManager, final Configuration conf) {
         super("HistoryClientService");
         this.history = history;
         this.protocolHandler = new HSClientProtocolHandler();
@@ -84,21 +80,24 @@ public class HistoryClientService extends AbstractService {
                 conf.get(HboxConfiguration.HBOX_HISTORY_ADDRESS, HboxConfiguration.DEFAULT_HBOX_HISTORY_ADDRESS),
                 conf.getInt(HboxConfiguration.HBOX_HISTORY_PORT, HboxConfiguration.DEFAULT_HBOX_HISTORY_PORT));
 
-        server =
-                rpc.getServer(HSClientProtocol.class, protocolHandler, address,
-                        conf, jhsDTSecretManager,
-                        conf.getInt(HboxConfiguration.HBOX_HISTORY_CLIENT_THREAD_COUNT,
-                                HboxConfiguration.DEFAULT_HBOX_HISTORY_CLIENT_THREAD_COUNT));
+        server = rpc.getServer(
+                HSClientProtocol.class,
+                protocolHandler,
+                address,
+                conf,
+                jhsDTSecretManager,
+                conf.getInt(
+                        HboxConfiguration.HBOX_HISTORY_CLIENT_THREAD_COUNT,
+                        HboxConfiguration.DEFAULT_HBOX_HISTORY_CLIENT_THREAD_COUNT));
 
         // Enable service authorization?
-        if (conf.getBoolean(
-                CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
-                false)) {
+        if (conf.getBoolean(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, false)) {
             server.refreshServiceAcl(conf, new ClientHSPolicyProvider());
         }
 
         server.start();
-        this.bindAddress = conf.updateConnectAddr(HboxConfiguration.HBOX_HISTORY_BIND_HOST,
+        this.bindAddress = conf.updateConnectAddr(
+                HboxConfiguration.HBOX_HISTORY_BIND_HOST,
                 HboxConfiguration.HBOX_HISTORY_ADDRESS,
                 conf.get(HboxConfiguration.HBOX_HISTORY_ADDRESS, HboxConfiguration.DEFAULT_HBOX_HISTORY_ADDRESS),
                 server.getListenerAddress());
@@ -112,14 +111,12 @@ public class HistoryClientService extends AbstractService {
         webApp = new HsWebApp(history);
         InetSocketAddress bindAddress = HboxWebAppUtil.getJHSWebBindAddress(conf);
         // NOTE: there should be a .at(InetSocketAddress)
-        WebApps
-                .$for("jobhistory", HistoryClientService.class, this, "ws")
+        WebApps.$for("jobhistory", HistoryClientService.class, this, "ws")
                 .with(conf)
-                .withHttpSpnegoKeytabKey(
-                        HboxConfiguration.HBOX_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
-                .withHttpSpnegoPrincipalKey(
-                        HboxConfiguration.HBOX_WEBAPP_SPNEGO_USER_NAME_KEY)
-                .at(NetUtils.getHostPortString(bindAddress)).build(webApp);
+                .withHttpSpnegoKeytabKey(HboxConfiguration.HBOX_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
+                .withHttpSpnegoPrincipalKey(HboxConfiguration.HBOX_WEBAPP_SPNEGO_USER_NAME_KEY)
+                .at(NetUtils.getHostPortString(bindAddress))
+                .build(webApp);
 
         HttpServer2 httpServer = webApp.httpServer();
 
@@ -128,14 +125,16 @@ public class HistoryClientService extends AbstractService {
         appWebAppContext.setContextPath("/static/hboxWebApp");
         String appDir = getClass().getClassLoader().getResource("hboxWebApp").toString();
         appWebAppContext.setResourceBase(appDir);
-        //appWebAppContext.addServlet(DefaultServlet.class, "/*");
+        // appWebAppContext.addServlet(DefaultServlet.class, "/*");
         final String[] ALL_URLS = {"/*"};
-        FilterHolder[] filterHolders =
-                webAppContext.getServletHandler().getFilters();
+        FilterHolder[] filterHolders = webAppContext.getServletHandler().getFilters();
         for (FilterHolder filterHolder : filterHolders) {
             if (!"guice".equals(filterHolder.getName())) {
-                HttpServer2.defineFilter(appWebAppContext, filterHolder.getName(),
-                        filterHolder.getClassName(), filterHolder.getInitParameters(),
+                HttpServer2.defineFilter(
+                        appWebAppContext,
+                        filterHolder.getName(),
+                        filterHolder.getClassName(),
+                        filterHolder.getInitParameters(),
                         ALL_URLS);
             }
         }
@@ -149,8 +148,8 @@ public class HistoryClientService extends AbstractService {
         }
 
         String connectHost = HboxWebAppUtil.getJHSWebappURLWithoutScheme(conf).split(":")[0];
-        HboxWebAppUtil.setJHSWebappURLWithoutScheme(conf,
-                connectHost + ":" + webApp.getListenerAddress().getPort());
+        HboxWebAppUtil.setJHSWebappURLWithoutScheme(
+                conf, connectHost + ":" + webApp.getListenerAddress().getPort());
     }
 
     @Override
@@ -169,7 +168,6 @@ public class HistoryClientService extends AbstractService {
         return this.bindAddress;
     }
 
-
     private class HSClientProtocolHandler implements HSClientProtocol {
 
         private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
@@ -178,8 +176,7 @@ public class HistoryClientService extends AbstractService {
             return getBindAddress();
         }
 
-        private Job verifyAndGetJob(final JobId jobID, boolean exceptionThrow)
-                throws IOException {
+        private Job verifyAndGetJob(final JobId jobID, boolean exceptionThrow) throws IOException {
             UserGroupInformation loginUgi = null;
             Job job = null;
             try {
@@ -208,8 +205,7 @@ public class HistoryClientService extends AbstractService {
         }
 
         @Override
-        public GetCountersResponse getCounters(GetCountersRequest request)
-                throws IOException {
+        public GetCountersResponse getCounters(GetCountersRequest request) throws IOException {
             JobId jobId = request.getJobId();
             Job job = verifyAndGetJob(jobId, true);
             GetCountersResponse response = recordFactory.newRecordInstance(GetCountersResponse.class);
@@ -218,8 +214,7 @@ public class HistoryClientService extends AbstractService {
         }
 
         @Override
-        public GetJobReportResponse getJobReport(GetJobReportRequest request)
-                throws IOException {
+        public GetJobReportResponse getJobReport(GetJobReportRequest request) throws IOException {
             JobId jobId = request.getJobId();
             Job job = verifyAndGetJob(jobId, false);
             GetJobReportResponse response = recordFactory.newRecordInstance(GetJobReportResponse.class);
@@ -232,18 +227,19 @@ public class HistoryClientService extends AbstractService {
         }
 
         @Override
-        public GetTaskAttemptReportResponse getTaskAttemptReport(
-                GetTaskAttemptReportRequest request) throws IOException {
+        public GetTaskAttemptReportResponse getTaskAttemptReport(GetTaskAttemptReportRequest request)
+                throws IOException {
             TaskAttemptId taskAttemptId = request.getTaskAttemptId();
             Job job = verifyAndGetJob(taskAttemptId.getTaskId().getJobId(), true);
             GetTaskAttemptReportResponse response = recordFactory.newRecordInstance(GetTaskAttemptReportResponse.class);
-            response.setTaskAttemptReport(job.getTask(taskAttemptId.getTaskId()).getAttempt(taskAttemptId).getReport());
+            response.setTaskAttemptReport(job.getTask(taskAttemptId.getTaskId())
+                    .getAttempt(taskAttemptId)
+                    .getReport());
             return response;
         }
 
         @Override
-        public GetTaskReportResponse getTaskReport(GetTaskReportRequest request)
-                throws IOException {
+        public GetTaskReportResponse getTaskReport(GetTaskReportRequest request) throws IOException {
             TaskId taskId = request.getTaskId();
             Job job = verifyAndGetJob(taskId.getJobId(), true);
             GetTaskReportResponse response = recordFactory.newRecordInstance(GetTaskReportResponse.class);
@@ -252,15 +248,15 @@ public class HistoryClientService extends AbstractService {
         }
 
         @Override
-        public GetTaskAttemptCompletionEventsResponse
-        getTaskAttemptCompletionEvents(
+        public GetTaskAttemptCompletionEventsResponse getTaskAttemptCompletionEvents(
                 GetTaskAttemptCompletionEventsRequest request) throws IOException {
             JobId jobId = request.getJobId();
             int fromEventId = request.getFromEventId();
             int maxEvents = request.getMaxEvents();
 
             Job job = verifyAndGetJob(jobId, true);
-            GetTaskAttemptCompletionEventsResponse response = recordFactory.newRecordInstance(GetTaskAttemptCompletionEventsResponse.class);
+            GetTaskAttemptCompletionEventsResponse response =
+                    recordFactory.newRecordInstance(GetTaskAttemptCompletionEventsResponse.class);
             response.addAllCompletionEvents(Arrays.asList(job.getTaskAttemptCompletionEvents(fromEventId, maxEvents)));
             return response;
         }
@@ -271,38 +267,35 @@ public class HistoryClientService extends AbstractService {
         }
 
         @Override
-        public KillTaskResponse killTask(KillTaskRequest request)
-                throws IOException {
+        public KillTaskResponse killTask(KillTaskRequest request) throws IOException {
             throw new IOException("Invalid operation on completed job");
         }
 
         @Override
-        public KillTaskAttemptResponse killTaskAttempt(
-                KillTaskAttemptRequest request) throws IOException {
+        public KillTaskAttemptResponse killTaskAttempt(KillTaskAttemptRequest request) throws IOException {
             throw new IOException("Invalid operation on completed job");
         }
 
         @Override
-        public GetDiagnosticsResponse getDiagnostics(GetDiagnosticsRequest request)
-                throws IOException {
+        public GetDiagnosticsResponse getDiagnostics(GetDiagnosticsRequest request) throws IOException {
             TaskAttemptId taskAttemptId = request.getTaskAttemptId();
 
             Job job = verifyAndGetJob(taskAttemptId.getTaskId().getJobId(), true);
 
             GetDiagnosticsResponse response = recordFactory.newRecordInstance(GetDiagnosticsResponse.class);
-            response.addAllDiagnostics(job.getTask(taskAttemptId.getTaskId()).getAttempt(taskAttemptId).getDiagnostics());
+            response.addAllDiagnostics(job.getTask(taskAttemptId.getTaskId())
+                    .getAttempt(taskAttemptId)
+                    .getDiagnostics());
             return response;
         }
 
         @Override
-        public FailTaskAttemptResponse failTaskAttempt(
-                FailTaskAttemptRequest request) throws IOException {
+        public FailTaskAttemptResponse failTaskAttempt(FailTaskAttemptRequest request) throws IOException {
             throw new IOException("Invalid operation on completed job");
         }
 
         @Override
-        public GetTaskReportsResponse getTaskReports(GetTaskReportsRequest request)
-                throws IOException {
+        public GetTaskReportsResponse getTaskReports(GetTaskReportsRequest request) throws IOException {
             JobId jobId = request.getJobId();
             TaskType taskType = request.getTaskType();
 
@@ -316,19 +309,16 @@ public class HistoryClientService extends AbstractService {
         }
 
         @Override
-        public GetDelegationTokenResponse getDelegationToken(
-                GetDelegationTokenRequest request) throws IOException {
+        public GetDelegationTokenResponse getDelegationToken(GetDelegationTokenRequest request) throws IOException {
 
             UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
             // Verify that the connection is kerberos authenticated
             if (!isAllowedDelegationTokenOp()) {
-                throw new IOException(
-                        "Delegation Token can be issued only with kerberos authentication");
+                throw new IOException("Delegation Token can be issued only with kerberos authentication");
             }
 
-            GetDelegationTokenResponse response = recordFactory.newRecordInstance(
-                    GetDelegationTokenResponse.class);
+            GetDelegationTokenResponse response = recordFactory.newRecordInstance(GetDelegationTokenResponse.class);
 
             String user = ugi.getUserName();
             Text owner = new Text(user);
@@ -337,64 +327,57 @@ public class HistoryClientService extends AbstractService {
                 realUser = new Text(ugi.getRealUser().getUserName());
             }
             MRDelegationTokenIdentifier tokenIdentifier =
-                    new MRDelegationTokenIdentifier(owner, new Text(
-                            request.getRenewer()), realUser);
+                    new MRDelegationTokenIdentifier(owner, new Text(request.getRenewer()), realUser);
             Token<MRDelegationTokenIdentifier> realJHSToken =
-                    new Token<MRDelegationTokenIdentifier>(tokenIdentifier,
-                            jhsDTSecretManager);
-            org.apache.hadoop.yarn.api.records.Token mrDToken =
-                    org.apache.hadoop.yarn.api.records.Token.newInstance(
-                            realJHSToken.getIdentifier(), realJHSToken.getKind().toString(),
-                            realJHSToken.getPassword(), realJHSToken.getService().toString());
+                    new Token<MRDelegationTokenIdentifier>(tokenIdentifier, jhsDTSecretManager);
+            org.apache.hadoop.yarn.api.records.Token mrDToken = org.apache.hadoop.yarn.api.records.Token.newInstance(
+                    realJHSToken.getIdentifier(), realJHSToken.getKind().toString(),
+                    realJHSToken.getPassword(), realJHSToken.getService().toString());
             response.setDelegationToken(mrDToken);
             return response;
         }
 
         @Override
-        public RenewDelegationTokenResponse renewDelegationToken(
-                RenewDelegationTokenRequest request) throws IOException {
+        public RenewDelegationTokenResponse renewDelegationToken(RenewDelegationTokenRequest request)
+                throws IOException {
             if (!isAllowedDelegationTokenOp()) {
-                throw new IOException(
-                        "Delegation Token can be renewed only with kerberos authentication");
+                throw new IOException("Delegation Token can be renewed only with kerberos authentication");
             }
 
             org.apache.hadoop.yarn.api.records.Token protoToken = request.getDelegationToken();
-            Token<MRDelegationTokenIdentifier> token =
-                    new Token<MRDelegationTokenIdentifier>(
-                            protoToken.getIdentifier().array(), protoToken.getPassword()
-                            .array(), new Text(protoToken.getKind()), new Text(
-                            protoToken.getService()));
+            Token<MRDelegationTokenIdentifier> token = new Token<MRDelegationTokenIdentifier>(
+                    protoToken.getIdentifier().array(),
+                    protoToken.getPassword().array(),
+                    new Text(protoToken.getKind()),
+                    new Text(protoToken.getService()));
 
             String user = UserGroupInformation.getCurrentUser().getShortUserName();
             long nextExpTime = jhsDTSecretManager.renewToken(token, user);
-            RenewDelegationTokenResponse renewResponse = Records
-                    .newRecord(RenewDelegationTokenResponse.class);
+            RenewDelegationTokenResponse renewResponse = Records.newRecord(RenewDelegationTokenResponse.class);
             renewResponse.setNextExpirationTime(nextExpTime);
             return renewResponse;
         }
 
         @Override
-        public CancelDelegationTokenResponse cancelDelegationToken(
-                CancelDelegationTokenRequest request) throws IOException {
+        public CancelDelegationTokenResponse cancelDelegationToken(CancelDelegationTokenRequest request)
+                throws IOException {
             if (!isAllowedDelegationTokenOp()) {
-                throw new IOException(
-                        "Delegation Token can be cancelled only with kerberos authentication");
+                throw new IOException("Delegation Token can be cancelled only with kerberos authentication");
             }
 
             org.apache.hadoop.yarn.api.records.Token protoToken = request.getDelegationToken();
-            Token<MRDelegationTokenIdentifier> token =
-                    new Token<MRDelegationTokenIdentifier>(
-                            protoToken.getIdentifier().array(), protoToken.getPassword()
-                            .array(), new Text(protoToken.getKind()), new Text(
-                            protoToken.getService()));
+            Token<MRDelegationTokenIdentifier> token = new Token<MRDelegationTokenIdentifier>(
+                    protoToken.getIdentifier().array(),
+                    protoToken.getPassword().array(),
+                    new Text(protoToken.getKind()),
+                    new Text(protoToken.getService()));
 
             String user = UserGroupInformation.getCurrentUser().getUserName();
             jhsDTSecretManager.cancelToken(token, user);
             return Records.newRecord(CancelDelegationTokenResponse.class);
         }
 
-        private void checkAccess(Job job, JobACL jobOperation)
-                throws IOException {
+        private void checkAccess(Job job, JobACL jobOperation) throws IOException {
 
             UserGroupInformation callerUGI;
             callerUGI = UserGroupInformation.getCurrentUser();
@@ -408,11 +391,11 @@ public class HistoryClientService extends AbstractService {
 
         private boolean isAllowedDelegationTokenOp() throws IOException {
             if (UserGroupInformation.isSecurityEnabled()) {
-                return EnumSet.of(UserGroupInformation.AuthenticationMethod.KERBEROS,
-                        UserGroupInformation.AuthenticationMethod.KERBEROS_SSL,
-                        UserGroupInformation.AuthenticationMethod.CERTIFICATE)
-                        .contains(UserGroupInformation.getCurrentUser()
-                                .getRealAuthenticationMethod());
+                return EnumSet.of(
+                                UserGroupInformation.AuthenticationMethod.KERBEROS,
+                                UserGroupInformation.AuthenticationMethod.KERBEROS_SSL,
+                                UserGroupInformation.AuthenticationMethod.CERTIFICATE)
+                        .contains(UserGroupInformation.getCurrentUser().getRealAuthenticationMethod());
             } else {
                 return true;
             }

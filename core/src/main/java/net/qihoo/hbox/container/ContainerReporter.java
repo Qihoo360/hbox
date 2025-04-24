@@ -1,16 +1,6 @@
 package net.qihoo.hbox.container;
 
 import com.google.gson.Gson;
-import net.qihoo.hbox.api.ApplicationContainerProtocol;
-import net.qihoo.hbox.util.Utilities;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,12 +11,19 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import net.qihoo.hbox.api.ApplicationContainerProtocol;
+import net.qihoo.hbox.util.Utilities;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 
 /**
  * Created by ouyangwen-it on 2017/11/30.
  */
-
-
 public class ContainerReporter extends Thread {
     private static final Log LOG = LogFactory.getLog(ContainerReporter.class);
 
@@ -52,9 +49,13 @@ public class ContainerReporter extends Thread {
 
     private ConcurrentHashMap<String, List> cpuMetrics;
 
-
-    public ContainerReporter(ApplicationContainerProtocol protocol, Configuration conf,
-                             HboxContainerId hboxContainerId, String gpuStr, String hboxCmdProcessId, Boolean dockerFlag) {
+    public ContainerReporter(
+            ApplicationContainerProtocol protocol,
+            Configuration conf,
+            HboxContainerId hboxContainerId,
+            String gpuStr,
+            String hboxCmdProcessId,
+            Boolean dockerFlag) {
         this.protocol = protocol;
         this.conf = conf;
         this.containerId = hboxContainerId;
@@ -62,8 +63,8 @@ public class ContainerReporter extends Thread {
         this.hboxCmdProcessId = hboxCmdProcessId;
         this.dockerFlag = dockerFlag;
         this.containerProcessId = null;
-        this.processTreeClass = conf.getClass(YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE, null,
-                ResourceCalculatorProcessTree.class);
+        this.processTreeClass = conf.getClass(
+                YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE, null, ResourceCalculatorProcessTree.class);
         this.gpuMemoryUsed = new ConcurrentHashMap<>();
         this.gpuUtilization = new ConcurrentHashMap<>();
         this.cpuMetrics = new ConcurrentHashMap<>();
@@ -114,9 +115,14 @@ public class ContainerReporter extends Thread {
         private int cpuVcores;
         private int gpuCores;
 
-        public ProcessTreeInfo(ContainerId containerId, String pid,
-                               ResourceCalculatorProcessTree pTree, long vmemLimit, long pmemLimit,
-                               int cpuVcores, int gpuCores) {
+        public ProcessTreeInfo(
+                ContainerId containerId,
+                String pid,
+                ResourceCalculatorProcessTree pTree,
+                long vmemLimit,
+                long pmemLimit,
+                int cpuVcores,
+                int gpuCores) {
             this.containerId = containerId;
             this.pid = pid;
             this.pTree = pTree;
@@ -249,10 +255,9 @@ public class ContainerReporter extends Thread {
         }
         LOG.info("containerProcessId is:" + this.containerProcessId);
         ProcessTreeInfo processTreeInfo =
-                new ProcessTreeInfo(this.containerId.getContainerId(),
-                        null, null, 0, 0, 0, 0);
-        ResourceCalculatorProcessTree pt =
-                ResourceCalculatorProcessTree.getResourceCalculatorProcessTree(this.containerProcessId, this.processTreeClass, conf);
+                new ProcessTreeInfo(this.containerId.getContainerId(), null, null, 0, 0, 0, 0);
+        ResourceCalculatorProcessTree pt = ResourceCalculatorProcessTree.getResourceCalculatorProcessTree(
+                this.containerProcessId, this.processTreeClass, conf);
         processTreeInfo.setPid(this.containerProcessId);
         processTreeInfo.setProcessTree(pt);
         final ResourceCalculatorProcessTree pTree = processTreeInfo.getProcessTree();
@@ -266,7 +271,8 @@ public class ContainerReporter extends Thread {
                     while (true) {
                         pTree.updateProcessTree();
                         Long time = (new Date()).getTime();
-                        double currentPmemUsage = Double.parseDouble(df.format(pTree.getRssMemorySize() / 1024.0 / 1024.0 / 1024.0));
+                        double currentPmemUsage =
+                                Double.parseDouble(df.format(pTree.getRssMemorySize() / 1024.0 / 1024.0 / 1024.0));
                         int cpuUsagePercentPerCore = (int) pTree.getCpuUsagePercent();
                         if (cpuUsagePercentPerCore < 0) {
                             cpuUsagePercentPerCore = 0;
@@ -291,7 +297,6 @@ public class ContainerReporter extends Thread {
             }
         });
         cpuMetricsThread.start();
-
     }
 
     private void produceVPCCpuMetrics() throws IOException {
@@ -313,9 +318,14 @@ public class ContainerReporter extends Thread {
                             String[] topInfo = StringUtils.split(line.trim(), ' ');
                             if (topInfo.length > 0 && topInfo[1].toLowerCase().equals("root")) {
                                 if (topInfo[5].trim().contains("g")) {
-                                    currentPmemUsage += Double.parseDouble(topInfo[5].trim().split("g")[0].trim());
+                                    currentPmemUsage += Double.parseDouble(
+                                            topInfo[5].trim().split("g")[0].trim());
                                 } else if (topInfo[5].trim().contains("m")) {
-                                    currentPmemUsage += Double.parseDouble(topInfo[5].trim().split("g")[0].trim()) / 1024.0;
+                                    currentPmemUsage += Double.parseDouble(topInfo[5]
+                                                    .trim()
+                                                    .split("g")[0]
+                                                    .trim())
+                                            / 1024.0;
                                 } else {
                                     currentPmemUsage += Double.parseDouble(topInfo[5].trim()) / 1024.0 / 1024.0;
                                 }
@@ -346,6 +356,4 @@ public class ContainerReporter extends Thread {
         });
         stdoutRedirectThread.start();
     }
-
-
 }

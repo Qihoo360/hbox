@@ -2,40 +2,6 @@ package net.qihoo.hbox.AM;
 
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.gson.Gson;
-import net.qihoo.hbox.api.HboxConstants;
-import net.qihoo.hbox.common.*;
-import net.qihoo.hbox.common.exceptions.HboxExecException;
-import net.qihoo.hbox.conf.HboxConfiguration;
-import net.qihoo.hbox.conf.HboxConfiguration2;
-import net.qihoo.hbox.container.HboxContainer;
-import net.qihoo.hbox.container.HboxContainerId;
-import net.qihoo.hbox.storage.AmazonS3;
-import net.qihoo.hbox.storage.S3File;
-import net.qihoo.hbox.util.ShellEscapeUtils;
-import net.qihoo.hbox.util.Utilities;
-import net.qihoo.hbox.util.HboxVersion;
-import net.qihoo.hbox.webapp.ApplicationWebService;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.mapred.InputFormat;
-import org.apache.hadoop.mapred.InputSplit;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.service.CompositeService;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.*;
-import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
-import org.apache.hadoop.yarn.client.api.AMRMClient;
-import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
-import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.util.Records;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -53,6 +19,39 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
+import net.qihoo.hbox.api.HboxConstants;
+import net.qihoo.hbox.common.*;
+import net.qihoo.hbox.common.exceptions.HboxExecException;
+import net.qihoo.hbox.conf.HboxConfiguration;
+import net.qihoo.hbox.conf.HboxConfiguration2;
+import net.qihoo.hbox.container.HboxContainer;
+import net.qihoo.hbox.container.HboxContainerId;
+import net.qihoo.hbox.storage.AmazonS3;
+import net.qihoo.hbox.storage.S3File;
+import net.qihoo.hbox.util.HboxVersion;
+import net.qihoo.hbox.util.ShellEscapeUtils;
+import net.qihoo.hbox.util.Utilities;
+import net.qihoo.hbox.webapp.ApplicationWebService;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapred.InputSplit;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.records.*;
+import org.apache.hadoop.yarn.client.api.AMRMClient;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
+import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.util.Records;
 
 public class ApplicationMaster extends CompositeService {
 
@@ -97,7 +96,7 @@ public class ApplicationMaster extends CompositeService {
     private String appCacheFilesRemoteLocation;
     // location of cacheArchive on HDFS
     private String appCacheArchivesRemoteLocation;
-    final private String[] hboxCommandArgs;
+    private final String[] hboxCommandArgs;
     private String dmlcPsRootUri;
     private int dmlcPsRootPort;
     private String dmlcTrackerUri;
@@ -149,7 +148,7 @@ public class ApplicationMaster extends CompositeService {
     private Boolean tfEvaluator;
     private String chiefWorkerContainerId;
     private String tfEvaluatorContainerId;
-    //input local dir
+    // input local dir
     private StringBuilder inputPath;
     private List<String> inputList;
 
@@ -175,7 +174,6 @@ public class ApplicationMaster extends CompositeService {
      *
      * @throws IOException
      */
-
     private ApplicationMaster(final String[] args) {
         super(ApplicationMaster.class.getName());
         conf = new HboxConfiguration();
@@ -187,7 +185,8 @@ public class ApplicationMaster extends CompositeService {
         wholeFiles = new ConcurrentHashMap<>();
         inputFileSplits = null;
         containerId2InputSplit = new ConcurrentHashMap<>();
-        statusUpdateInterval = conf.getInt(HboxConfiguration.HBOX_STATUS_UPDATE_INTERVAL, HboxConfiguration.DEFAULT_HBOX_STATUS_PULL_INTERVAL);
+        statusUpdateInterval = conf.getInt(
+                HboxConfiguration.HBOX_STATUS_UPDATE_INTERVAL, HboxConfiguration.DEFAULT_HBOX_STATUS_PULL_INTERVAL);
         applicationAttemptID = Records.newRecord(ApplicationAttemptId.class);
         applicationMessageQueue = new LinkedBlockingQueue<>(
                 conf.getInt(HboxConfiguration.HBOX_MESSAGES_LEN_MAX, HboxConfiguration.DEFAULT_HBOX_MESSAGES_LEN_MAX));
@@ -197,8 +196,10 @@ public class ApplicationMaster extends CompositeService {
         envs = System.getenv();
         maxContainerMem = Integer.parseInt(envs.get(HboxConstants.Environment.HBOX_CONTAINER_MAX_MEMORY.toString()));
         workerMemory = conf.getInt(HboxConfiguration.HBOX_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
-        chiefWorkerMemory = conf.getInt(HboxConfiguration.HBOX_CHIEF_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
-        evaluatorWorkerMemory = conf.getInt(HboxConfiguration.HBOX_EVALUATOR_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
+        chiefWorkerMemory =
+                conf.getInt(HboxConfiguration.HBOX_CHIEF_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
+        evaluatorWorkerMemory = conf.getInt(
+                HboxConfiguration.HBOX_EVALUATOR_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY);
         workerVCores = conf.getInt(HboxConfiguration.HBOX_WORKER_VCORES, HboxConfiguration.DEFAULT_HBOX_WORKER_VCORES);
         workerGCores = conf.getInt(HboxConfiguration.HBOX_WORKER_GPU, HboxConfiguration.DEFAULT_HBOX_WORKER_GPU);
         workerNum = conf.getInt(HboxConfiguration.HBOX_WORKER_NUM, HboxConfiguration.DEFAULT_HBOX_WORKER_NUM);
@@ -212,7 +213,8 @@ public class ApplicationMaster extends CompositeService {
             chiefWorker = false;
         }
         single = conf.getBoolean(HboxConfiguration.HBOX_TF_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_TF_MODE_SINGLE);
-        singleMx = conf.getBoolean(HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE);
+        singleMx = conf.getBoolean(
+                HboxConfiguration.HBOX_MXNET_MODE_SINGLE, HboxConfiguration.DEFAULT_HBOX_MXNET_MODE_SINGLE);
         appPriority = conf.getInt(HboxConfiguration.HBOX_APP_PRIORITY, HboxConfiguration.DEFAULT_HBOX_APP_PRIORITY);
         tfEvaluator = conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR);
         tfEvaluatorContainerId = "";
@@ -240,16 +242,17 @@ public class ApplicationMaster extends CompositeService {
         containerStarted = false;
         outputIndex = -1;
 
-        reservePortBegin = this.conf.getInt(HboxConfiguration.HBOX_RESERVE_PORT_BEGIN, HboxConfiguration.DEFAULT_HBOX_RESERVE_PORT_BEGIN);
-        reservePortEnd = this.conf.getInt(HboxConfiguration.HBOX_RESERVE_PORT_END, HboxConfiguration.DEFAULT_HBOX_RESERVE_PORT_END);
+        reservePortBegin = this.conf.getInt(
+                HboxConfiguration.HBOX_RESERVE_PORT_BEGIN, HboxConfiguration.DEFAULT_HBOX_RESERVE_PORT_BEGIN);
+        reservePortEnd = this.conf.getInt(
+                HboxConfiguration.HBOX_RESERVE_PORT_END, HboxConfiguration.DEFAULT_HBOX_RESERVE_PORT_END);
 
         if (envs.containsKey(ApplicationConstants.Environment.CONTAINER_ID.toString())) {
             amContainerId = envs.get(ApplicationConstants.Environment.CONTAINER_ID.toString());
             ContainerId containerId = ContainerId.fromString(amContainerId);
             applicationAttemptID = containerId.getApplicationAttemptId();
         } else {
-            throw new IllegalArgumentException(
-                    "Application Attempt Id is not availiable in environment");
+            throw new IllegalArgumentException("Application Attempt Id is not availiable in environment");
         }
 
         LOG.info("Application appId="
@@ -258,7 +261,8 @@ public class ApplicationMaster extends CompositeService {
                 + applicationAttemptID.getApplicationId().getClusterTimestamp()
                 + ", attemptId=" + applicationAttemptID.getAttemptId());
 
-        containerType = this.conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE);
+        containerType =
+                this.conf.get(HboxConfiguration.HBOX_CONTAINER_TYPE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_TYPE);
         LOG.info("Current container type: " + this.containerType);
         if (containerType.equalsIgnoreCase("docker")) {
             processLaunch = new DockerLaunch(amContainerId, conf);
@@ -286,36 +290,76 @@ public class ApplicationMaster extends CompositeService {
             processLaunch = new YarnLaunch(amContainerId);
         }
 
-        if (applicationAttemptID.getAttemptId() > 1 && (conf.getInt(HboxConfiguration.HBOX_APP_MAX_ATTEMPTS, HboxConfiguration.DEFAULT_HBOX_APP_MAX_ATTEMPTS) > 1)) {
-            workerMemory = workerMemory + (applicationAttemptID.getAttemptId() - 1) * (int) Math.ceil(workerMemory * conf.getDouble(HboxConfiguration.HBOX_WORKER_MEM_AUTO_SCALE, HboxConfiguration.DEFAULT_HBOX_WORKER_MEM_AUTO_SCALE));
+        if (applicationAttemptID.getAttemptId() > 1
+                && (conf.getInt(
+                                HboxConfiguration.HBOX_APP_MAX_ATTEMPTS,
+                                HboxConfiguration.DEFAULT_HBOX_APP_MAX_ATTEMPTS)
+                        > 1)) {
+            workerMemory = workerMemory
+                    + (applicationAttemptID.getAttemptId() - 1)
+                            * (int) Math.ceil(workerMemory
+                                    * conf.getDouble(
+                                            HboxConfiguration.HBOX_WORKER_MEM_AUTO_SCALE,
+                                            HboxConfiguration.DEFAULT_HBOX_WORKER_MEM_AUTO_SCALE));
             if (workerMemory > maxContainerMem) {
                 workerMemory = maxContainerMem;
             }
-            LOG.info("Auto Scale the Worker Memory from " + conf.getInt(HboxConfiguration.HBOX_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY) + " to " + workerMemory);
+            LOG.info("Auto Scale the Worker Memory from "
+                    + conf.getInt(HboxConfiguration.HBOX_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY)
+                    + " to " + workerMemory);
             chiefWorkerMemory = workerMemory;
             evaluatorWorkerMemory = workerMemory;
             if (chiefWorker) {
-                chiefWorkerMemory = chiefWorkerMemory + (applicationAttemptID.getAttemptId() - 1) * (int) Math.ceil(chiefWorkerMemory * conf.getDouble(HboxConfiguration.HBOX_WORKER_MEM_AUTO_SCALE, HboxConfiguration.DEFAULT_HBOX_WORKER_MEM_AUTO_SCALE));
+                chiefWorkerMemory = chiefWorkerMemory
+                        + (applicationAttemptID.getAttemptId() - 1)
+                                * (int) Math.ceil(chiefWorkerMemory
+                                        * conf.getDouble(
+                                                HboxConfiguration.HBOX_WORKER_MEM_AUTO_SCALE,
+                                                HboxConfiguration.DEFAULT_HBOX_WORKER_MEM_AUTO_SCALE));
                 if (chiefWorkerMemory > maxContainerMem) {
                     chiefWorkerMemory = maxContainerMem;
                 }
-                LOG.info("Auto Scale the chief Worker Memory from " + conf.getInt(HboxConfiguration.HBOX_CHIEF_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY) + " to " + chiefWorkerMemory);
+                LOG.info("Auto Scale the chief Worker Memory from "
+                        + conf.getInt(
+                                HboxConfiguration.HBOX_CHIEF_WORKER_MEMORY,
+                                HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY)
+                        + " to " + chiefWorkerMemory);
             }
             if (tfEvaluator) {
-                if (conf.getInt(HboxConfiguration.HBOX_EVALUATOR_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY) != conf.getInt(HboxConfiguration.HBOX_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY)) {
-                    evaluatorWorkerMemory = evaluatorWorkerMemory + (applicationAttemptID.getAttemptId() - 1) * (int) Math.ceil(evaluatorWorkerMemory * conf.getDouble(HboxConfiguration.HBOX_WORKER_MEM_AUTO_SCALE, HboxConfiguration.DEFAULT_HBOX_WORKER_MEM_AUTO_SCALE));
+                if (conf.getInt(
+                                HboxConfiguration.HBOX_EVALUATOR_WORKER_MEMORY,
+                                HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY)
+                        != conf.getInt(
+                                HboxConfiguration.HBOX_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY)) {
+                    evaluatorWorkerMemory = evaluatorWorkerMemory
+                            + (applicationAttemptID.getAttemptId() - 1)
+                                    * (int) Math.ceil(evaluatorWorkerMemory
+                                            * conf.getDouble(
+                                                    HboxConfiguration.HBOX_WORKER_MEM_AUTO_SCALE,
+                                                    HboxConfiguration.DEFAULT_HBOX_WORKER_MEM_AUTO_SCALE));
                     if (evaluatorWorkerMemory > maxContainerMem) {
                         evaluatorWorkerMemory = maxContainerMem;
                     }
-                    LOG.info("Auto Scale the evaluator Worker Memory from " + conf.getInt(HboxConfiguration.HBOX_EVALUATOR_WORKER_MEMORY, HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY) + " to " + chiefWorkerMemory);
+                    LOG.info("Auto Scale the evaluator Worker Memory from "
+                            + conf.getInt(
+                                    HboxConfiguration.HBOX_EVALUATOR_WORKER_MEMORY,
+                                    HboxConfiguration.DEFAULT_HBOX_WORKER_MEMORY)
+                            + " to " + chiefWorkerMemory);
                 }
             }
             if (psNum > 0) {
-                psMemory = psMemory + (applicationAttemptID.getAttemptId() - 1) * (int) Math.ceil(psMemory * conf.getDouble(HboxConfiguration.HBOX_PS_MEM_AUTO_SCALE, HboxConfiguration.DEFAULT_HBOX_PS_MEM_AUTO_SCALE));
+                psMemory = psMemory
+                        + (applicationAttemptID.getAttemptId() - 1)
+                                * (int) Math.ceil(psMemory
+                                        * conf.getDouble(
+                                                HboxConfiguration.HBOX_PS_MEM_AUTO_SCALE,
+                                                HboxConfiguration.DEFAULT_HBOX_PS_MEM_AUTO_SCALE));
                 if (psMemory > maxContainerMem) {
                     psMemory = maxContainerMem;
                 }
-                LOG.info("Auto Scale the Ps Memory from " + conf.getInt(HboxConfiguration.HBOX_PS_MEMORY, HboxConfiguration.DEFAULT_HBOX_PS_MEMORY) + " to " + psMemory);
+                LOG.info("Auto Scale the Ps Memory from "
+                        + conf.getInt(HboxConfiguration.HBOX_PS_MEMORY, HboxConfiguration.DEFAULT_HBOX_PS_MEMORY)
+                        + " to " + psMemory);
             }
         }
 
@@ -356,16 +400,18 @@ public class ApplicationMaster extends CompositeService {
         LOG.info("Hbox exec command: " + String.join(" ", hboxCommandArgs));
 
         if (envs.containsKey(HboxConstants.Environment.HBOX_APP_TYPE.toString())) {
-            hboxAppType = envs.get(HboxConstants.Environment.HBOX_APP_TYPE.toString()).toUpperCase();
+            hboxAppType =
+                    envs.get(HboxConstants.Environment.HBOX_APP_TYPE.toString()).toUpperCase();
             LOG.info("Hbox app type: " + hboxAppType);
         } else {
             hboxAppType = HboxConfiguration.DEFAULT_HBOX_APP_TYPE.toUpperCase();
             LOG.info("Hbox app type: " + hboxAppType);
         }
 
-        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
             mpiExecDir = envs.get("PWD");
-            if (conf.getBoolean(HboxConfiguration.HBOX_MPI_EXEC_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR_ENABLE)) {
+            if (conf.getBoolean(
+                    HboxConfiguration.HBOX_MPI_EXEC_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR_ENABLE)) {
                 mpiExecDir = conf.get(HboxConfiguration.HBOX_MPI_EXEC_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_EXEC_DIR);
             }
             LOG.info(hboxAppType + " exec path: " + mpiExecDir);
@@ -387,7 +433,9 @@ public class ApplicationMaster extends CompositeService {
         this.startSavingModel = false;
         this.lastSavingStatus = false;
         this.savingModelList = new ArrayList<>();
-        this.savingInterval = conf.getInt(HboxConfiguration.HBOX_INTERRESULT_UPLOAD_INTERVAL, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_UPLOAD_INTERVAL);
+        this.savingInterval = conf.getInt(
+                HboxConfiguration.HBOX_INTERRESULT_UPLOAD_INTERVAL,
+                HboxConfiguration.DEFAULT_HBOX_INTERRESULT_UPLOAD_INTERVAL);
     }
 
     private void init() {
@@ -414,11 +462,12 @@ public class ApplicationMaster extends CompositeService {
         }
 
         applicationMasterTrackingUrl = "http://" + applicationMasterHostname + ":" + this.webService.getHttpPort();
-        String historyWebappAddress = conf.get(HboxConfiguration.HBOX_HISTORY_WEBAPP_ADDRESS,
-                HboxConfiguration.DEFAULT_HBOX_HISTORY_WEBAPP_ADDRESS);
+        String historyWebappAddress = conf.get(
+                HboxConfiguration.HBOX_HISTORY_WEBAPP_ADDRESS, HboxConfiguration.DEFAULT_HBOX_HISTORY_WEBAPP_ADDRESS);
         String cluster = conf.get(HboxConfiguration.HBOX_CLUSTER_NAME, HboxConfiguration.DEFAULT_HBOX_CLUSTER_NAME);
         if (!cluster.equals("")) {
-            String clusterHistoryWebappAddress = conf.get(HboxConfiguration.HBOX_CLUSTER_HISTORY_WEBAPP_ADDRESS.replace("cluster.name", cluster));
+            String clusterHistoryWebappAddress =
+                    conf.get(HboxConfiguration.HBOX_CLUSTER_HISTORY_WEBAPP_ADDRESS.replace("cluster.name", cluster));
             if (clusterHistoryWebappAddress == null || clusterHistoryWebappAddress.equals("")) {
                 LOG.warn("Note that not set the cluster history webaddress.");
             } else {
@@ -426,8 +475,8 @@ public class ApplicationMaster extends CompositeService {
                 LOG.info("History webApp address has updated! ");
             }
         }
-        applicationHistoryUrl = "http://" + historyWebappAddress + "/jobhistory/job/"
-                + applicationAttemptID.getApplicationId();
+        applicationHistoryUrl =
+                "http://" + historyWebappAddress + "/jobhistory/job/" + applicationAttemptID.getApplicationId();
         LOG.info("master tracking url: " + applicationMasterTrackingUrl);
         LOG.info("history url: " + applicationHistoryUrl);
 
@@ -438,7 +487,8 @@ public class ApplicationMaster extends CompositeService {
                 hboxConf.setBoolean("fs.hdfs.impl.disable.cache", true);
                 hboxConf.setBoolean("fs.hdfsold.impl.disable.cache", true);
 
-                if (hboxConf.getBoolean(HboxConfiguration.HBOX_CLEANUP_ENABLE, HboxConfiguration.DEFAULT_HBOX_CLEANUP_ENABLE)) {
+                if (hboxConf.getBoolean(
+                        HboxConfiguration.HBOX_CLEANUP_ENABLE, HboxConfiguration.DEFAULT_HBOX_CLEANUP_ENABLE)) {
                     Path stagingDir = new Path(envs.get(HboxConstants.Environment.HBOX_STAGING_LOCATION.toString()));
                     try {
                         FileSystem stagingFS = FileSystem.get(hboxConf);
@@ -451,8 +501,10 @@ public class ApplicationMaster extends CompositeService {
 
                 try {
                     FsPermission LOG_FILE_PERMISSION = FsPermission.createImmutable((short) 0777);
-                    Path logdir = new Path(conf.get(HboxConfiguration.HBOX_HISTORY_LOG_DIR,
-                            HboxConfiguration.DEFAULT_HBOX_HISTORY_LOG_DIR) + "/" + applicationAttemptID.getApplicationId().toString()
+                    Path logdir = new Path(conf.get(
+                                    HboxConfiguration.HBOX_HISTORY_LOG_DIR,
+                                    HboxConfiguration.DEFAULT_HBOX_HISTORY_LOG_DIR)
+                            + "/" + applicationAttemptID.getApplicationId().toString()
                             + "/" + applicationAttemptID.getApplicationId().toString());
                     Path jobLogPath = new Path(hboxConf.get("fs.defaultFS"), logdir);
                     LOG.info("jobLogPath:" + jobLogPath.toString());
@@ -460,15 +512,21 @@ public class ApplicationMaster extends CompositeService {
                     FileSystem fs = FileSystem.get(hboxConf);
                     FSDataOutputStream out = fs.create(jobLogPath);
                     fs.setPermission(jobLogPath, new FsPermission(LOG_FILE_PERMISSION));
-                    if (conf.getBoolean(HboxConfiguration.HBOX_HOST_LOCAL_ENABLE, HboxConfiguration.DEFAULT_HBOX_HOST_LOCAL_ENABLE)) {
-                        Path hostLocaldir = new Path(conf.get(HboxConfiguration.HBOX_HISTORY_LOG_DIR,
-                                HboxConfiguration.DEFAULT_HBOX_HISTORY_LOG_DIR) + "/" + conf.get("hadoop.job.ugi").split(",")[0]
+                    if (conf.getBoolean(
+                            HboxConfiguration.HBOX_HOST_LOCAL_ENABLE,
+                            HboxConfiguration.DEFAULT_HBOX_HOST_LOCAL_ENABLE)) {
+                        Path hostLocaldir = new Path(conf.get(
+                                        HboxConfiguration.HBOX_HISTORY_LOG_DIR,
+                                        HboxConfiguration.DEFAULT_HBOX_HISTORY_LOG_DIR)
+                                + "/" + conf.get("hadoop.job.ugi").split(",")[0]
                                 + "/" + envs.get(HboxConstants.Environment.HBOX_APP_NAME.toString()));
                         Path hostLocalPath = new Path(hboxConf.get("fs.defaultFS"), hostLocaldir);
                         try {
                             FSDataOutputStream hostLocalOut = fs.create(hostLocalPath);
                             fs.setPermission(hostLocalPath, new FsPermission(LOG_FILE_PERMISSION));
-                            hostLocalOut.writeBytes(containerHostnames.toString().substring(1, containerHostnames.toString().length() - 1));
+                            hostLocalOut.writeBytes(containerHostnames
+                                    .toString()
+                                    .substring(1, containerHostnames.toString().length() - 1));
                             hostLocalOut.close();
                             LOG.info("host local enable is true, write " + hostLocalPath.toString() + " success");
                         } catch (Exception e) {
@@ -479,15 +537,35 @@ public class ApplicationMaster extends CompositeService {
                     logMessage.put("appType", Arrays.asList(hboxAppType));
                     if (!(hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS"))) {
                         List<String> tensorboardInfo = new ArrayList<>();
-                        if (conf.getBoolean(HboxConfiguration.HBOX_TF_BOARD_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_ENABLE)) {
+                        if (conf.getBoolean(
+                                HboxConfiguration.HBOX_TF_BOARD_ENABLE,
+                                HboxConfiguration.DEFAULT_HBOX_TF_BOARD_ENABLE)) {
                             Path boardLogPath;
-                            if (!conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR).contains("hdfs://")) {
-                                if (conf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR, HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR).equals(hboxConf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR, HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR))) {
-                                    boardLogPath = new Path(hboxConf.get("fs.defaultFS"), conf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
-                                            HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR) + "/" + applicationAttemptID.getApplicationId().toString());
+                            if (!conf.get(
+                                            HboxConfiguration.HBOX_TF_BOARD_LOG_DIR,
+                                            HboxConfiguration.DEFAULT_HBOX_TF_BOARD_LOG_DIR)
+                                    .contains("hdfs://")) {
+                                if (conf.get(
+                                                HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
+                                                HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR)
+                                        .equals(hboxConf.get(
+                                                HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
+                                                HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR))) {
+                                    boardLogPath = new Path(
+                                            hboxConf.get("fs.defaultFS"),
+                                            conf.get(
+                                                            HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
+                                                            HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR)
+                                                    + "/"
+                                                    + applicationAttemptID
+                                                            .getApplicationId()
+                                                            .toString());
                                 } else {
-                                    boardLogPath = new Path(conf.get("fs.defaultFS"), conf.get(HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
-                                            HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR));
+                                    boardLogPath = new Path(
+                                            conf.get("fs.defaultFS"),
+                                            conf.get(
+                                                    HboxConfiguration.HBOX_TF_BOARD_HISTORY_DIR,
+                                                    HboxConfiguration.DEFAULT_HBOX_TF_BOARD_HISTORY_DIR));
                                 }
                             } else {
                                 boardLogPath = new Path(conf.get(HboxConfiguration.HBOX_TF_BOARD_LOG_DIR));
@@ -503,15 +581,21 @@ public class ApplicationMaster extends CompositeService {
                     List<Container> workerContainers = applicationContext.getWorkerContainers();
                     List<Container> psContainers = applicationContext.getPsContainers();
                     Map<HboxContainerId, String> reporterProgress = applicationContext.getReporterProgress();
-                    Map<HboxContainerId, String> containersAppStartTime = applicationContext.getContainersAppStartTime();
-                    Map<HboxContainerId, String> containersAppFinishTime = applicationContext.getContainersAppFinishTime();
+                    Map<HboxContainerId, String> containersAppStartTime =
+                            applicationContext.getContainersAppStartTime();
+                    Map<HboxContainerId, String> containersAppFinishTime =
+                            applicationContext.getContainersAppFinishTime();
 
                     for (Container container : workerContainers) {
                         List<String> containerMessage = new ArrayList<>();
                         containerMessage.add(container.getNodeHttpAddress());
                         HboxContainerId currentContainerID = new HboxContainerId(container.getId());
                         if (applicationContext.getContainerGPUDevice(currentContainerID) != null) {
-                            if (applicationContext.getContainerGPUDevice(currentContainerID).trim().length() != 0) {
+                            if (applicationContext
+                                            .getContainerGPUDevice(currentContainerID)
+                                            .trim()
+                                            .length()
+                                    != 0) {
                                 containerMessage.add(applicationContext.getContainerGPUDevice(currentContainerID));
                             } else {
                                 containerMessage.add("-");
@@ -534,17 +618,29 @@ public class ApplicationMaster extends CompositeService {
                             containerMessage.add("-");
                         }
                         List<String> usageStatistics = new ArrayList<>();
-                        ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(currentContainerID);
+                        ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics =
+                                applicationContext.getContainersCpuMetrics().get(currentContainerID);
                         containerMessage.add(new Gson().toJson(cpuMetrics));
-                        ConcurrentHashMap<String, List<Double>> cpuStatistics = applicationContext.getContainersCpuStatistics().get(currentContainerID);
+                        ConcurrentHashMap<String, List<Double>> cpuStatistics =
+                                applicationContext.getContainersCpuStatistics().get(currentContainerID);
                         usageStatistics.add(new Gson().toJson(cpuStatistics));
                         if (workerGCores > 0) {
-                            ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuMemMetrics = applicationContext.getContainersGpuMemMetrics().get(currentContainerID);
-                            ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuUtilMetrics = applicationContext.getContainersGpuUtilMetrics().get(currentContainerID);
+                            ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuMemMetrics =
+                                    applicationContext
+                                            .getContainersGpuMemMetrics()
+                                            .get(currentContainerID);
+                            ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuUtilMetrics =
+                                    applicationContext
+                                            .getContainersGpuUtilMetrics()
+                                            .get(currentContainerID);
                             containerMessage.add(new Gson().toJson(containersGpuMemMetrics));
                             containerMessage.add(new Gson().toJson(containersGpuUtilMetrics));
-                            ConcurrentHashMap<String, List<Double>> gpuMemStatistics = applicationContext.getContainersGpuMemStatistics().get(currentContainerID);
-                            ConcurrentHashMap<String, List<Double>> gpuUtilStatistics = applicationContext.getContainersGpuUtilStatistics().get(currentContainerID);
+                            ConcurrentHashMap<String, List<Double>> gpuMemStatistics = applicationContext
+                                    .getContainersGpuMemStatistics()
+                                    .get(currentContainerID);
+                            ConcurrentHashMap<String, List<Double>> gpuUtilStatistics = applicationContext
+                                    .getContainersGpuUtilStatistics()
+                                    .get(currentContainerID);
                             usageStatistics.add(new Gson().toJson(gpuMemStatistics));
                             usageStatistics.add(new Gson().toJson(gpuUtilStatistics));
                         } else {
@@ -563,26 +659,38 @@ public class ApplicationMaster extends CompositeService {
                             if (tfEvaluator && container.getId().toString().equals(tfEvaluatorContainerId)) {
                                 currentWorkerMemory = evaluatorWorkerMemory;
                             }
-                            if (status != null && status.toString().equalsIgnoreCase("SUCCEEDED") && (cpuMemUsagedMax / (currentWorkerMemory / 1024.0)) < conf.getDouble(HboxConfiguration.HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION, HboxConfiguration.DEFAULT_HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
+                            if (status != null
+                                    && status.toString().equalsIgnoreCase("SUCCEEDED")
+                                    && (cpuMemUsagedMax / (currentWorkerMemory / 1024.0))
+                                            < conf.getDouble(
+                                                    HboxConfiguration.HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION,
+                                                    HboxConfiguration.DEFAULT_HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
                                 usageStatistics.add("true");
                             } else {
                                 usageStatistics.add("false");
                             }
                         }
 
-                        if (containersAppStartTime.get(currentContainerID) != null && !containersAppStartTime.get(currentContainerID).equals("")) {
+                        if (containersAppStartTime.get(currentContainerID) != null
+                                && !containersAppStartTime
+                                        .get(currentContainerID)
+                                        .equals("")) {
                             String localStartTime = containersAppStartTime.get(currentContainerID);
                             containerMessage.add(localStartTime);
                         } else {
                             containerMessage.add("N/A");
                         }
-                        if (containersAppFinishTime.get(currentContainerID) != null && !containersAppFinishTime.get(currentContainerID).equals("")) {
+                        if (containersAppFinishTime.get(currentContainerID) != null
+                                && !containersAppFinishTime
+                                        .get(currentContainerID)
+                                        .equals("")) {
                             String localFinishTime = containersAppFinishTime.get(currentContainerID);
                             containerMessage.add(localFinishTime);
                         } else {
                             containerMessage.add("N/A");
                         }
-                        if (reporterProgress.get(currentContainerID) != null && !reporterProgress.get(currentContainerID).equals("")) {
+                        if (reporterProgress.get(currentContainerID) != null
+                                && !reporterProgress.get(currentContainerID).equals("")) {
                             String progressLog = reporterProgress.get(currentContainerID);
                             String[] progress = progressLog.toString().split(":");
                             if (progress.length != 2) {
@@ -596,17 +704,19 @@ public class ApplicationMaster extends CompositeService {
                                         DecimalFormat df = new DecimalFormat("0.00");
                                         df.setRoundingMode(RoundingMode.HALF_UP);
                                         containerMessage.add(df.format((Float.parseFloat(progress[1]) * 100)) + "%");
-                                        //containerMessage.add(Float.toString((Float.parseFloat(progress[1])*100)) + "%");
+                                        // containerMessage.add(Float.toString((Float.parseFloat(progress[1])*100)) +
+                                        // "%");
                                     }
                                 } catch (Exception e) {
                                     containerMessage.add("progress log format error");
                                 }
                             }
-                            //containerMessage.add(Float.toString((Float.parseFloat(progress[1])*100)) + "%");
+                            // containerMessage.add(Float.toString((Float.parseFloat(progress[1])*100)) + "%");
                         } else {
                             containerMessage.add("0.00%");
                         }
-                        containerMessage.add(String.format("http://%s/node/containerlogs/%s/%s",
+                        containerMessage.add(String.format(
+                                "http://%s/node/containerlogs/%s/%s",
                                 container.getNodeHttpAddress(),
                                 container.getId().toString(),
                                 userName));
@@ -619,7 +729,11 @@ public class ApplicationMaster extends CompositeService {
                         containerMessage.add(container.getNodeHttpAddress());
                         HboxContainerId currentContainerID = new HboxContainerId(container.getId());
                         if (applicationContext.getContainerGPUDevice(currentContainerID) != null) {
-                            if (applicationContext.getContainerGPUDevice(currentContainerID).trim().length() != 0) {
+                            if (applicationContext
+                                            .getContainerGPUDevice(currentContainerID)
+                                            .trim()
+                                            .length()
+                                    != 0) {
                                 containerMessage.add(applicationContext.getContainerGPUDevice(currentContainerID));
                             } else {
                                 containerMessage.add("-");
@@ -629,7 +743,9 @@ public class ApplicationMaster extends CompositeService {
                         }
                         if (hboxAppType.equals("TENSORFLOW") || "TENSOR2TENSOR".equals(hboxAppType)) {
                             containerMessage.add("ps");
-                        } else if (hboxAppType.equals("MXNET") || hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("XFLOW")) {
+                        } else if (hboxAppType.equals("MXNET")
+                                || hboxAppType.equals("DISTLIGHTLDA")
+                                || hboxAppType.equals("XFLOW")) {
                             containerMessage.add("server");
                         } else if (hboxAppType.equals("XDL")) {
                             if (currentContainerID.toString().equals(schedulerContainerId)) {
@@ -645,18 +761,30 @@ public class ApplicationMaster extends CompositeService {
                             containerMessage.add("-");
                         }
                         List<String> usageStatistics = new ArrayList<>();
-                        ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics = applicationContext.getContainersCpuMetrics().get(currentContainerID);
+                        ConcurrentHashMap<String, LinkedBlockingDeque<Object>> cpuMetrics =
+                                applicationContext.getContainersCpuMetrics().get(currentContainerID);
                         containerMessage.add(new Gson().toJson(cpuMetrics));
-                        ConcurrentHashMap<String, List<Double>> cpuStatistics = applicationContext.getContainersCpuStatistics().get(currentContainerID);
+                        ConcurrentHashMap<String, List<Double>> cpuStatistics =
+                                applicationContext.getContainersCpuStatistics().get(currentContainerID);
                         usageStatistics.add(new Gson().toJson(cpuStatistics));
 
                         if (psGCores > 0) {
-                            ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuMemMetrics = applicationContext.getContainersGpuMemMetrics().get(currentContainerID);
-                            ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuUtilMetrics = applicationContext.getContainersGpuUtilMetrics().get(currentContainerID);
+                            ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuMemMetrics =
+                                    applicationContext
+                                            .getContainersGpuMemMetrics()
+                                            .get(currentContainerID);
+                            ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> containersGpuUtilMetrics =
+                                    applicationContext
+                                            .getContainersGpuUtilMetrics()
+                                            .get(currentContainerID);
                             containerMessage.add(new Gson().toJson(containersGpuMemMetrics));
                             containerMessage.add(new Gson().toJson(containersGpuUtilMetrics));
-                            ConcurrentHashMap<String, List<Double>> gpuMemStatistics = applicationContext.getContainersGpuMemStatistics().get(currentContainerID);
-                            ConcurrentHashMap<String, List<Double>> gpuUtilStatistics = applicationContext.getContainersGpuUtilStatistics().get(currentContainerID);
+                            ConcurrentHashMap<String, List<Double>> gpuMemStatistics = applicationContext
+                                    .getContainersGpuMemStatistics()
+                                    .get(currentContainerID);
+                            ConcurrentHashMap<String, List<Double>> gpuUtilStatistics = applicationContext
+                                    .getContainersGpuUtilStatistics()
+                                    .get(currentContainerID);
                             usageStatistics.add(new Gson().toJson(gpuMemStatistics));
                             usageStatistics.add(new Gson().toJson(gpuUtilStatistics));
                         } else {
@@ -668,27 +796,39 @@ public class ApplicationMaster extends CompositeService {
 
                         if (cpuStatistics.size() != 0) {
                             Double cpuMemUsagedMax = cpuStatistics.get("CPUMEM").get(1);
-                            if (status != null && status.toString().equalsIgnoreCase("SUCCEEDED") && (cpuMemUsagedMax / (psMemory / 1024.0)) < conf.getDouble(HboxConfiguration.HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION, HboxConfiguration.DEFAULT_HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
+                            if (status != null
+                                    && status.toString().equalsIgnoreCase("SUCCEEDED")
+                                    && (cpuMemUsagedMax / (psMemory / 1024.0))
+                                            < conf.getDouble(
+                                                    HboxConfiguration.HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION,
+                                                    HboxConfiguration.DEFAULT_HBOX_CONTAINER_MEM_USAGE_WARN_FRACTION)) {
                                 usageStatistics.add("true");
                             } else {
                                 usageStatistics.add("false");
                             }
                         }
 
-                        if (containersAppStartTime.get(currentContainerID) != null && !containersAppStartTime.get(currentContainerID).equals("")) {
+                        if (containersAppStartTime.get(currentContainerID) != null
+                                && !containersAppStartTime
+                                        .get(currentContainerID)
+                                        .equals("")) {
                             String localStartTime = containersAppStartTime.get(currentContainerID);
                             containerMessage.add(localStartTime);
                         } else {
                             containerMessage.add("N/A");
                         }
-                        if (containersAppFinishTime.get(currentContainerID) != null && !containersAppFinishTime.get(currentContainerID).equals("")) {
+                        if (containersAppFinishTime.get(currentContainerID) != null
+                                && !containersAppFinishTime
+                                        .get(currentContainerID)
+                                        .equals("")) {
                             String localFinishTime = containersAppFinishTime.get(currentContainerID);
                             containerMessage.add(localFinishTime);
                         } else {
                             containerMessage.add("N/A");
                         }
                         containerMessage.add("0.00%");
-                        containerMessage.add(String.format("http://%s/node/containerlogs/%s/%s",
+                        containerMessage.add(String.format(
+                                "http://%s/node/containerlogs/%s/%s",
                                 container.getNodeHttpAddress(),
                                 container.getId().toString(),
                                 userName));
@@ -709,7 +849,8 @@ public class ApplicationMaster extends CompositeService {
                             savedTimeStamp.add("-");
                         } else {
                             for (int i = applicationContext.getModelSavingList().size(); i > 0; i--) {
-                                savedTimeStamp.add(String.valueOf(applicationContext.getModelSavingList().get(i - 1)));
+                                savedTimeStamp.add(String.valueOf(
+                                        applicationContext.getModelSavingList().get(i - 1)));
                             }
                         }
                     }
@@ -726,28 +867,37 @@ public class ApplicationMaster extends CompositeService {
                     logMessage.put("psVCores", Arrays.asList(String.valueOf(psVCores)));
                     logMessage.put("psMemory", Arrays.asList(String.format("%.2f", psMemory / 1024.0)));
                     logMessage.put("hboxVersion", Arrays.asList(HboxVersion.VERSION));
-                    logMessage.put("queue", Arrays.asList(conf.get(HboxConfiguration.HBOX_APP_QUEUE, HboxConfiguration.DEFAULT_HBOX_APP_QUEUE)));
-                    logMessage.put("user", Arrays.asList(conf.get("hadoop.job.ugi").split(",")[0]));
+                    logMessage.put(
+                            "queue",
+                            Arrays.asList(conf.get(
+                                    HboxConfiguration.HBOX_APP_QUEUE, HboxConfiguration.DEFAULT_HBOX_APP_QUEUE)));
+                    logMessage.put(
+                            "user", Arrays.asList(conf.get("hadoop.job.ugi").split(",")[0]));
                     if (chiefWorker) {
-                        logMessage.put("chiefWorkerMemory", Arrays.asList(String.format("%.2f", chiefWorkerMemory / 1024.0)));
+                        logMessage.put(
+                                "chiefWorkerMemory", Arrays.asList(String.format("%.2f", chiefWorkerMemory / 1024.0)));
                     }
                     if (tfEvaluator) {
-                        logMessage.put("evaluatorWorkerMemory", Arrays.asList(String.format("%.2f", evaluatorWorkerMemory / 1024.0)));
+                        logMessage.put(
+                                "evaluatorWorkerMemory",
+                                Arrays.asList(String.format("%.2f", evaluatorWorkerMemory / 1024.0)));
                     }
 
                     // application master logs
                     final List<String> amLogUrls = new ArrayList<>();
                     if (null != regResp && null != regResp.getContainersFromPreviousAttempts()) {
                         for (final Container container : regResp.getContainersFromPreviousAttempts()) {
-                            amLogUrls.add(String.format("http://%s/node/containerlogs/%s/%s",
+                            amLogUrls.add(String.format(
+                                    "http://%s/node/containerlogs/%s/%s",
                                     container.getNodeHttpAddress(),
                                     container.getId().toString(),
                                     userName));
                         }
                     }
                     if (null != applicationMasterHostname && null != applicationMasterHttpPortString) {
-                        amLogUrls.add(String.format("http://%s:%s/node/containerlogs/%s/%s",
-                                                applicationMasterHostname, applicationMasterHttpPortString, amContainerId, userName));
+                        amLogUrls.add(String.format(
+                                "http://%s:%s/node/containerlogs/%s/%s",
+                                applicationMasterHostname, applicationMasterHttpPortString, amContainerId, userName));
                     }
                     if (amLogUrls.size() > 0) {
                         logMessage.put("applicationMaster", amLogUrls);
@@ -765,7 +915,7 @@ public class ApplicationMaster extends CompositeService {
         Runtime.getRuntime().addShutdownHook(cleanApplication);
     }
 
-    private void buildS3InputFileInfo() throws RuntimeException{
+    private void buildS3InputFileInfo() throws RuntimeException {
         String hboxS3Inputs = envs.get(HboxConstants.Environment.HBOX_S3_INPUTS.toString());
         if (StringUtils.isBlank(hboxS3Inputs)) {
             LOG.info("Application has no amazon s3 inputs");
@@ -775,11 +925,10 @@ public class ApplicationMaster extends CompositeService {
          * input1#local1
          * input2,input3#local2
          */
-
         String[] inputs = StringUtils.split(hboxS3Inputs, "|");
         if (inputs != null && inputs.length > 0) {
             for (String input : inputs) {
-                //input: input2,input3#local2
+                // input: input2,input3#local2
                 String[] s3InputPathTuple = StringUtils.split(input, "#");
                 if (s3InputPathTuple.length < 2) {
                     throw new RuntimeException("Error input path format " + hboxS3Inputs);
@@ -789,18 +938,23 @@ public class ApplicationMaster extends CompositeService {
                 String inputBuckets = s3InputPathTuple[0];
                 String inputLocalDir = s3InputPathTuple[1];
                 info.setAliasName(inputLocalDir);
-                String clusterPrefix = conf.get(HboxConfiguration.HBOX_S3_CLUSTER_PREFIX, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER_PREFIX);
-                String s3Cluster = conf.get(HboxConfiguration.HBOX_S3_CLUSTER, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER);
-                if(!s3Cluster.startsWith(clusterPrefix))
-                    s3Cluster = clusterPrefix + s3Cluster;
-                String s3AccessKey = conf.get(HboxConfiguration.HBOX_S3_ACCESS_KEY, HboxConfiguration.DEFAULT_HBOX_S3_ACCESS_KEY);
-                String s3SecretKey = conf.get(HboxConfiguration.HBOX_S3_SECRET_KEY, HboxConfiguration.DEFAULT_HBOX_S3_SECRET_KEY);
+                String clusterPrefix = conf.get(
+                        HboxConfiguration.HBOX_S3_CLUSTER_PREFIX, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER_PREFIX);
+                String s3Cluster =
+                        conf.get(HboxConfiguration.HBOX_S3_CLUSTER, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER);
+                if (!s3Cluster.startsWith(clusterPrefix)) s3Cluster = clusterPrefix + s3Cluster;
+                String s3AccessKey =
+                        conf.get(HboxConfiguration.HBOX_S3_ACCESS_KEY, HboxConfiguration.DEFAULT_HBOX_S3_ACCESS_KEY);
+                String s3SecretKey =
+                        conf.get(HboxConfiguration.HBOX_S3_SECRET_KEY, HboxConfiguration.DEFAULT_HBOX_S3_SECRET_KEY);
                 boolean correctS3Conf = !s3Cluster.equals("") && !s3AccessKey.equals("") && !s3SecretKey.equals("");
                 for (String bucket : StringUtils.split(inputBuckets, ",")) {
                     String bucketName = bucket;
                     String prefix = "";
-                    String split = conf.get(HboxConfiguration.HBOX_S3_BUCKET_DIR_SPLIT, HboxConfiguration.DEFAULT_HBOX_S3_BUCKET_DIR_SPLIT);
-                    if(bucket.contains(split)){
+                    String split = conf.get(
+                            HboxConfiguration.HBOX_S3_BUCKET_DIR_SPLIT,
+                            HboxConfiguration.DEFAULT_HBOX_S3_BUCKET_DIR_SPLIT);
+                    if (bucket.contains(split)) {
                         bucketName = bucket.substring(0, bucket.indexOf(split));
                         prefix = bucket.substring(bucket.indexOf(split) + 1);
                     }
@@ -808,22 +962,24 @@ public class ApplicationMaster extends CompositeService {
                     if (s3.doesBucketExist() && correctS3Conf) {
                         for (S3ObjectSummary obj : s3.listObjects(prefix)) {
                             String objKey = obj.getKey();
-                            S3File s3File = new S3File(bucketName, objKey, s3.getUrl(objKey).toString());
+                            S3File s3File = new S3File(
+                                    bucketName, objKey, s3.getUrl(objKey).toString());
                             s3FileList.add(s3File);
                         }
                     } else {
-                        throw new RuntimeException("Error input bucket format " + hboxS3Inputs + "or submit shell doesn't have correct config.");
+                        throw new RuntimeException("Error input bucket format " + hboxS3Inputs
+                                + "or submit shell doesn't have correct config.");
                     }
                 }
                 info.setS3Files(s3FileList);
                 info.setInputType(HboxConstants.S3);
                 s3Input2InputInfo.put(inputLocalDir, info);
-                //append local dir path in inputPath
+                // append local dir path in inputPath
                 this.inputPath.append(inputLocalDir).append(",");
                 if (s3FileList.size() > 0) {
                     if (s3FileList.size() < workerNum) {
-                        LOG.warn("File count in  bucket " + inputBuckets + "  " + s3FileList.size() +
-                                " less than the worker count " + workerNum);
+                        LOG.warn("File count in  bucket " + inputBuckets + "  " + s3FileList.size()
+                                + " less than the worker count " + workerNum);
                     }
                 }
             }
@@ -854,8 +1010,8 @@ public class ApplicationMaster extends CompositeService {
                             for (Path inputPath : FileUtil.stat2Paths(inputStatus)) {
                                 this.inputList.add(inputPath.toString());
                                 inputPath = inputFs.makeQualified(inputPath);
-                                List<FileStatus> downLoadFile = Utilities.listStatusRecursively(inputPath,
-                                        inputFs, null, Integer.MAX_VALUE);
+                                List<FileStatus> downLoadFile =
+                                        Utilities.listStatusRecursively(inputPath, inputFs, null, Integer.MAX_VALUE);
                                 fileStatus.addAll(downLoadFile);
                             }
                             inputFs.close();
@@ -864,12 +1020,12 @@ public class ApplicationMaster extends CompositeService {
                         e.printStackTrace();
                     }
                     input2FileStatus.put(inputPathTuple[1], fileStatus);
-                    //append local dir path in inputPath
+                    // append local dir path in inputPath
                     this.inputPath.append(inputPathTuple[1]).append(",");
                     if (fileStatus.size() > 0) {
                         if (fileStatus.size() < workerNum) {
-                            LOG.warn("File count in  " + inputPathRemote + "  " + fileStatus.size() +
-                                    " less than the worker count " + workerNum);
+                            LOG.warn("File count in  " + inputPathRemote + "  " + fileStatus.size()
+                                    + " less than the worker count " + workerNum);
                         }
                     }
                 } else {
@@ -894,7 +1050,11 @@ public class ApplicationMaster extends CompositeService {
         if (!StringUtils.isBlank(inputPathRemote)) {
             JobConf jobConf = new JobConf(conf);
             jobConf.set(HboxConstants.STREAM_INPUT_DIR, inputPathRemote);
-            InputFormat inputFormat = ReflectionUtils.newInstance(conf.getClass(HboxConfiguration2.HBOX_INPUTF0RMAT_CLASS, HboxConfiguration2.DEFAULT_HBOX_INPUTF0RMAT_CLASS, InputFormat.class),
+            InputFormat inputFormat = ReflectionUtils.newInstance(
+                    conf.getClass(
+                            HboxConfiguration2.HBOX_INPUTF0RMAT_CLASS,
+                            HboxConfiguration2.DEFAULT_HBOX_INPUTF0RMAT_CLASS,
+                            InputFormat.class),
                     jobConf);
             inputFileSplits = inputFormat.getSplits(jobConf, 1);
         } else {
@@ -902,7 +1062,7 @@ public class ApplicationMaster extends CompositeService {
         }
     }
 
-    private void allocateS3InputSplits(){
+    private void allocateS3InputSplits() {
         for (Container container : acquiredWorkerContainers) {
             LOG.info("Initializing " + container.getId().toString() + " s3 input splits");
             containerId2InputInfo.putIfAbsent(new HboxContainerId(container.getId()), new ArrayList<InputInfo>());
@@ -911,19 +1071,26 @@ public class ApplicationMaster extends CompositeService {
         int splitWorkerNum = workerNum;
         if (tfEvaluator) {
             --splitWorkerNum;
-            LOG.info("Note that current tensorflow job has the evaluator type. Not allocate the input to the last container.");
+            LOG.info(
+                    "Note that current tensorflow job has the evaluator type. Not allocate the input to the last container.");
         }
         for (String localDir : fileKeys) {
             InputInfo filesInfo = s3Input2InputInfo.get(localDir);
-            ConcurrentHashMap<HboxContainerId, ConcurrentHashMap<String, InputInfo>> containersFiles = new ConcurrentHashMap<>();
-            boolean chiefWorkerMinData = conf.getBoolean(HboxConfiguration.HBOX_CHIEF_WORKER_MINIMUM_DATA, HboxConfiguration.DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_DATA);
+            ConcurrentHashMap<HboxContainerId, ConcurrentHashMap<String, InputInfo>> containersFiles =
+                    new ConcurrentHashMap<>();
+            boolean chiefWorkerMinData = conf.getBoolean(
+                    HboxConfiguration.HBOX_CHIEF_WORKER_MINIMUM_DATA,
+                    HboxConfiguration.DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_DATA);
             int remainFilesIndex = 0;
             if (chiefWorkerMinData) {
                 splitWorkerNum--;
-                //at least have 1 file
-                int fileNumForChiefWorker = conf.getInt(HboxConfiguration.HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM, HboxConfiguration.DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM);
+                // at least have 1 file
+                int fileNumForChiefWorker = conf.getInt(
+                        HboxConfiguration.HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM,
+                        HboxConfiguration.DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM);
                 remainFilesIndex = fileNumForChiefWorker;
-                HboxContainerId containerId = new HboxContainerId(acquiredWorkerContainers.get(0).getId());
+                HboxContainerId containerId =
+                        new HboxContainerId(acquiredWorkerContainers.get(0).getId());
                 ConcurrentHashMap<String, InputInfo> mapSplit = new ConcurrentHashMap<>();
                 InputInfo inputInfo = new InputInfo();
                 inputInfo.setAliasName(localDir);
@@ -932,14 +1099,15 @@ public class ApplicationMaster extends CompositeService {
                 inputInfo.setS3Files(urls);
                 mapSplit.put(localDir, inputInfo);
                 containersFiles.put(containerId, mapSplit);
-                LOG.info("Enable chief worker minimum data! " + "Chief worker data files num is: " + fileNumForChiefWorker);
+                LOG.info("Enable chief worker minimum data! " + "Chief worker data files num is: "
+                        + fileNumForChiefWorker);
             }
             for (int i = remainFilesIndex, len = filesInfo.getS3Files().size(); i < len; i++) {
                 int index = i % splitWorkerNum;
-                if(chiefWorkerMinData)
-                    index++;
+                if (chiefWorkerMinData) index++;
                 ConcurrentHashMap<String, InputInfo> mapSplit;
-                HboxContainerId containerId = new HboxContainerId(acquiredWorkerContainers.get(index).getId());
+                HboxContainerId containerId =
+                        new HboxContainerId(acquiredWorkerContainers.get(index).getId());
                 if (containersFiles.containsKey(containerId)) {
                     mapSplit = containersFiles.get(containerId);
                 } else {
@@ -960,7 +1128,9 @@ public class ApplicationMaster extends CompositeService {
             }
             Set<HboxContainerId> containerIdSet = containersFiles.keySet();
             for (HboxContainerId containerId : containerIdSet) {
-                containerId2InputInfo.get(containerId).add(containersFiles.get(containerId).get(localDir));
+                containerId2InputInfo
+                        .get(containerId)
+                        .add(containersFiles.get(containerId).get(localDir));
                 LOG.info("put " + localDir + " to " + containerId.toString());
             }
         }
@@ -977,20 +1147,27 @@ public class ApplicationMaster extends CompositeService {
         int splitWorkerNum = workerNum;
         if (tfEvaluator) {
             --splitWorkerNum;
-            LOG.info("Note that current tensorflow job has the evaluator type. Not allocate the input to the last container.");
+            LOG.info(
+                    "Note that current tensorflow job has the evaluator type. Not allocate the input to the last container.");
         }
-        //fileName: local dir name
+        // fileName: local dir name
         for (String fileName : fileKeys) {
             List<FileStatus> files = input2FileStatus.get(fileName);
             List<Path> paths = Utilities.convertStatusToPath(files);
-            ConcurrentHashMap<HboxContainerId, ConcurrentHashMap<String, InputInfo>> containersFiles = new ConcurrentHashMap<>();
-            boolean chiefWorkerMinData = conf.getBoolean(HboxConfiguration.HBOX_CHIEF_WORKER_MINIMUM_DATA, HboxConfiguration.DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_DATA);
+            ConcurrentHashMap<HboxContainerId, ConcurrentHashMap<String, InputInfo>> containersFiles =
+                    new ConcurrentHashMap<>();
+            boolean chiefWorkerMinData = conf.getBoolean(
+                    HboxConfiguration.HBOX_CHIEF_WORKER_MINIMUM_DATA,
+                    HboxConfiguration.DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_DATA);
             int remainFilesIndex = 0;
             if (chiefWorkerMinData) {
                 splitWorkerNum--;
-                //at least have 1 file
-                int fileNumForChiefWorker = conf.getInt(HboxConfiguration.HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM, HboxConfiguration.DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM);
-                HboxContainerId containerId = new HboxContainerId(acquiredWorkerContainers.get(0).getId());
+                // at least have 1 file
+                int fileNumForChiefWorker = conf.getInt(
+                        HboxConfiguration.HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM,
+                        HboxConfiguration.DEFAULT_HBOX_CHIEF_WORKER_MINIMUM_FILE_NUM);
+                HboxContainerId containerId =
+                        new HboxContainerId(acquiredWorkerContainers.get(0).getId());
                 ConcurrentHashMap<String, InputInfo> mapSplit = new ConcurrentHashMap<>();
                 InputInfo inputInfo = new InputInfo();
                 inputInfo.setInputType(HboxConstants.HDFS);
@@ -998,21 +1175,21 @@ public class ApplicationMaster extends CompositeService {
                 List<Path> ps = new ArrayList<>();
                 for (int i = 0; i < fileNumForChiefWorker; i++) {
                     ps.add(paths.get(i));
-                    if(files.get(i).getLen() == 0)
-                        fileNumForChiefWorker++;
+                    if (files.get(i).getLen() == 0) fileNumForChiefWorker++;
                 }
                 remainFilesIndex = fileNumForChiefWorker;
                 inputInfo.setPaths(ps);
                 mapSplit.put(fileName, inputInfo);
                 containersFiles.put(containerId, mapSplit);
-                LOG.info("Enable chief worker minimum data! " + "Chief worker data files num is: " + fileNumForChiefWorker);
+                LOG.info("Enable chief worker minimum data! " + "Chief worker data files num is: "
+                        + fileNumForChiefWorker);
             }
             for (int i = remainFilesIndex, len = paths.size(); i < len; i++) {
                 int index = i % splitWorkerNum;
-                if(chiefWorkerMinData)
-                    index++;
+                if (chiefWorkerMinData) index++;
                 ConcurrentHashMap<String, InputInfo> mapSplit;
-                HboxContainerId containerId = new HboxContainerId(acquiredWorkerContainers.get(index).getId());
+                HboxContainerId containerId =
+                        new HboxContainerId(acquiredWorkerContainers.get(index).getId());
                 if (containersFiles.containsKey(containerId)) {
                     mapSplit = containersFiles.get(containerId);
                 } else {
@@ -1033,7 +1210,9 @@ public class ApplicationMaster extends CompositeService {
             }
             Set<HboxContainerId> containerIdSet = containersFiles.keySet();
             for (HboxContainerId containerId : containerIdSet) {
-                containerId2InputInfo.get(containerId).add(containersFiles.get(containerId).get(fileName));
+                containerId2InputInfo
+                        .get(containerId)
+                        .add(containersFiles.get(containerId).get(fileName));
                 LOG.info("put " + fileName + " to " + containerId.toString());
             }
         }
@@ -1087,11 +1266,13 @@ public class ApplicationMaster extends CompositeService {
         for (String fileName : fileKeys) {
             List<FileStatus> files = input2FileStatus.get(fileName);
             List<Path> paths = Utilities.convertStatusToPath(files);
-            ConcurrentHashMap<HboxContainerId, ConcurrentHashMap<String, InputInfo>> containersFiles = new ConcurrentHashMap<>();
+            ConcurrentHashMap<HboxContainerId, ConcurrentHashMap<String, InputInfo>> containersFiles =
+                    new ConcurrentHashMap<>();
             for (int i = 0, len = paths.size(); i < len; i++) {
                 int index = i % (workerNum + psNum);
                 ConcurrentHashMap<String, InputInfo> mapSplit;
-                HboxContainerId containerId = new HboxContainerId(acquiredContainers.get(index).getId());
+                HboxContainerId containerId =
+                        new HboxContainerId(acquiredContainers.get(index).getId());
                 if (containersFiles.containsKey(containerId)) {
                     mapSplit = containersFiles.get(containerId);
                 } else {
@@ -1112,7 +1293,9 @@ public class ApplicationMaster extends CompositeService {
             }
             Set<HboxContainerId> containerIdSet = containersFiles.keySet();
             for (HboxContainerId containerId : containerIdSet) {
-                containerId2InputInfo.get(containerId).add(containersFiles.get(containerId).get(fileName));
+                containerId2InputInfo
+                        .get(containerId)
+                        .add(containersFiles.get(containerId).get(fileName));
                 LOG.info("put " + fileName + " to " + containerId.toString());
             }
         }
@@ -1128,14 +1311,17 @@ public class ApplicationMaster extends CompositeService {
         int splitWorkerNum = workerNum;
         if (tfEvaluator) {
             --splitWorkerNum;
-            LOG.info("Note that current tensorflow job has the evaluator type. Not allocate the input to the last container.");
+            LOG.info(
+                    "Note that current tensorflow job has the evaluator type. Not allocate the input to the last container.");
         }
 
-        if (conf.getBoolean(HboxConfiguration.HBOX_INPUT_STREAM_SHUFFLE, HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM_SHUFFLE)) {
+        if (conf.getBoolean(
+                HboxConfiguration.HBOX_INPUT_STREAM_SHUFFLE, HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM_SHUFFLE)) {
             LOG.info("HBOX_INPUT_STREAM_SHUFFLE is true");
             for (int i = 0, len = inputFileSplits.length; i < len; i++) {
                 int index = i % splitWorkerNum;
-                HboxContainerId containerId = new HboxContainerId(acquiredWorkerContainers.get(index).getId());
+                HboxContainerId containerId =
+                        new HboxContainerId(acquiredWorkerContainers.get(index).getId());
                 containerId2InputSplit.get(containerId).add(inputFileSplits[i]);
                 LOG.info("put split " + (i + 1) + " to " + containerId.toString());
             }
@@ -1145,7 +1331,8 @@ public class ApplicationMaster extends CompositeService {
             int msplit = inputFileSplits.length % splitWorkerNum;
             int count = 0;
             for (int i = 0; i < splitWorkerNum; i++) {
-                HboxContainerId containerId = new HboxContainerId(acquiredWorkerContainers.get(i).getId());
+                HboxContainerId containerId =
+                        new HboxContainerId(acquiredWorkerContainers.get(i).getId());
                 for (int j = 0; j < nsplit; j++) {
                     containerId2InputSplit.get(containerId).add(inputFileSplits[count++]);
                     LOG.info("put split " + count + " to " + containerId.toString());
@@ -1196,18 +1383,22 @@ public class ApplicationMaster extends CompositeService {
 
     private RegisterApplicationMasterResponse registerApplicationMaster() {
         try {
-            return amrmAsync.registerApplicationMaster(this.messageService.getServerAddress().getHostName(),
-                    this.messageService.getServerAddress().getPort(), applicationMasterTrackingUrl);
+            return amrmAsync.registerApplicationMaster(
+                    this.messageService.getServerAddress().getHostName(),
+                    this.messageService.getServerAddress().getPort(),
+                    applicationMasterTrackingUrl);
         } catch (Exception e) {
             throw new RuntimeException("Registering application master failed,", e);
         }
     }
 
     private void buildContainerRequest(String[] hostLocals) {
-        if (conf.getBoolean(HboxConfiguration.HBOX_HOST_LOCAL_ENABLE, HboxConfiguration.DEFAULT_HBOX_HOST_LOCAL_ENABLE)) {
+        if (conf.getBoolean(
+                HboxConfiguration.HBOX_HOST_LOCAL_ENABLE, HboxConfiguration.DEFAULT_HBOX_HOST_LOCAL_ENABLE)) {
             HboxConfiguration hboxConf = new HboxConfiguration();
-            String hostLocaldir = hboxConf.get("fs.defaultFS") + conf.get(HboxConfiguration.HBOX_HISTORY_LOG_DIR,
-                    HboxConfiguration.DEFAULT_HBOX_HISTORY_LOG_DIR) + "/" + conf.get("hadoop.job.ugi").split(",")[0]
+            String hostLocaldir = hboxConf.get("fs.defaultFS")
+                    + conf.get(HboxConfiguration.HBOX_HISTORY_LOG_DIR, HboxConfiguration.DEFAULT_HBOX_HISTORY_LOG_DIR)
+                    + "/" + conf.get("hadoop.job.ugi").split(",")[0]
                     + "/" + envs.get(HboxConstants.Environment.HBOX_APP_NAME.toString());
             Path hostLocalPath = new Path(hostLocaldir);
             String line;
@@ -1227,53 +1418,92 @@ public class ApplicationMaster extends CompositeService {
         Priority priority = Records.newRecord(Priority.class);
         priority.setPriority(appPriority);
         Resource workerCapability = Records.newRecord(Resource.class);
-        int workerOverheadMem = (int) Math.max(workerMemory * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
-                conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
+        int workerOverheadMem = (int) Math.max(
+                workerMemory
+                        * conf.getDouble(
+                                HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION,
+                                HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
+                conf.getInt(
+                        HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM,
+                        HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
         workerCapability.setMemory(Math.min(workerMemory + workerOverheadMem, maxContainerMem));
         workerCapability.setVirtualCores(workerVCores);
         if (HadoopVersion.SUPPORTS_GPU && workerGCores > 0) {
             workerCapability.setResourceValue(HboxConstants.GPU, workerGCores);
         }
-        workerContainerRequest = new ContainerRequest(workerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
+        workerContainerRequest = new ContainerRequest(
+                workerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
         LOG.info("Create worker container request: " + workerContainerRequest.toString());
 
         if (("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) && workerNum > 1) {
             if (chiefWorker) {
                 Resource chiefWorkerCapability = Records.newRecord(Resource.class);
-                int chiefWorkerOverheadMem = (int) Math.max(chiefWorkerMemory * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
-                        conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
+                int chiefWorkerOverheadMem = (int) Math.max(
+                        chiefWorkerMemory
+                                * conf.getDouble(
+                                        HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION,
+                                        HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
+                        conf.getInt(
+                                HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM,
+                                HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
                 chiefWorkerCapability.setMemory(Math.min(chiefWorkerMemory + chiefWorkerOverheadMem, maxContainerMem));
                 chiefWorkerCapability.setVirtualCores(workerVCores);
                 if (HadoopVersion.SUPPORTS_GPU && workerGCores > 0) {
                     chiefWorkerCapability.setResourceValue(HboxConstants.GPU, workerGCores);
                 }
-                chiefWorkerContainerRequest = new ContainerRequest(chiefWorkerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
+                chiefWorkerContainerRequest = new ContainerRequest(
+                        chiefWorkerCapability,
+                        hostLocals,
+                        null,
+                        priority,
+                        true,
+                        conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
                 LOG.info("Create chief worker container request: " + chiefWorkerContainerRequest.toString());
             }
             if (tfEvaluator) {
                 Resource evaluatorWorkerCapability = Records.newRecord(Resource.class);
-                int evaluatorWorkerOverheadMem = (int) Math.max(evaluatorWorkerMemory * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
-                        conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
-                evaluatorWorkerCapability.setMemory(Math.min(evaluatorWorkerMemory + evaluatorWorkerOverheadMem, maxContainerMem));
+                int evaluatorWorkerOverheadMem = (int) Math.max(
+                        evaluatorWorkerMemory
+                                * conf.getDouble(
+                                        HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION,
+                                        HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
+                        conf.getInt(
+                                HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM,
+                                HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
+                evaluatorWorkerCapability.setMemory(
+                        Math.min(evaluatorWorkerMemory + evaluatorWorkerOverheadMem, maxContainerMem));
                 evaluatorWorkerCapability.setVirtualCores(workerVCores);
                 if (HadoopVersion.SUPPORTS_GPU && workerGCores > 0) {
                     evaluatorWorkerCapability.setResourceValue(HboxConstants.GPU, workerGCores);
                 }
-                evaluatorWorkerContainerRequest = new ContainerRequest(evaluatorWorkerCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
+                evaluatorWorkerContainerRequest = new ContainerRequest(
+                        evaluatorWorkerCapability,
+                        hostLocals,
+                        null,
+                        priority,
+                        true,
+                        conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
                 LOG.info("Create evaluator worker container request: " + evaluatorWorkerContainerRequest.toString());
             }
         }
 
         if (psNum > 0) {
             Resource psCapability = Records.newRecord(Resource.class);
-            int psOverheadMem = (int) Math.max(psMemory * conf.getDouble(HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
-                    conf.getInt(HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM, HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
+            int psOverheadMem = (int) Math.max(
+                    psMemory
+                            * conf.getDouble(
+                                    HboxConfiguration.HBOX_MEMORY_OVERHEAD_FRACTION,
+                                    HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_FRACTION),
+                    conf.getInt(
+                            HboxConfiguration.HBOX_MEMORY_OVERHEAD_MINIMUM,
+                            HboxConfiguration.DEFAULT_HBOX_MEMORY_OVERHEAD_MINIMUM));
             psCapability.setMemory(Math.min(psMemory + psOverheadMem, maxContainerMem));
             psCapability.setVirtualCores(psVCores);
             if (HadoopVersion.SUPPORTS_GPU && psGCores > 0) {
                 psCapability.setResourceValue(HboxConstants.GPU, psGCores);
             }
-            psContainerRequest = new ContainerRequest(psCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
+            psContainerRequest = new ContainerRequest(
+                    psCapability, hostLocals, null, priority, true, conf.get(HboxConfiguration.HBOX_JOB_LABEL_NAME));
             LOG.info("Create ps container request: " + psContainerRequest.toString());
         }
     }
@@ -1283,14 +1513,14 @@ public class ApplicationMaster extends CompositeService {
         LOG.info("default URI is " + defaultUri.toString());
         containerLocalResource = new HashMap<>();
         try {
-            containerLocalResource.put(HboxConstants.HBOX_APPLICATION_JAR,
-                    Utilities.createApplicationResource(appJarRemoteLocation.getFileSystem(conf),
-                            appJarRemoteLocation,
-                            LocalResourceType.FILE));
-            containerLocalResource.put(HboxConstants.HBOX_JOB_CONFIGURATION,
-                    Utilities.createApplicationResource(appConfRemoteLocation.getFileSystem(conf),
-                            appConfRemoteLocation,
-                            LocalResourceType.FILE));
+            containerLocalResource.put(
+                    HboxConstants.HBOX_APPLICATION_JAR,
+                    Utilities.createApplicationResource(
+                            appJarRemoteLocation.getFileSystem(conf), appJarRemoteLocation, LocalResourceType.FILE));
+            containerLocalResource.put(
+                    HboxConstants.HBOX_JOB_CONFIGURATION,
+                    Utilities.createApplicationResource(
+                            appConfRemoteLocation.getFileSystem(conf), appConfRemoteLocation, LocalResourceType.FILE));
 
             if (appCacheFilesRemoteLocation != null) {
                 String[] cacheFiles = StringUtils.split(appCacheFilesRemoteLocation, ",");
@@ -1309,17 +1539,19 @@ public class ApplicationMaster extends CompositeService {
                         aliasName = pathRemote.getName();
                     }
                     URI pathRemoteUri = pathRemote.toUri();
-                    if (Boolean.parseBoolean(conf.get(HboxConfiguration.HBOX_APPEND_DEFAULTFS_ENABLE, String.valueOf(HboxConfiguration.DEFAULT_HBOX_APPEND_DEFAULTFS_ENABLE)))) {
+                    if (Boolean.parseBoolean(conf.get(
+                            HboxConfiguration.HBOX_APPEND_DEFAULTFS_ENABLE,
+                            String.valueOf(HboxConfiguration.DEFAULT_HBOX_APPEND_DEFAULTFS_ENABLE)))) {
                         if (pathRemoteUri.getScheme() == null || pathRemoteUri.getHost() == null) {
                             pathRemote = new Path(defaultUri.toString(), pathRemote.toString());
                         }
                     }
                     LOG.info("Cache file remote path is " + pathRemote + " and alias name is " + aliasName);
-                    containerLocalResource.put(aliasName,
-                            Utilities.createApplicationResource(pathRemote.getFileSystem(conf),
-                                    pathRemote,
-                                    LocalResourceType.FILE));
-                    if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+                    containerLocalResource.put(
+                            aliasName,
+                            Utilities.createApplicationResource(
+                                    pathRemote.getFileSystem(conf), pathRemote, LocalResourceType.FILE));
+                    if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
                         reLinkFiles.append(aliasName).append(",");
                     }
                 }
@@ -1333,7 +1565,8 @@ public class ApplicationMaster extends CompositeService {
                     if (path.contains("#")) {
                         String[] paths = StringUtils.split(path, "#");
                         if (paths.length != 2) {
-                            throw new RuntimeException("Error cacheArchive path format " + appCacheArchivesRemoteLocation);
+                            throw new RuntimeException(
+                                    "Error cacheArchive path format " + appCacheArchivesRemoteLocation);
                         }
                         pathRemote = new Path(paths[0]);
                         aliasName = paths[1];
@@ -1342,17 +1575,19 @@ public class ApplicationMaster extends CompositeService {
                         aliasName = pathRemote.getName();
                     }
                     URI pathRemoteUri = pathRemote.toUri();
-                    if (Boolean.parseBoolean(conf.get(HboxConfiguration.HBOX_APPEND_DEFAULTFS_ENABLE, String.valueOf(HboxConfiguration.DEFAULT_HBOX_APPEND_DEFAULTFS_ENABLE)))) {
+                    if (Boolean.parseBoolean(conf.get(
+                            HboxConfiguration.HBOX_APPEND_DEFAULTFS_ENABLE,
+                            String.valueOf(HboxConfiguration.DEFAULT_HBOX_APPEND_DEFAULTFS_ENABLE)))) {
                         if (pathRemoteUri.getScheme() == null || pathRemoteUri.getHost() == null) {
                             pathRemote = new Path(defaultUri.toString(), pathRemote.toString());
                         }
                     }
                     LOG.info("Cache archive remote path is " + pathRemote + " and alias name is " + aliasName);
-                    containerLocalResource.put(aliasName,
-                            Utilities.createApplicationResource(pathRemote.getFileSystem(conf),
-                                    pathRemote,
-                                    LocalResourceType.ARCHIVE));
-                    if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+                    containerLocalResource.put(
+                            aliasName,
+                            Utilities.createApplicationResource(
+                                    pathRemote.getFileSystem(conf), pathRemote, LocalResourceType.ARCHIVE));
+                    if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
                         reLinkFiles.append(aliasName).append(",");
                     }
                 }
@@ -1362,11 +1597,11 @@ public class ApplicationMaster extends CompositeService {
                 String[] tfFiles = StringUtils.split(appFilesRemoteLocation, ",");
                 for (String file : tfFiles) {
                     Path path = new Path(file);
-                    containerLocalResource.put(path.getName(),
-                            Utilities.createApplicationResource(path.getFileSystem(conf),
-                                    path,
-                                    LocalResourceType.FILE));
-                    if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+                    containerLocalResource.put(
+                            path.getName(),
+                            Utilities.createApplicationResource(
+                                    path.getFileSystem(conf), path, LocalResourceType.FILE));
+                    if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
                         reLinkFiles.append(path.getName()).append(",");
                     }
                 }
@@ -1380,7 +1615,8 @@ public class ApplicationMaster extends CompositeService {
                     if (archiveFile.contains("#")) {
                         String[] paths = StringUtils.split(archiveFile, "#");
                         if (paths.length != 2) {
-                            throw new RuntimeException("Error cacheArchive path format " + appArchiveFilesRemoteLocation);
+                            throw new RuntimeException(
+                                    "Error cacheArchive path format " + appArchiveFilesRemoteLocation);
                         }
                         pathRemote = new Path(paths[0]);
                         aliasName = paths[1];
@@ -1389,18 +1625,22 @@ public class ApplicationMaster extends CompositeService {
                         aliasName = pathRemote.getName();
                     }
                     URI pathRemoteUri = pathRemote.toUri();
-                    if (Boolean.parseBoolean(conf.get(HboxConfiguration.HBOX_APPEND_DEFAULTFS_ENABLE, String.valueOf(HboxConfiguration.DEFAULT_HBOX_APPEND_DEFAULTFS_ENABLE)))) {
+                    if (Boolean.parseBoolean(conf.get(
+                            HboxConfiguration.HBOX_APPEND_DEFAULTFS_ENABLE,
+                            String.valueOf(HboxConfiguration.DEFAULT_HBOX_APPEND_DEFAULTFS_ENABLE)))) {
                         if (pathRemoteUri.getScheme() == null || pathRemoteUri.getHost() == null) {
                             pathRemote = new Path(defaultUri.toString(), pathRemote.toString());
                         }
                     }
                     LOG.info("archive file remote path is " + pathRemote + " and alias name is " + aliasName);
-                    containerLocalResource.put(aliasName,
-                            Utilities.createApplicationResource(pathRemote.getFileSystem(conf),
+                    containerLocalResource.put(
+                            aliasName,
+                            Utilities.createApplicationResource(
+                                    pathRemote.getFileSystem(conf),
                                     pathRemote,
                                     LocalResourceType.ARCHIVE,
                                     LocalResourceVisibility.APPLICATION));
-                    if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+                    if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
                         reLinkFiles.append(aliasName).append(",");
                     }
                 }
@@ -1410,10 +1650,10 @@ public class ApplicationMaster extends CompositeService {
                 String[] tfFiles = StringUtils.split(appLibJarsRemoteLocation, ",");
                 for (String file : tfFiles) {
                     Path path = new Path(file);
-                    containerLocalResource.put(path.getName(),
-                            Utilities.createApplicationResource(path.getFileSystem(conf),
-                                    path,
-                                    LocalResourceType.FILE));
+                    containerLocalResource.put(
+                            path.getName(),
+                            Utilities.createApplicationResource(
+                                    path.getFileSystem(conf), path, LocalResourceType.FILE));
                     libJarsClassPath += path.getName() + ":";
                 }
             }
@@ -1426,27 +1666,36 @@ public class ApplicationMaster extends CompositeService {
     private Map<String, String> buildContainerEnv(String role) {
         LOG.info("Seting environments for the Container as the role of " + role);
         Map<String, String> containerEnv = new HashMap<>();
-        String containerExecType = conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE,
-                HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);
-        containerEnv.put(HboxConstants.Environment.HADOOP_USER_NAME.toString(), conf.get("hadoop.job.ugi").split(",")[0]);
+        String containerExecType =
+                conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);
+        containerEnv.put(
+                HboxConstants.Environment.HADOOP_USER_NAME.toString(),
+                conf.get("hadoop.job.ugi").split(",")[0]);
         containerEnv.put(HboxConstants.Environment.HBOX_TF_ROLE.toString(), role);
-        containerEnv.put(HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR.toString(), ApplicationConstants.LOG_DIR_EXPANSION_VAR);
+        containerEnv.put(
+                HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR.toString(),
+                ApplicationConstants.LOG_DIR_EXPANSION_VAR);
 
-        //containerEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), containerExecType);
+        // containerEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), containerExecType);
         if (psGCores > 0 || workerGCores > 0) {
-            containerEnv.put(HboxConstants.Environment.HBOX_CONTAIENR_GPU_NUM.toString(), String.valueOf(Math.max(psGCores, workerGCores)));
+            containerEnv.put(
+                    HboxConstants.Environment.HBOX_CONTAIENR_GPU_NUM.toString(),
+                    String.valueOf(Math.max(psGCores, workerGCores)));
         } else {
             containerEnv.put(HboxConstants.Environment.HBOX_CONTAIENR_GPU_NUM.toString(), String.valueOf(0));
         }
 
         if (this.inputPath.length() > 0) {
-            containerEnv.put(HboxConstants.Environment.HBOX_INPUT_PATH.toString(), this.inputPath.substring(0, inputPath.length() - 1));
+            containerEnv.put(
+                    HboxConstants.Environment.HBOX_INPUT_PATH.toString(),
+                    this.inputPath.substring(0, inputPath.length() - 1));
         }
         if (envs.containsKey(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString())) {
             this.outputIndex = Integer.parseInt(envs.get(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString()));
             if (this.outputIndex >= workerNum) {
-                LOG.info("Note that user set the worker index " + outputIndex + " which to upload the output exceed the worker num " + workerNum + ". " +
-                        "Job will upload the output of all workers after completed successfully!");
+                LOG.info("Note that user set the worker index " + outputIndex
+                        + " which to upload the output exceed the worker num " + workerNum + ". "
+                        + "Job will upload the output of all workers after completed successfully!");
             }
             if (workerNum == 1) {
                 this.outputIndex = 0;
@@ -1454,7 +1703,8 @@ public class ApplicationMaster extends CompositeService {
             containerEnv.put(HboxConstants.Environment.HBOX_OUTPUT_INDEX.toString(), String.valueOf(this.outputIndex));
         }
 
-        if (conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE).equalsIgnoreCase("docker")) {
+        if (conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE)
+                .equalsIgnoreCase("docker")) {
             if (role.equalsIgnoreCase(HboxConstants.PS) || role.equalsIgnoreCase(HboxConstants.SCHEDULER)) {
                 containerEnv.put("DOCKER_CONTAINER_MEMORY", psMemory + "");
                 containerEnv.put("DOCKER_CONTAINER_CPU", psVCores + "");
@@ -1467,17 +1717,23 @@ public class ApplicationMaster extends CompositeService {
             }
         }
 
-        if (hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS") || containerExecType.toUpperCase().equals("DOCKER")) {
-            String imageName = conf.get(HboxConfiguration.DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME,
+        if (hboxAppType.equals("VPC")
+                || hboxAppType.equals("DIGITS")
+                || containerExecType.toUpperCase().equals("DOCKER")) {
+            String imageName = conf.get(
+                    HboxConfiguration.DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME,
                     HboxConfiguration.DEFALUT_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
             if (hboxAppType.equals("DIGITS")) {
-                imageName = conf.get(HboxConfiguration.HBOX_DIGITS_IMAGE_NAME,
-                        HboxConfiguration.DEFAULT_HBOX_DIGITS_IMAGE_NAME);
+                imageName = conf.get(
+                        HboxConfiguration.HBOX_DIGITS_IMAGE_NAME, HboxConfiguration.DEFAULT_HBOX_DIGITS_IMAGE_NAME);
             }
             containerEnv.put(HboxConstants.Environment.HBOX_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME.toString(), imageName);
-            containerEnv.put(HboxConstants.Environment.HBOX_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME.toString(), conf.get(HboxConfiguration.DOCKER_CONTAINER_EXECUTOR_EXEC_NAME,
-                    HboxConfiguration.DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME));
-            //containerEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), "docker");
+            containerEnv.put(
+                    HboxConstants.Environment.HBOX_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME.toString(),
+                    conf.get(
+                            HboxConfiguration.DOCKER_CONTAINER_EXECUTOR_EXEC_NAME,
+                            HboxConfiguration.DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME));
+            // containerEnv.put(HboxConstants.Environment.HBOX_CONTAINER_EXECUTOR_TYPE.toString(), "docker");
             LOG.info("Docker image name: " + imageName);
         }
 
@@ -1527,7 +1783,8 @@ public class ApplicationMaster extends CompositeService {
             }
         }
 
-        if (conf.getBoolean(HboxConfiguration.HBOX_USER_CLASSPATH_FIRST, HboxConfiguration.DEFAULT_HBOX_USER_CLASSPATH_FIRST)) {
+        if (conf.getBoolean(
+                HboxConfiguration.HBOX_USER_CLASSPATH_FIRST, HboxConfiguration.DEFAULT_HBOX_USER_CLASSPATH_FIRST)) {
             containerEnv.put("CLASSPATH", libJarsClassPath + System.getenv("CLASSPATH"));
         } else {
             containerEnv.put("CLASSPATH", System.getenv("CLASSPATH") + ":" + libJarsClassPath);
@@ -1537,23 +1794,28 @@ public class ApplicationMaster extends CompositeService {
         containerEnv.computeIfPresent("CLASSPATH", (k, v) -> v + ":$(hadoop classpath --glob)");
 
         containerEnv.put(HboxConstants.Environment.APP_ATTEMPTID.toString(), applicationAttemptID.toString());
-        containerEnv.put(HboxConstants.Environment.APP_ID.toString(), applicationAttemptID.getApplicationId().toString());
+        containerEnv.put(
+                HboxConstants.Environment.APP_ID.toString(),
+                applicationAttemptID.getApplicationId().toString());
 
-        containerEnv.put(HboxConstants.Environment.APPMASTER_HOST.toString(),
+        containerEnv.put(
+                HboxConstants.Environment.APPMASTER_HOST.toString(),
                 System.getenv(ApplicationConstants.Environment.NM_HOST.toString()));
-        containerEnv.put(HboxConstants.Environment.APPMASTER_PORT.toString(),
-                String.valueOf(containerListener.getServerPort()));
+        containerEnv.put(
+                HboxConstants.Environment.APPMASTER_PORT.toString(), String.valueOf(containerListener.getServerPort()));
         final String userPath = System.getenv(HboxConstants.Environment.USER_PATH.toString());
         if (null != userPath) {
             containerEnv.put("PATH", System.getenv("PATH") + ":" + userPath);
         }
 
-        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
             if (!mpiExecDir.equals("")) {
                 containerEnv.put(HboxConstants.Environment.MPI_EXEC_DIR.toString(), mpiExecDir);
             }
             if (reLinkFiles.length() > 0) {
-                containerEnv.put(HboxConstants.Environment.MPI_FILES_LINKS.toString(), reLinkFiles.substring(0, reLinkFiles.length() - 1));
+                containerEnv.put(
+                        HboxConstants.Environment.MPI_FILES_LINKS.toString(),
+                        reLinkFiles.substring(0, reLinkFiles.length() - 1));
             }
         }
 
@@ -1582,21 +1844,28 @@ public class ApplicationMaster extends CompositeService {
     private List<String> buildContainerLaunchCommand(final String role, final int containerMemory) {
         List<String> vargs = new ArrayList<>();
         LOG.info("Setting up container command for the role of " + role);
-        int jvmContainerMem = (int) Math.max(containerMemory * conf.getDouble(HboxConfiguration.HBOX_CONTAINER_JVM_MEMORY_FRACTION, HboxConfiguration.DEFAULT_HBOX_CONTAINER_JVM_MEMORY_FRACTION),
-                conf.getInt(HboxConfiguration.HBOX_CONTAINER_JVM_MEMORY_MINIMUM, HboxConfiguration.DEFAULT_HBOX_CONTAINER_JVM_MEMORY_MINIMUM));
-        if (jvmContainerMem > containerMemory)
-            jvmContainerMem = containerMemory;
+        int jvmContainerMem = (int) Math.max(
+                containerMemory
+                        * conf.getDouble(
+                                HboxConfiguration.HBOX_CONTAINER_JVM_MEMORY_FRACTION,
+                                HboxConfiguration.DEFAULT_HBOX_CONTAINER_JVM_MEMORY_FRACTION),
+                conf.getInt(
+                        HboxConfiguration.HBOX_CONTAINER_JVM_MEMORY_MINIMUM,
+                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_JVM_MEMORY_MINIMUM));
+        if (jvmContainerMem > containerMemory) jvmContainerMem = containerMemory;
         vargs.add("exec");
         vargs.add(ShellEscapeUtils.escapeInDoubleQuotes("\"${JAVA_HOME}/bin/java\"")); // expand in the inner bash
         vargs.add("-Xmx" + jvmContainerMem + "m");
         vargs.add("-Xms" + jvmContainerMem + "m");
-        String javaOpts = conf.get(HboxConfiguration.HBOX_CONTAINER_EXTRA_JAVA_OPTS, HboxConfiguration.DEFAULT_HBOX_CONTAINER_JAVA_OPTS_EXCEPT_MEMORY);
+        String javaOpts = conf.get(
+                HboxConfiguration.HBOX_CONTAINER_EXTRA_JAVA_OPTS,
+                HboxConfiguration.DEFAULT_HBOX_CONTAINER_JAVA_OPTS_EXCEPT_MEMORY);
         if (!StringUtils.isBlank(javaOpts)) {
             vargs.add(ShellEscapeUtils.escapeContainerLaunch(javaOpts)); // java opts should not contain env variables
         }
         vargs.add(ShellEscapeUtils.escapeContainerLaunch(HboxContainer.class.getName()));
 
-        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
             // mpiContainerCommand is appended in launchContainer() after replacing '<template>' with the index
         } else if (!hboxAppType.equals("VPC") && !hboxAppType.equals("DIGITS")) {
             for (final String arg : hboxCommandArgs) {
@@ -1629,7 +1898,10 @@ public class ApplicationMaster extends CompositeService {
             LOG.info("add " + ldLibraryPath + " to LD_LIBRARY_PATH");
         }
 
-        String mpiInstallDir = Paths.get(conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR)).toAbsolutePath().toString();
+        String mpiInstallDir = Paths.get(conf.get(
+                        HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR))
+                .toAbsolutePath()
+                .toString();
         ldLibraryPath.append(":").append(mpiInstallDir).append(File.separator).append("lib");
 
         mpiexec.append(mpiInstallDir).append(File.separator).append("bin").append(File.separator);
@@ -1655,7 +1927,15 @@ public class ApplicationMaster extends CompositeService {
         mpiexecArgs.add("PMIX_INSTALL_PREFIX"); // unset PMIX_INSTALL_PREFIX which inherits path from mpi master node
         mpiexecArgs.add("/bin/sh");
         mpiexecArgs.add("-c");
-        mpiexecArgs.add(String.format("[ \"$%s\" != 1 ] && exec \"$@\" 1>> \"$%s\"/%s 2>> \"$%s\"/%s; \"$@\" 2>&1 | tee -a \"$%s\"/%s", HboxConstants.Environment.HBOX_TF_INDEX, HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_OUT_FILE, HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_ERR_FILE, HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_OUT_FILE)); // envs are expanded by /bin/sh
+        mpiexecArgs.add(String.format(
+                "[ \"$%s\" != 1 ] && exec \"$@\" 1>> \"$%s\"/%s 2>> \"$%s\"/%s; \"$@\" 2>&1 | tee -a \"$%s\"/%s",
+                HboxConstants.Environment.HBOX_TF_INDEX,
+                HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR,
+                HboxConstants.MPI_STD_OUT_FILE,
+                HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR,
+                HboxConstants.MPI_STD_ERR_FILE,
+                HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR,
+                HboxConstants.MPI_STD_OUT_FILE)); // envs are expanded by /bin/sh
         mpiexecArgs.add("--");
         for (final String arg : hboxCommandArgs) {
             mpiexecArgs.add(arg);
@@ -1668,7 +1948,6 @@ public class ApplicationMaster extends CompositeService {
         envLists.add("PATH=" + System.getenv("PATH"));
         envLists.add("PWD=" + mpiExecDir);
         envLists.add("LD_LIBRARY_PATH=" + ldLibraryPath.toString());
-
 
         // MPI related options
         // relocated openmpi install dir
@@ -1690,7 +1969,8 @@ public class ApplicationMaster extends CompositeService {
             final String value = entry.getValue();
             if (null != key && null != value) {
                 if (key.startsWith(HboxConstants.AM_ENV_PREFIX)) {
-                    final String envName = key.substring(HboxConstants.AM_ENV_PREFIX.length()).trim();
+                    final String envName =
+                            key.substring(HboxConstants.AM_ENV_PREFIX.length()).trim();
                     if (!envName.isEmpty()) {
                         envLists.add(envName + "=" + value);
                     }
@@ -1700,7 +1980,11 @@ public class ApplicationMaster extends CompositeService {
 
         LOG.info("Executing mpi exec command: " + String.join(" ", mpiexecArgs));
         LOG.info("Mpi exec Process run in: " + mpiExecDir);
-        mpiExecProcess = processLaunch.exec(mpiexecArgs.toArray(new String[0]), envLists.toArray(new String[envLists.size()]), this.envs, new File(mpiExecDir));
+        mpiExecProcess = processLaunch.exec(
+                mpiexecArgs.toArray(new String[0]),
+                envLists.toArray(new String[envLists.size()]),
+                this.envs,
+                new File(mpiExecDir));
 
         Thread stdinThread = new Thread(new Runnable() {
             @Override
@@ -1732,7 +2016,9 @@ public class ApplicationMaster extends CompositeService {
                         LOG.info(mpiExecStderr);
                         appendMessage(new Message(LogType.STDERR, mpiExecStderr));
                         extractMpiRTECommand(mpiExecStderr, null);
-                        if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                        if (conf.getBoolean(
+                                HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                                HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                             amContainerStdErr.append(mpiExecStderr);
                         }
                     }
@@ -1762,45 +2048,64 @@ public class ApplicationMaster extends CompositeService {
             appendMessage(new Message(LogType.STDERR, mpiExecOutput));
             if (mpiExecOutput.startsWith("command")) {
                 // add orted prefix
-                mpiContainerCommand = "orted " + mpiExecOutput.replaceFirst("command:", "").replace("--daemonize","");
+                mpiContainerCommand =
+                        "orted " + mpiExecOutput.replaceFirst("command:", "").replace("--daemonize", "");
             } else {
                 int commandStartIndex = mpiExecOutput.indexOf("orted -mca");
                 mpiContainerCommand = mpiExecOutput.substring(commandStartIndex);
             }
-            if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE) && null != logCollector) {
+            if (conf.getBoolean(
+                            HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                            HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)
+                    && null != logCollector) {
                 logCollector.append(mpiExecOutput);
             }
         }
     }
 
-    //read user horovod config parameter
+    // read user horovod config parameter
     private String readHorovodConfig() {
         StringBuilder horovodConfig = new StringBuilder();
-        if (conf.getBoolean(HboxConfiguration.HBOX_HOROVOD_MPI_THREADS_DISABLE, HboxConfiguration.DEFAULT_HBOX_HOROVOD_MPI_THREADS_DISABLE)) {
+        if (conf.getBoolean(
+                HboxConfiguration.HBOX_HOROVOD_MPI_THREADS_DISABLE,
+                HboxConfiguration.DEFAULT_HBOX_HOROVOD_MPI_THREADS_DISABLE)) {
             horovodConfig.append("-x HOROVOD_MPI_THREADS_DISABLE=1 ");
         }
         String timelineFileName = conf.get(HboxConfiguration.HBOX_HOROVOD_TIMELINE);
         if (timelineFileName != null) {
-            horovodConfig.append("-x HOROVOD_TIMELINE=").append(timelineFileName).append(" ");
+            horovodConfig
+                    .append("-x HOROVOD_TIMELINE=")
+                    .append(timelineFileName)
+                    .append(" ");
         }
-        int fusionThreshold = conf.getInt(HboxConfiguration.HBOX_HOROVOD_FUSION_THRESHOLD, HboxConfiguration.DEFAULT_HBOX_HOROVOD_FUSION_THRESHOLD);
+        int fusionThreshold = conf.getInt(
+                HboxConfiguration.HBOX_HOROVOD_FUSION_THRESHOLD,
+                HboxConfiguration.DEFAULT_HBOX_HOROVOD_FUSION_THRESHOLD);
         if (fusionThreshold != -1) {
-            horovodConfig.append("-x HOROVOD_FUSION_THRESHOLD=").append(fusionThreshold).append(" ");
+            horovodConfig
+                    .append("-x HOROVOD_FUSION_THRESHOLD=")
+                    .append(fusionThreshold)
+                    .append(" ");
         }
-        int cycleTime = conf.getInt(HboxConfiguration.HBOX_HOROVOD_CYCLE_TIME, HboxConfiguration.DEFAULT_HBOX_HOROVOD_CYCLE_TIME);
+        int cycleTime = conf.getInt(
+                HboxConfiguration.HBOX_HOROVOD_CYCLE_TIME, HboxConfiguration.DEFAULT_HBOX_HOROVOD_CYCLE_TIME);
         if (cycleTime != -1) {
             horovodConfig.append("-x HOROVOD_CYCLE_TIME=").append(cycleTime).append(" ");
         }
-        if (conf.getBoolean(HboxConfiguration.HBOX_HOROVOD_STALL_CHECK_DISABLE, HboxConfiguration.DEFAULT_HBOX_HOROVOD_STALL_CHECK_DISABLE)) {
+        if (conf.getBoolean(
+                HboxConfiguration.HBOX_HOROVOD_STALL_CHECK_DISABLE,
+                HboxConfiguration.DEFAULT_HBOX_HOROVOD_STALL_CHECK_DISABLE)) {
             horovodConfig.append("-x HOROVOD_STALL_CHECK_DISABLE=1 ");
         }
-        if (conf.getBoolean(HboxConfiguration.HBOX_HOROVOD_HIERARCHICAL_ALLREDUCE, HboxConfiguration.DEFAULT_HBOX_HOROVOD_HIERARCHICAL_ALLREDUCE)) {
+        if (conf.getBoolean(
+                HboxConfiguration.HBOX_HOROVOD_HIERARCHICAL_ALLREDUCE,
+                HboxConfiguration.DEFAULT_HBOX_HOROVOD_HIERARCHICAL_ALLREDUCE)) {
             horovodConfig.append("-x HOROVOD_HIERARCHICAL_ALLREDUCE=1 ");
         }
         return horovodConfig.toString().trim();
     }
 
-    //launch horovod mpi task
+    // launch horovod mpi task
     private void launchHorovodExec() throws IOException {
         LOG.info("Launching horovod exec in Application Master");
         StringBuilder commandBuilder = new StringBuilder();
@@ -1811,27 +2116,45 @@ public class ApplicationMaster extends CompositeService {
             ldLibraryPath.append(mpiExtraLdLibraryPath);
             LOG.info("add " + ldLibraryPath + " to LD_LIBRARY_PATH");
         }
-        if (conf.getBoolean(HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR_ENABLE)) {
-            String mpiInstallDir = conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR);
-            commandBuilder.append(mpiInstallDir).append(File.separator).append("bin").append(File.separator);
-            ldLibraryPath.append(":").append(mpiInstallDir).append(File.separator).append("lib");
+        if (conf.getBoolean(
+                HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR_ENABLE)) {
+            String mpiInstallDir =
+                    conf.get(HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR);
+            commandBuilder
+                    .append(mpiInstallDir)
+                    .append(File.separator)
+                    .append("bin")
+                    .append(File.separator);
+            ldLibraryPath
+                    .append(":")
+                    .append(mpiInstallDir)
+                    .append(File.separator)
+                    .append("lib");
         }
-        int processPerWorker = conf.getInt(HboxConfiguration.HBOX_HOROVOD_PROCESS_NUM_PER_WORKER, HboxConfiguration.DEDAULT_HBOX_HOROVOD_PROCESS_NUM_PER_WORKER);
-        commandBuilder.append("mpirun -np ").append(workerNum * processPerWorker).append(" -H ");
+        int processPerWorker = conf.getInt(
+                HboxConfiguration.HBOX_HOROVOD_PROCESS_NUM_PER_WORKER,
+                HboxConfiguration.DEDAULT_HBOX_HOROVOD_PROCESS_NUM_PER_WORKER);
+        commandBuilder
+                .append("mpirun -np ")
+                .append(workerNum * processPerWorker)
+                .append(" -H ");
         ldLibraryPath.append(":").append(System.getenv("LD_LIBRARY_PATH"));
         for (Container container : acquiredWorkerContainers) {
             if (processPerWorker == 1)
                 commandBuilder.append(container.getNodeId().getHost()).append(",");
             else
-                commandBuilder.append(container.getNodeId().getHost()).append(":").append(processPerWorker).append(",");
+                commandBuilder
+                        .append(container.getNodeId().getHost())
+                        .append(":")
+                        .append(processPerWorker)
+                        .append(",");
         }
         commandBuilder.deleteCharAt(commandBuilder.length() - 1);
         String horovodConfig = readHorovodConfig();
-        if (horovodConfig.trim().equals(""))
-            commandBuilder.append(" ");
-        else
-            commandBuilder.append(" ").append(readHorovodConfig()).append(" ");
-        commandBuilder.append("-bind-to none -map-by slot -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH -mca pml ob1 -mca btl ^openib -mca btl_tcp_if_include \"10.0.0.0/8\" ");
+        if (horovodConfig.trim().equals("")) commandBuilder.append(" ");
+        else commandBuilder.append(" ").append(readHorovodConfig()).append(" ");
+        commandBuilder.append(
+                "-bind-to none -map-by slot -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH -mca pml ob1 -mca btl ^openib -mca btl_tcp_if_include \"10.0.0.0/8\" ");
         commandBuilder.append(String.join(" ", hboxCommandArgs));
 
         List<String> env = new ArrayList<>(20);
@@ -1855,7 +2178,8 @@ public class ApplicationMaster extends CompositeService {
             env.add("PATH=" + System.getenv("PATH"));
         }
         if (userEnv.containsKey("LD_LIBRARY_PATH")) {
-            env.add("LD_LIBRARY_PATH=" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + ldLibraryPath.toString());
+            env.add("LD_LIBRARY_PATH=" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator")
+                    + ldLibraryPath.toString());
         } else {
             env.add("LD_LIBRARY_PATH=" + ldLibraryPath.toString());
         }
@@ -1863,7 +2187,8 @@ public class ApplicationMaster extends CompositeService {
         File mpiExec = new File(mpiExecDir);
         LOG.info("Executing horovod exec command: " + commandBuilder.toString());
         LOG.info("Horovod mpi exec Process run in: " + mpiExec.toString());
-        mpiExecProcess = processLaunch.exec(commandBuilder.toString(), env.toArray(new String[env.size()]), this.envs, mpiExec);
+        mpiExecProcess =
+                processLaunch.exec(commandBuilder.toString(), env.toArray(new String[env.size()]), this.envs, mpiExec);
 
         Thread stdinThread = new Thread(new Runnable() {
             @Override
@@ -1876,8 +2201,9 @@ public class ApplicationMaster extends CompositeService {
                         if (mpiExecOutput.startsWith("command")) {
                             LOG.info("Container horovod Command " + mpiExecOutput);
                             appendMessage(new Message(LogType.STDERR, mpiExecOutput));
-                            //get orted command
-                            mpiContainerCommand = mpiExecOutput.replaceFirst("command:", "").replace("--daemonize","");
+                            // get orted command
+                            mpiContainerCommand =
+                                    mpiExecOutput.replaceFirst("command:", "").replace("--daemonize", "");
                         } else {
                             LOG.info(mpiExecOutput);
                             appendMessage(new Message(LogType.STDOUT, mpiExecOutput));
@@ -1916,13 +2242,16 @@ public class ApplicationMaster extends CompositeService {
      * @return is launched success
      */
     @SuppressWarnings("deprecation")
-    private void launchContainer(Map<String, LocalResource> containerLocalResource,
-                                 Map<String, String> containerEnv,
-                                 List<String> containerLaunchcommands,
-                                 Container container, int index) throws IOException {
+    private void launchContainer(
+            Map<String, LocalResource> containerLocalResource,
+            Map<String, String> containerEnv,
+            List<String> containerLaunchcommands,
+            Container container,
+            int index)
+            throws IOException {
         LOG.info("Setting up launch context for containerid=" + container.getId());
 
-        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
             // mpiContainerCommand must be ready, and this openmpi generated orted command sould be splitted by spaces
             String containerMpiCommand = mpiContainerCommand.replace("<template>", String.valueOf(index));
             LOG.info("Container mpi command is: " + containerMpiCommand);
@@ -1951,7 +2280,9 @@ public class ApplicationMaster extends CompositeService {
     }
 
     private void appendMessage(Message message) {
-        if (applicationMessageQueue.size() >= conf.getInt(HboxConfiguration.HBOX_MESSAGES_LEN_MAX, HboxConfiguration.DEFAULT_HBOX_MESSAGES_LEN_MAX)) {
+        if (applicationMessageQueue.size()
+                >= conf.getInt(
+                        HboxConfiguration.HBOX_MESSAGES_LEN_MAX, HboxConfiguration.DEFAULT_HBOX_MESSAGES_LEN_MAX)) {
             applicationMessageQueue.poll();
         }
         if (!applicationMessageQueue.offer(message)) {
@@ -1961,8 +2292,7 @@ public class ApplicationMaster extends CompositeService {
 
     private void unregisterApp(FinalApplicationStatus finalStatus, String diagnostics) {
         try {
-            amrmAsync.unregisterApplicationMaster(finalStatus, diagnostics,
-                    applicationHistoryUrl);
+            amrmAsync.unregisterApplicationMaster(finalStatus, diagnostics, applicationHistoryUrl);
             amrmAsync.stop();
         } catch (Exception e) {
             LOG.error("Error while unregistering Application", e);
@@ -1978,7 +2308,8 @@ public class ApplicationMaster extends CompositeService {
         LOG.info("ApplicationMaster Starting ...");
         regResp = registerApplicationMaster();
 
-        LOG.info("Application submit hbox client is: " + conf.get(HboxConfiguration.HBOX_CLIENT_HOSTNAME, HboxConfiguration.DEFAULT_HBOX_CLIENT_HOSTNAME));
+        LOG.info("Application submit hbox client is: "
+                + conf.get(HboxConfiguration.HBOX_CLIENT_HOSTNAME, HboxConfiguration.DEFAULT_HBOX_CLIENT_HOSTNAME));
         LOG.info("HBox release version: " + HboxVersion.VERSION);
         if (conf.getBoolean(HboxConfiguration.HBOX_AM_CMD_ENABLE, HboxConfiguration.DEFAULT_HBOX_AM_ENABLE)) {
             String cmd = conf.get(HboxConfiguration.HBOX_AM_CMD, HboxConfiguration.DEDAULT_HBOX_AM_CMD);
@@ -1994,7 +2325,9 @@ public class ApplicationMaster extends CompositeService {
                             String extraAmCmdStdoutLog;
                             while ((extraAmCmdStdoutLog = reader.readLine()) != null) {
                                 LOG.info(extraAmCmdStdoutLog);
-                                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                                if (conf.getBoolean(
+                                        HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                                     amContainerStdOut.append(extraAmCmdStdoutLog);
                                 }
                             }
@@ -2015,7 +2348,9 @@ public class ApplicationMaster extends CompositeService {
                             String extraAmCmdStdoutLog;
                             while ((extraAmCmdStdoutLog = reader.readLine()) != null) {
                                 LOG.info(extraAmCmdStdoutLog);
-                                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                                if (conf.getBoolean(
+                                        HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                                     amContainerStdErr.append(extraAmCmdStdoutLog);
                                 }
                             }
@@ -2029,17 +2364,22 @@ public class ApplicationMaster extends CompositeService {
             }
         }
 
-        if (conf.getBoolean(HboxConfiguration.HBOX_INPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM) ||
-                conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("STREAM")) {
+        if (conf.getBoolean(HboxConfiguration.HBOX_INPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM)
+                || conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY)
+                        .equals("STREAM")) {
             buildInputStreamFileStatus();
         } else {
             buildInputFileStatus();
             buildS3InputFileInfo();
         }
 
-        if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType) || "MXNET".equals(hboxAppType) || "DISTLIGHTLDA".equals(hboxAppType) || "XFLOW".equals(hboxAppType)) {
-            this.appendMessage("Hbox application needs " + workerNum + " worker and "
-                    + psNum + " ps containers in fact", true);
+        if ("TENSORFLOW".equals(hboxAppType)
+                || "TENSOR2TENSOR".equals(hboxAppType)
+                || "MXNET".equals(hboxAppType)
+                || "DISTLIGHTLDA".equals(hboxAppType)
+                || "XFLOW".equals(hboxAppType)) {
+            this.appendMessage(
+                    "Hbox application needs " + workerNum + " worker and " + psNum + " ps containers in fact", true);
         } else {
             this.appendMessage("Hbox application needs " + workerNum + " worker container in fact", true);
         }
@@ -2048,17 +2388,16 @@ public class ApplicationMaster extends CompositeService {
 
         int requestWorkerNum = workerNum;
         if ("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType)) {
-            if (chiefWorker)
-                requestWorkerNum--;
-            if (tfEvaluator)
-                requestWorkerNum--;
+            if (chiefWorker) requestWorkerNum--;
+            if (tfEvaluator) requestWorkerNum--;
         }
 
         rmCallbackHandler.setNeededPsContainersCount(psNum);
         rmCallbackHandler.setNeededWorkerContainersCount(requestWorkerNum);
         rmCallbackHandler.setHboxAppType(hboxAppType);
 
-        int allocateInterval = conf.getInt(HboxConfiguration.HBOX_ALLOCATE_INTERVAL, HboxConfiguration.DEFAULT_HBOX_ALLOCATE_INTERVAL);
+        int allocateInterval =
+                conf.getInt(HboxConfiguration.HBOX_ALLOCATE_INTERVAL, HboxConfiguration.DEFAULT_HBOX_ALLOCATE_INTERVAL);
         amrmAsync.setHeartbeatInterval(allocateInterval);
 
         if (conf.get(HboxConfiguration.HBOX_HOST_BLACKLIST) != null) {
@@ -2102,8 +2441,13 @@ public class ApplicationMaster extends CompositeService {
                 startAllocatedContainer = true;
                 startAllocatedTimeStamp = System.currentTimeMillis();
             }
-            if (startAllocatedContainer && (System.currentTimeMillis() - startAllocatedTimeStamp) > conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
-                String failMessage = "Container waiting except the allocated expiry time. Maybe the Cluster resource not satisfied the user necessary. Please resubmit !";
+            if (startAllocatedContainer
+                    && (System.currentTimeMillis() - startAllocatedTimeStamp)
+                            > conf.getInt(
+                                    YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
+                                    YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
+                String failMessage =
+                        "Container waiting except the allocated expiry time. Maybe the Cluster resource not satisfied the user necessary. Please resubmit !";
                 LOG.info(failMessage);
                 this.appendMessage("Unregister  Application", true);
                 unregisterApp(FinalApplicationStatus.FAILED, failMessage);
@@ -2134,7 +2478,7 @@ public class ApplicationMaster extends CompositeService {
         LOG.info("Try to allocate " + requestWorkerNum + " worker containers");
         int workerCancelCount = 0;
         while (rmCallbackHandler.getAllocatedWorkerContainerNumber() < requestWorkerNum) {
-            if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+            if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
                 rmCallbackHandler.addBlackHost(applicationMasterHostname);
                 List<String> blackAMs = rmCallbackHandler.getBlackHosts();
                 amrmSync.updateBlacklist(blackAMs, null);
@@ -2157,8 +2501,13 @@ public class ApplicationMaster extends CompositeService {
                 startAllocatedContainer = true;
                 startAllocatedTimeStamp = System.currentTimeMillis();
             }
-            if (startAllocatedContainer && (System.currentTimeMillis() - startAllocatedTimeStamp) > conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
-                String failMessage = "Container waiting except the allocated expiry time. Maybe the Cluster resource not satisfied the user necessary. Please resubmit !";
+            if (startAllocatedContainer
+                    && (System.currentTimeMillis() - startAllocatedTimeStamp)
+                            > conf.getInt(
+                                    YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
+                                    YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
+                String failMessage =
+                        "Container waiting except the allocated expiry time. Maybe the Cluster resource not satisfied the user necessary. Please resubmit !";
                 LOG.info(failMessage);
                 this.appendMessage("Unregister  Application", true);
                 unregisterApp(FinalApplicationStatus.FAILED, failMessage);
@@ -2211,7 +2560,8 @@ public class ApplicationMaster extends CompositeService {
                     synchronized (cancelContainers) {
                         if (cancelContainers.size() != 0) {
                             for (Container container : cancelContainers) {
-                                LOG.info("Canceling container: " + container.getId().toString());
+                                LOG.info("Canceling container: "
+                                        + container.getId().toString());
                                 amrmAsync.releaseAssignedContainer(container.getId());
                                 amrmAsync.addContainerRequest(chiefWorkerContainerRequest);
                                 chiefWorkerCancelCount++;
@@ -2219,8 +2569,13 @@ public class ApplicationMaster extends CompositeService {
                             cancelContainers.clear();
                         }
                     }
-                    if (startAllocatedContainer && (System.currentTimeMillis() - startAllocatedTimeStamp) > conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
-                        String failMessage = "Container waiting except the allocated expiry time. Maybe the Cluster resource not satisfied the user necessary. Please resubmit !";
+                    if (startAllocatedContainer
+                            && (System.currentTimeMillis() - startAllocatedTimeStamp)
+                                    > conf.getInt(
+                                            YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
+                                            YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
+                        String failMessage =
+                                "Container waiting except the allocated expiry time. Maybe the Cluster resource not satisfied the user necessary. Please resubmit !";
                         LOG.info(failMessage);
                         this.appendMessage("Unregister  Application", true);
                         unregisterApp(FinalApplicationStatus.FAILED, failMessage);
@@ -2235,7 +2590,8 @@ public class ApplicationMaster extends CompositeService {
                         while (acquiredChiefWorkerContainers.size() > 1) {
                             Container releaseContainer = acquiredChiefWorkerContainers.remove(0);
                             amrmAsync.releaseAssignedContainer(releaseContainer.getId());
-                            LOG.info("Release chief container " + releaseContainer.getId().toString());
+                            LOG.info("Release chief container "
+                                    + releaseContainer.getId().toString());
                         }
                     }
                 }
@@ -2258,7 +2614,8 @@ public class ApplicationMaster extends CompositeService {
                         if (cancelContainers.size() != 0) {
                             LOG.info("cancelContainers");
                             for (Container container : cancelContainers) {
-                                LOG.info("Canceling container: " + container.getId().toString());
+                                LOG.info("Canceling container: "
+                                        + container.getId().toString());
                                 amrmAsync.releaseAssignedContainer(container.getId());
                                 amrmAsync.addContainerRequest(evaluatorWorkerContainerRequest);
                                 evaluatorCancelCount++;
@@ -2266,8 +2623,13 @@ public class ApplicationMaster extends CompositeService {
                             cancelContainers.clear();
                         }
                     }
-                    if (startAllocatedContainer && (System.currentTimeMillis() - startAllocatedTimeStamp) > conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
-                        String failMessage = "Container waiting except the allocated expiry time. Maybe the Cluster resource not satisfied the user necessary. Please resubmit !";
+                    if (startAllocatedContainer
+                            && (System.currentTimeMillis() - startAllocatedTimeStamp)
+                                    > conf.getInt(
+                                            YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
+                                            YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS)) {
+                        String failMessage =
+                                "Container waiting except the allocated expiry time. Maybe the Cluster resource not satisfied the user necessary. Please resubmit !";
                         LOG.info(failMessage);
                         this.appendMessage("Unregister  Application", true);
                         unregisterApp(FinalApplicationStatus.FAILED, failMessage);
@@ -2284,11 +2646,13 @@ public class ApplicationMaster extends CompositeService {
                         while (acquiredEvaluatorWorkerContainers.size() > 1) {
                             Container releaseContainer = acquiredEvaluatorWorkerContainers.remove(0);
                             amrmAsync.releaseAssignedContainer(releaseContainer.getId());
-                            LOG.info("Release evaluator container " + releaseContainer.getId().toString());
+                            LOG.info("Release evaluator container "
+                                    + releaseContainer.getId().toString());
                         }
                     }
                 }
-                LOG.info("Total " + acquiredEvaluatorWorkerContainers.size() + " evaluator worker containers has allocated.");
+                LOG.info("Total " + acquiredEvaluatorWorkerContainers.size()
+                        + " evaluator worker containers has allocated.");
                 acquiredWorkerContainers.add(acquiredEvaluatorWorkerContainers.get(0));
             }
 
@@ -2306,14 +2670,16 @@ public class ApplicationMaster extends CompositeService {
         synchronized (cancelContainers) {
             if (cancelContainers.size() != 0) {
                 for (Container container : cancelContainers) {
-                    LOG.info("Canceling unnecessary container: " + container.getId().toString());
+                    LOG.info("Canceling unnecessary container: "
+                            + container.getId().toString());
                     amrmAsync.releaseAssignedContainer(container.getId());
                 }
                 cancelContainers.clear();
             }
         }
 
-        if (conf.getBoolean(HboxConfiguration.HBOX_HOST_LOCAL_ENABLE, HboxConfiguration.DEFAULT_HBOX_HOST_LOCAL_ENABLE)) {
+        if (conf.getBoolean(
+                HboxConfiguration.HBOX_HOST_LOCAL_ENABLE, HboxConfiguration.DEFAULT_HBOX_HOST_LOCAL_ENABLE)) {
             containerHostnames = new HashSet<>();
             if (acquiredPsContainers.size() > 0) {
                 for (Container container : acquiredPsContainers) {
@@ -2328,13 +2694,17 @@ public class ApplicationMaster extends CompositeService {
             LOG.info("host local enable is true, host list is: " + containerHostnames.toString());
         }
 
-        //launch dist mxnet scheduler
+        // launch dist mxnet scheduler
         if (hboxAppType.equals("MXNET") && !singleMx) {
             LOG.info("Seting environments for the mxnet scheduler");
             dmlcPsRootUri = applicationMasterHostname;
             Socket schedulerReservedSocket = new Socket();
             try {
-                Utilities.getReservePort(schedulerReservedSocket, InetAddress.getByName(applicationMasterHostname).getHostAddress(), reservePortBegin, reservePortEnd);
+                Utilities.getReservePort(
+                        schedulerReservedSocket,
+                        InetAddress.getByName(applicationMasterHostname).getHostAddress(),
+                        reservePortBegin,
+                        reservePortEnd);
             } catch (IOException e) {
                 LOG.error("Can not get available port");
             }
@@ -2355,7 +2725,8 @@ public class ApplicationMaster extends CompositeService {
                 }
             }
             if (userEnv.containsKey("PATH")) {
-                schedulerEnv.add("PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
+                schedulerEnv.add(
+                        "PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
             } else {
                 schedulerEnv.add("PATH=" + System.getenv("PATH"));
             }
@@ -2363,16 +2734,21 @@ public class ApplicationMaster extends CompositeService {
             schedulerEnv.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
             schedulerEnv.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
             if (userEnv.containsKey("LD_LIBRARY_PATH")) {
-                schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                        "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+                schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH")
+                        + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":"
+                        + System.getenv("JAVA_HOME") + "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME")
+                        + "/lib/native");
             } else {
-                schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                        "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+                schedulerEnv.add(
+                        "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME")
+                                + "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
             }
             if (userEnv.containsKey("CLASSPATH")) {
-                schedulerEnv.add("CLASSPATH=" + "./:" + userEnv.get("CLASSPATH") + System.getProperty("path.separator") + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+                schedulerEnv.add("CLASSPATH=" + "./:" + userEnv.get("CLASSPATH") + System.getProperty("path.separator")
+                        + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
             } else {
-                schedulerEnv.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+                schedulerEnv.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":"
+                        + System.getProperty("java.class.path"));
             }
             schedulerEnv.add("DMLC_ROLE=scheduler");
             schedulerEnv.add("DMLC_PS_ROOT_URI=" + dmlcPsRootUri);
@@ -2389,7 +2765,8 @@ public class ApplicationMaster extends CompositeService {
 
             try {
                 schedulerReservedSocket.close();
-                final Process mxnetSchedulerProcess = processLaunch.exec(hboxCommandArgs, schedulerEnv.toArray(new String[schedulerEnv.size()]), this.envs, null);
+                final Process mxnetSchedulerProcess = processLaunch.exec(
+                        hboxCommandArgs, schedulerEnv.toArray(new String[schedulerEnv.size()]), this.envs, null);
                 LOG.info("Starting thread to redirect stdout of mxnet scheduler process");
                 Thread mxnetSchedulerRedirectThread = new Thread(new Runnable() {
                     @Override
@@ -2400,7 +2777,9 @@ public class ApplicationMaster extends CompositeService {
                             String mxnetSchedulerStdoutLog;
                             while ((mxnetSchedulerStdoutLog = reader.readLine()) != null) {
                                 LOG.debug(mxnetSchedulerStdoutLog);
-                                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                                if (conf.getBoolean(
+                                        HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                                     amContainerStdOut.append(mxnetSchedulerStdoutLog);
                                 }
                             }
@@ -2422,7 +2801,9 @@ public class ApplicationMaster extends CompositeService {
                             String mxnetSchedulerStderrLog;
                             while ((mxnetSchedulerStderrLog = reader.readLine()) != null) {
                                 LOG.info(mxnetSchedulerStderrLog);
-                                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                                if (conf.getBoolean(
+                                        HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                                     amContainerStdErr.append(mxnetSchedulerStderrLog);
                                 }
                             }
@@ -2436,16 +2817,19 @@ public class ApplicationMaster extends CompositeService {
             } catch (Exception e) {
                 LOG.info("start mxnet scheduler error " + e);
             }
-
         }
 
-        //launch dist xgboost scheduler
+        // launch dist xgboost scheduler
         if (hboxAppType.equals("DISTXGBOOST")) {
             LOG.info("Seting environments for the dist xgboost scheduler");
             dmlcTrackerUri = applicationMasterHostname;
             Socket schedulerReservedSocket = new Socket();
             try {
-                Utilities.getReservePort(schedulerReservedSocket, InetAddress.getByName(applicationMasterHostname).getHostAddress(), reservePortBegin, reservePortEnd);
+                Utilities.getReservePort(
+                        schedulerReservedSocket,
+                        InetAddress.getByName(applicationMasterHostname).getHostAddress(),
+                        reservePortBegin,
+                        reservePortEnd);
             } catch (IOException e) {
                 LOG.error("Can not get available port");
             }
@@ -2466,7 +2850,8 @@ public class ApplicationMaster extends CompositeService {
                 }
             }
             if (userEnv.containsKey("PATH")) {
-                schedulerEnv.add("PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
+                schedulerEnv.add(
+                        "PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
             } else {
                 schedulerEnv.add("PATH=" + System.getenv("PATH"));
             }
@@ -2474,16 +2859,21 @@ public class ApplicationMaster extends CompositeService {
             schedulerEnv.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
             schedulerEnv.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
             if (userEnv.containsKey("LD_LIBRARY_PATH")) {
-                schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                        "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+                schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH")
+                        + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":"
+                        + System.getenv("JAVA_HOME") + "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME")
+                        + "/lib/native");
             } else {
-                schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                        "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+                schedulerEnv.add(
+                        "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME")
+                                + "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
             }
             if (userEnv.containsKey("CLASSPATH")) {
-                schedulerEnv.add("CLASSPATH=" + "./:" + userEnv.get("CLASSPATH") + System.getProperty("path.separator") + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+                schedulerEnv.add("CLASSPATH=" + "./:" + userEnv.get("CLASSPATH") + System.getProperty("path.separator")
+                        + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
             } else {
-                schedulerEnv.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+                schedulerEnv.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":"
+                        + System.getProperty("java.class.path"));
             }
             schedulerEnv.add("PYTHONUNBUFFERED=1");
 
@@ -2496,19 +2886,26 @@ public class ApplicationMaster extends CompositeService {
 
             try {
                 schedulerReservedSocket.close();
-                final Process xgboostSchedulerProcess = processLaunch.exec(distXgboostSchedulerCmd, schedulerEnv.toArray(new String[schedulerEnv.size()]), this.envs, null);
+                final Process xgboostSchedulerProcess = processLaunch.exec(
+                        distXgboostSchedulerCmd,
+                        schedulerEnv.toArray(new String[schedulerEnv.size()]),
+                        this.envs,
+                        null);
                 LOG.info("Starting thread to redirect stdout of xgboost scheduler process");
                 Thread xgboostSchedulerRedirectThread = new Thread(new Runnable() {
                     @Override
                     public void run() {
                         try {
                             BufferedReader reader;
-                            reader = new BufferedReader(new InputStreamReader(xgboostSchedulerProcess.getInputStream()));
+                            reader =
+                                    new BufferedReader(new InputStreamReader(xgboostSchedulerProcess.getInputStream()));
                             String xgboostSchedulerStdoutLog;
                             while ((xgboostSchedulerStdoutLog = reader.readLine()) != null) {
                                 LOG.info(xgboostSchedulerStdoutLog);
                                 appendMessage(xgboostSchedulerStdoutLog, false);
-                                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                                if (conf.getBoolean(
+                                        HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                                     amContainerStdOut.append(xgboostSchedulerStdoutLog);
                                 }
                             }
@@ -2526,12 +2923,15 @@ public class ApplicationMaster extends CompositeService {
                     public void run() {
                         try {
                             BufferedReader reader;
-                            reader = new BufferedReader(new InputStreamReader(xgboostSchedulerProcess.getErrorStream()));
+                            reader =
+                                    new BufferedReader(new InputStreamReader(xgboostSchedulerProcess.getErrorStream()));
                             String xgboostSchedulerStderrLog;
                             while ((xgboostSchedulerStderrLog = reader.readLine()) != null) {
                                 LOG.info(xgboostSchedulerStderrLog);
                                 appendMessage(xgboostSchedulerStderrLog, false);
-                                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                                if (conf.getBoolean(
+                                        HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                                     amContainerStdErr.append(xgboostSchedulerStderrLog);
                                 }
                             }
@@ -2545,7 +2945,6 @@ public class ApplicationMaster extends CompositeService {
             } catch (Exception e) {
                 LOG.info("start xgboost scheduler error " + e);
             }
-
         }
 
         // launch xflow scheduler
@@ -2560,7 +2959,11 @@ public class ApplicationMaster extends CompositeService {
             }
             Socket schedulerReservedSocket = new Socket();
             try {
-                Utilities.getReservePort(schedulerReservedSocket, InetAddress.getByName(applicationMasterHostname).getHostAddress(), reservePortBegin, reservePortEnd);
+                Utilities.getReservePort(
+                        schedulerReservedSocket,
+                        InetAddress.getByName(applicationMasterHostname).getHostAddress(),
+                        reservePortBegin,
+                        reservePortEnd);
             } catch (IOException e) {
                 LOG.error("Can not get available port");
             }
@@ -2581,7 +2984,8 @@ public class ApplicationMaster extends CompositeService {
                 }
             }
             if (userEnv.containsKey("PATH")) {
-                schedulerEnv.add("PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
+                schedulerEnv.add(
+                        "PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
             } else {
                 schedulerEnv.add("PATH=" + System.getenv("PATH"));
             }
@@ -2589,16 +2993,21 @@ public class ApplicationMaster extends CompositeService {
             schedulerEnv.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
             schedulerEnv.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
             if (userEnv.containsKey("LD_LIBRARY_PATH")) {
-                schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                        "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+                schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH")
+                        + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":"
+                        + System.getenv("JAVA_HOME") + "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME")
+                        + "/lib/native");
             } else {
-                schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                        "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+                schedulerEnv.add(
+                        "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME")
+                                + "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
             }
             if (userEnv.containsKey("CLASSPATH")) {
-                schedulerEnv.add("CLASSPATH=" + "./:" + userEnv.get("CLASSPATH") + System.getProperty("path.separator") + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+                schedulerEnv.add("CLASSPATH=" + "./:" + userEnv.get("CLASSPATH") + System.getProperty("path.separator")
+                        + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
             } else {
-                schedulerEnv.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+                schedulerEnv.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":"
+                        + System.getProperty("java.class.path"));
             }
             schedulerEnv.add("DMLC_ROLE=scheduler");
             schedulerEnv.add("DMLC_PS_ROOT_URI=" + dmlcPsRootUri);
@@ -2615,7 +3024,8 @@ public class ApplicationMaster extends CompositeService {
 
             try {
                 schedulerReservedSocket.close();
-                final Process xflowSchedulerProcess = processLaunch.exec(hboxCommandArgs, schedulerEnv.toArray(new String[schedulerEnv.size()]), this.envs, null);
+                final Process xflowSchedulerProcess = processLaunch.exec(
+                        hboxCommandArgs, schedulerEnv.toArray(new String[schedulerEnv.size()]), this.envs, null);
                 LOG.info("Starting thread to redirect stdout of xflow scheduler process");
                 Thread xflowSchedulerRedirectThread = new Thread(new Runnable() {
                     @Override
@@ -2626,7 +3036,9 @@ public class ApplicationMaster extends CompositeService {
                             String xflowSchedulerStdoutLog;
                             while ((xflowSchedulerStdoutLog = reader.readLine()) != null) {
                                 LOG.info(xflowSchedulerStdoutLog);
-                                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                                if (conf.getBoolean(
+                                        HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                                     amContainerStdOut.append(xflowSchedulerStdoutLog);
                                 }
                             }
@@ -2648,7 +3060,9 @@ public class ApplicationMaster extends CompositeService {
                             String xflowSchedulerStderrLog;
                             while ((xflowSchedulerStderrLog = reader.readLine()) != null) {
                                 LOG.info(xflowSchedulerStderrLog);
-                                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                                if (conf.getBoolean(
+                                        HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                                     amContainerStdErr.append(xflowSchedulerStderrLog);
                                 }
                             }
@@ -2662,13 +3076,11 @@ public class ApplicationMaster extends CompositeService {
             } catch (Exception e) {
                 LOG.info("start xflow scheduler error " + e);
             }
-
         }
 
-        //launch mpi exec process
-        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
-            if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") )
-                launchMpiExec();
+        // launch mpi exec process
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
+            if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")) launchMpiExec();
             else launchHorovodExec();
             mpiExitCode = -1;
             final long start = System.currentTimeMillis();
@@ -2680,15 +3092,17 @@ public class ApplicationMaster extends CompositeService {
                     LOG.debug(hboxAppType.toLowerCase() + " mpiexec process is running");
                 }
                 if (mpiExitCode != -1) {
-                    appendMessage(new Message(LogType.STDERR, hboxAppType.toLowerCase() + " exec exit with code " + mpiExitCode));
+                    appendMessage(new Message(
+                            LogType.STDERR, hboxAppType.toLowerCase() + " exec exit with code " + mpiExitCode));
                     throw new HboxExecException(hboxAppType.toLowerCase() + " mpiexec exit with code " + mpiExitCode);
                 }
                 if (System.currentTimeMillis() - start > 30_000) { // wait at most 30s
-                    final String errMsg = hboxAppType.toLowerCase() + " timeout for extracting mpi rte command from mpiexec output!";
+                    final String errMsg =
+                            hboxAppType.toLowerCase() + " timeout for extracting mpi rte command from mpiexec output!";
                     LOG.error(errMsg);
                     appendMessage(new Message(LogType.STDERR, errMsg));
                     throw new HboxExecException(errMsg);
-                 }
+                }
             }
         }
 
@@ -2704,7 +3118,11 @@ public class ApplicationMaster extends CompositeService {
             }
             Socket schedulerReservedSocket = new Socket();
             try {
-                Utilities.getReservePort(schedulerReservedSocket, InetAddress.getByName(applicationMasterHostname).getHostAddress(), reservePortBegin, reservePortEnd);
+                Utilities.getReservePort(
+                        schedulerReservedSocket,
+                        InetAddress.getByName(applicationMasterHostname).getHostAddress(),
+                        reservePortBegin,
+                        reservePortEnd);
             } catch (IOException e) {
                 LOG.error("Can not get available port");
             }
@@ -2725,7 +3143,8 @@ public class ApplicationMaster extends CompositeService {
                 }
             }
             if (userEnv.containsKey("PATH")) {
-                schedulerEnv.add("PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
+                schedulerEnv.add(
+                        "PATH=" + userEnv.get("PATH") + System.getProperty("path.separator") + System.getenv("PATH"));
             } else {
                 schedulerEnv.add("PATH=" + System.getenv("PATH"));
             }
@@ -2733,25 +3152,34 @@ public class ApplicationMaster extends CompositeService {
             schedulerEnv.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
             schedulerEnv.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
             if (userEnv.containsKey("LD_LIBRARY_PATH")) {
-                schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH") + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                        "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+                schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + userEnv.get("LD_LIBRARY_PATH")
+                        + System.getProperty("path.separator") + System.getenv("LD_LIBRARY_PATH") + ":"
+                        + System.getenv("JAVA_HOME") + "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME")
+                        + "/lib/native");
             } else {
-                schedulerEnv.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME") +
-                        "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
+                schedulerEnv.add(
+                        "LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME")
+                                + "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
             }
             if (userEnv.containsKey("CLASSPATH")) {
-                schedulerEnv.add("CLASSPATH=" + "./:" + userEnv.get("CLASSPATH") + System.getProperty("path.separator") + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+                schedulerEnv.add("CLASSPATH=" + "./:" + userEnv.get("CLASSPATH") + System.getProperty("path.separator")
+                        + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
             } else {
-                schedulerEnv.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
+                schedulerEnv.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":"
+                        + System.getProperty("java.class.path"));
             }
-            //xdl zk
+            // xdl zk
             conf.set("DOCKER_CONTAINER_NETWORK", "");
             conf.set("DOCKER_PORT", "2181");
             conf.set("RESERVED_PORT", String.valueOf(xdlZkPort));
             conf.set("DOCKER_CONTAINER_USER", "root");
             try {
                 schedulerReservedSocket.close();
-                final Process xdlZKProcess = processLaunch.exec("sh /usr/share/zookeeper/bin/start.sh " + "/" + applicationAttemptID.toString(), schedulerEnv.toArray(new String[schedulerEnv.size()]), this.envs, null);
+                final Process xdlZKProcess = processLaunch.exec(
+                        "sh /usr/share/zookeeper/bin/start.sh " + "/" + applicationAttemptID.toString(),
+                        schedulerEnv.toArray(new String[schedulerEnv.size()]),
+                        this.envs,
+                        null);
                 LOG.info("Starting thread to redirect stdout of xdl zk process");
                 Thread xdlZKRedirectThread = new Thread(new Runnable() {
                     @Override
@@ -2762,7 +3190,9 @@ public class ApplicationMaster extends CompositeService {
                             String xdlZKStdoutLog;
                             while ((xdlZKStdoutLog = reader.readLine()) != null) {
                                 LOG.info(xdlZKStdoutLog);
-                                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                                if (conf.getBoolean(
+                                        HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                                     amContainerStdOut.append(xdlZKStdoutLog);
                                 }
                             }
@@ -2784,7 +3214,9 @@ public class ApplicationMaster extends CompositeService {
                             String xdlZKStderrLog;
                             while ((xdlZKStderrLog = reader.readLine()) != null) {
                                 LOG.info(xdlZKStderrLog);
-                                if (conf.getBoolean(HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE, HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
+                                if (conf.getBoolean(
+                                        HboxConfiguration.HBOX_CONTAINER_RUNNING_LOG_ENABLE,
+                                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_RUNNING_LOG_ENABLE)) {
                                     amContainerStdErr.append(xdlZKStderrLog);
                                 }
                             }
@@ -2800,20 +3232,25 @@ public class ApplicationMaster extends CompositeService {
             }
         }
 
-        if (conf.getBoolean(HboxConfiguration.HBOX_INPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM) ||
-                conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("STREAM")) {
+        if (conf.getBoolean(HboxConfiguration.HBOX_INPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_INPUT_STREAM)
+                || conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY)
+                        .equals("STREAM")) {
             if (inputFileSplits != null) {
                 allocateInputStreamSplits();
             } else {
                 LOG.info("Don't have the input splits to allocated");
             }
         } else {
-            if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY).equals("PLACEHOLDER")
-                    && conf.getBoolean(HboxConfiguration.HBOX_PLACEHOLDER_WHOLE_ENABLE, HboxConfiguration.DEFAULT_HBOX_PLACEHOLDER_WHOLE_ENABLE)) {
+            if (conf.get(HboxConfiguration.HBOX_INPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_INPUT_STRATEGY)
+                            .equals("PLACEHOLDER")
+                    && conf.getBoolean(
+                            HboxConfiguration.HBOX_PLACEHOLDER_WHOLE_ENABLE,
+                            HboxConfiguration.DEFAULT_HBOX_PLACEHOLDER_WHOLE_ENABLE)) {
                 allocateWholeInput();
                 allocateWholeS3Input();
             } else {
-                if (conf.getBoolean(HboxConfiguration.HBOX_TF_INPUT_PS_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_INPUT_PS_ENABLE)) {
+                if (conf.getBoolean(
+                        HboxConfiguration.HBOX_TF_INPUT_PS_ENABLE, HboxConfiguration.DEFAULT_HBOX_TF_INPUT_PS_ENABLE)) {
                     allocateInputSplitsInlcudePs();
                 } else {
                     allocateInputSplits();
@@ -2831,8 +3268,9 @@ public class ApplicationMaster extends CompositeService {
 
         boolean jobExecTimeoutFlag = false;
         long startJobExecTimeStamp = Long.MIN_VALUE;
-        long jobExecTimeout = conf.getLong(HboxConfiguration.HBOX_JOB_EXEC_TIMEOUT, HboxConfiguration.DEFAULT_HBOX_JOB_EXEC_TIME);
-        String failMessage = "Job running timeout after "  + jobExecTimeout / 1000 + " seconds. ";
+        long jobExecTimeout =
+                conf.getLong(HboxConfiguration.HBOX_JOB_EXEC_TIMEOUT, HboxConfiguration.DEFAULT_HBOX_JOB_EXEC_TIME);
+        String failMessage = "Job running timeout after " + jobExecTimeout / 1000 + " seconds. ";
         if (jobExecTimeout > 0) {
             jobExecTimeoutFlag = true;
             startJobExecTimeStamp = System.currentTimeMillis();
@@ -2844,56 +3282,69 @@ public class ApplicationMaster extends CompositeService {
         }
         int index = 0;
         for (Container container : acquiredPsContainers) {
-            LOG.info("Launching ps container " + container.getId()
-                    + " on " + container.getNodeId().getHost() + ":" + container.getNodeId().getPort());
+            LOG.info("Launching ps container " + container.getId() + " on "
+                    + container.getNodeId().getHost() + ":"
+                    + container.getNodeId().getPort());
 
-            //TODO launch container in special thread take with fault-tolerant
+            // TODO launch container in special thread take with fault-tolerant
             if (container.getId().toString().equals(schedulerContainerId)) {
-                launchContainer(containerLocalResource, schedulerContainerEnv,
-                        psContainerLaunchcommands, container, 0);
+                launchContainer(containerLocalResource, schedulerContainerEnv, psContainerLaunchcommands, container, 0);
             } else {
-                launchContainer(containerLocalResource, psContainerEnv,
-                        psContainerLaunchcommands, container, index++);
+                launchContainer(containerLocalResource, psContainerEnv, psContainerLaunchcommands, container, index++);
             }
             containerListener.registerContainer(new HboxContainerId(container.getId()), HboxConstants.PS);
         }
-        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
             index = 1;
         } else {
             index = 0;
         }
 
         if (chiefWorker) {
-            chiefWorkerContainerId = acquiredChiefWorkerContainers.get(0).getId().toString();
+            chiefWorkerContainerId =
+                    acquiredChiefWorkerContainers.get(0).getId().toString();
         }
         if (tfEvaluator) {
-            tfEvaluatorContainerId = acquiredEvaluatorWorkerContainers.get(0).getId().toString();
+            tfEvaluatorContainerId =
+                    acquiredEvaluatorWorkerContainers.get(0).getId().toString();
         }
 
         for (Container container : acquiredWorkerContainers) {
-            LOG.info("Launching worker container " + container.getId()
-                    + " on " + container.getNodeId().getHost() + ":" + container.getNodeId().getPort());
+            LOG.info("Launching worker container " + container.getId() + " on "
+                    + container.getNodeId().getHost() + ":"
+                    + container.getNodeId().getPort());
 
-            //TODO launch container in special thread take with fault-tolerant
+            // TODO launch container in special thread take with fault-tolerant
             if (chiefWorker && container.getId().toString().equals(chiefWorkerContainerId)) {
-                List<String> chiefWorkerContainerLaunchcommands = buildContainerLaunchCommand(HboxConstants.CHIEF, chiefWorkerMemory);
-                launchContainer(containerLocalResource, workerContainerEnv,
-                        chiefWorkerContainerLaunchcommands, container, index++);
+                List<String> chiefWorkerContainerLaunchcommands =
+                        buildContainerLaunchCommand(HboxConstants.CHIEF, chiefWorkerMemory);
+                launchContainer(
+                        containerLocalResource,
+                        workerContainerEnv,
+                        chiefWorkerContainerLaunchcommands,
+                        container,
+                        index++);
             } else if (tfEvaluator && container.getId().toString().equals(tfEvaluatorContainerId)) {
                 Map<String, String> evaluatorWorkerContainerEnv = buildContainerEnv(HboxConstants.EVALUATOR);
-                List<String> evaluatorWorkerContainerLaunchcommands = buildContainerLaunchCommand(HboxConstants.EVALUATOR, evaluatorWorkerMemory);
-                launchContainer(containerLocalResource, evaluatorWorkerContainerEnv, evaluatorWorkerContainerLaunchcommands, container, 0);
+                List<String> evaluatorWorkerContainerLaunchcommands =
+                        buildContainerLaunchCommand(HboxConstants.EVALUATOR, evaluatorWorkerMemory);
+                launchContainer(
+                        containerLocalResource,
+                        evaluatorWorkerContainerEnv,
+                        evaluatorWorkerContainerLaunchcommands,
+                        container,
+                        0);
             } else {
-                launchContainer(containerLocalResource, workerContainerEnv,
-                        workerContainerLaunchcommands, container, index++);
+                launchContainer(
+                        containerLocalResource, workerContainerEnv, workerContainerLaunchcommands, container, index++);
             }
             containerListener.registerContainer(new HboxContainerId(container.getId()), HboxConstants.WORKER);
         }
 
-        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || hboxAppType.equals("HOROVOD")) {
+        if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
             while (!containerListener.isAllContainerStarted()) {
                 Utilities.sleep(statusUpdateInterval);
-                if(jobExecTimeoutFlag && (System.currentTimeMillis() - startJobExecTimeStamp) > jobExecTimeout){
+                if (jobExecTimeoutFlag && (System.currentTimeMillis() - startJobExecTimeStamp) > jobExecTimeout) {
                     throw new HboxExecException(failMessage);
                 }
             }
@@ -2924,8 +3375,13 @@ public class ApplicationMaster extends CompositeService {
                             Boolean startSaved = applicationContext.getStartSavingStatus();
                             containerListener.setSaveInnerModel(startSaved);
                             if (savingInterval > 0 && !startSaved) {
-                                if ((containerListener.interResultTimeStamp() < 0 && containerListener.allContainerStartTime() > 0 && (System.currentTimeMillis() - containerListener.allContainerStartTime()) > savingInterval) ||
-                                        ((System.currentTimeMillis() - containerListener.interResultTimeStamp()) > savingInterval)) {
+                                if ((containerListener.interResultTimeStamp() < 0
+                                                && containerListener.allContainerStartTime() > 0
+                                                && (System.currentTimeMillis()
+                                                                - containerListener.allContainerStartTime())
+                                                        > savingInterval)
+                                        || ((System.currentTimeMillis() - containerListener.interResultTimeStamp())
+                                                > savingInterval)) {
                                     applicationContext.startSavingModelStatus(true);
                                     containerListener.setSaveInnerModel(true);
                                     startSaved = true;
@@ -2940,12 +3396,16 @@ public class ApplicationMaster extends CompositeService {
                                     }
                                     break;
                                 }
-                                Utilities.sleep(conf.getInt(HboxConfiguration.HBOX_CONTAINER_HEARTBEAT_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_HEARTBEAT_INTERVAL));
+                                Utilities.sleep(conf.getInt(
+                                        HboxConfiguration.HBOX_CONTAINER_HEARTBEAT_INTERVAL,
+                                        HboxConfiguration.DEFAULT_HBOX_CONTAINER_HEARTBEAT_INTERVAL));
                             }
                         } catch (Exception e) {
                             LOG.info("Monitor the InnerModel saving error: " + e);
                         }
-                        Utilities.sleep(conf.getInt(HboxConfiguration.HBOX_CONTAINER_HEARTBEAT_INTERVAL, HboxConfiguration.DEFAULT_HBOX_CONTAINER_HEARTBEAT_INTERVAL));
+                        Utilities.sleep(conf.getInt(
+                                HboxConfiguration.HBOX_CONTAINER_HEARTBEAT_INTERVAL,
+                                HboxConfiguration.DEFAULT_HBOX_CONTAINER_HEARTBEAT_INTERVAL));
                     }
                 }
             });
@@ -2956,54 +3416,88 @@ public class ApplicationMaster extends CompositeService {
         try {
             boolean flag = true;
             boolean digitsFlag = true;
-            if (!hboxAppType.equals("MPI") && !hboxAppType.equals("TENSORNET")  && !hboxAppType.equals("HOROVOD")) {
+            if (!hboxAppType.equals("MPI") && !hboxAppType.equals("TENSORNET") && !hboxAppType.equals("HOROVOD")) {
                 LOG.info("Waiting for train completed");
                 Map<HboxContainerId, HboxContainerStatus> lastWorkerContainerStatus = new ConcurrentHashMap<>();
                 Map<HboxContainerId, HboxContainerStatus> lastPsContainerStatus = new ConcurrentHashMap<>();
                 while (!containerListener.isTrainCompleted()) {
-                    //report progress to client
-                    if (conf.getBoolean(HboxConfiguration.HBOX_REPORT_CONTAINER_STATUS, HboxConfiguration.DEFAULT_HBOX_REPORT_CONTAINER_STATUS) && !hboxAppType.equals("MPI") && !hboxAppType.equals("TENSORNET")  && !hboxAppType.equals("HOROVOD")) {
+                    // report progress to client
+                    if (conf.getBoolean(
+                                    HboxConfiguration.HBOX_REPORT_CONTAINER_STATUS,
+                                    HboxConfiguration.DEFAULT_HBOX_REPORT_CONTAINER_STATUS)
+                            && !hboxAppType.equals("MPI")
+                            && !hboxAppType.equals("TENSORNET")
+                            && !hboxAppType.equals("HOROVOD")) {
                         List<Container> workerContainersStatus = applicationContext.getWorkerContainers();
                         List<Container> psContainersStatus = applicationContext.getPsContainers();
                         for (Container container : workerContainersStatus) {
                             if (!lastWorkerContainerStatus.containsKey(new HboxContainerId(container.getId()))) {
-                                lastWorkerContainerStatus.put(new HboxContainerId(container.getId()), HboxContainerStatus.STARTED);
+                                lastWorkerContainerStatus.put(
+                                        new HboxContainerId(container.getId()), HboxContainerStatus.STARTED);
                             }
-                            if (!applicationContext.getContainerStatus(new HboxContainerId(container.getId())).equals(lastWorkerContainerStatus.get(new HboxContainerId(container.getId())))) {
-                                this.appendMessage("container " + container.getId().toString() + " status is " + applicationContext.getContainerStatus(new HboxContainerId(container.getId())), false);
-                                lastWorkerContainerStatus.put(new HboxContainerId(container.getId()), applicationContext.getContainerStatus(new HboxContainerId(container.getId())));
+                            if (!applicationContext
+                                    .getContainerStatus(new HboxContainerId(container.getId()))
+                                    .equals(lastWorkerContainerStatus.get(new HboxContainerId(container.getId())))) {
+                                this.appendMessage(
+                                        "container " + container.getId().toString() + " status is "
+                                                + applicationContext.getContainerStatus(
+                                                        new HboxContainerId(container.getId())),
+                                        false);
+                                lastWorkerContainerStatus.put(
+                                        new HboxContainerId(container.getId()),
+                                        applicationContext.getContainerStatus(new HboxContainerId(container.getId())));
                             }
                         }
                         for (Container container : psContainersStatus) {
                             if (!lastPsContainerStatus.containsKey(new HboxContainerId(container.getId()))) {
-                                lastPsContainerStatus.put(new HboxContainerId(container.getId()), HboxContainerStatus.STARTED);
+                                lastPsContainerStatus.put(
+                                        new HboxContainerId(container.getId()), HboxContainerStatus.STARTED);
                             }
-                            if (!applicationContext.getContainerStatus(new HboxContainerId(container.getId())).equals(lastPsContainerStatus.get(new HboxContainerId(container.getId())))) {
-                                this.appendMessage("container " + container.getId().toString() + " status is " + applicationContext.getContainerStatus(new HboxContainerId(container.getId())), false);
-                                lastPsContainerStatus.put(new HboxContainerId(container.getId()), applicationContext.getContainerStatus(new HboxContainerId(container.getId())));
+                            if (!applicationContext
+                                    .getContainerStatus(new HboxContainerId(container.getId()))
+                                    .equals(lastPsContainerStatus.get(new HboxContainerId(container.getId())))) {
+                                this.appendMessage(
+                                        "container " + container.getId().toString() + " status is "
+                                                + applicationContext.getContainerStatus(
+                                                        new HboxContainerId(container.getId())),
+                                        false);
+                                lastPsContainerStatus.put(
+                                        new HboxContainerId(container.getId()),
+                                        applicationContext.getContainerStatus(new HboxContainerId(container.getId())));
                             }
                         }
                     }
 
-                    String containerType = conf.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE,
-                            HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE).toUpperCase();
+                    String containerType = conf.get(
+                                    HboxConfiguration.CONTAINER_EXECUTOR_TYPE,
+                                    HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE)
+                            .toUpperCase();
                     List<Container> workerContainers = applicationContext.getWorkerContainers();
                     List<Container> psContainers = applicationContext.getPsContainers();
                     if (hboxAppType.equals("VPC") || hboxAppType.equals("DIGITS") || containerType.equals("DOCKER")) {
                         if (flag) {
-                            Map<HboxContainerId, String> vpcCommandAndPasswdMap = applicationContext.getVPCCommandAndPasswdMap();
+                            Map<HboxContainerId, String> vpcCommandAndPasswdMap =
+                                    applicationContext.getVPCCommandAndPasswdMap();
                             if (vpcCommandAndPasswdMap.size() == (workerNum + psNum)) {
                                 for (Container container : workerContainers) {
-                                    String commandCombine = vpcCommandAndPasswdMap.get(new HboxContainerId(container.getId()));
+                                    String commandCombine =
+                                            vpcCommandAndPasswdMap.get(new HboxContainerId(container.getId()));
                                     String[] splits = commandCombine.split(":");
-                                    this.appendMessage("Received vpc login command and password from " + container.getId().toString(), true);
+                                    this.appendMessage(
+                                            "Received vpc login command and password from "
+                                                    + container.getId().toString(),
+                                            true);
                                     this.appendMessage("Login command:ssh " + splits[0], true);
                                     this.appendMessage("Password:" + splits[1], true);
                                 }
                                 for (Container container : psContainers) {
-                                    String commandCombine = vpcCommandAndPasswdMap.get(new HboxContainerId(container.getId()));
+                                    String commandCombine =
+                                            vpcCommandAndPasswdMap.get(new HboxContainerId(container.getId()));
                                     String[] splits = commandCombine.split(":");
-                                    this.appendMessage("Received vpc login command and password from " + container.getId().toString(), true);
+                                    this.appendMessage(
+                                            "Received vpc login command and password from "
+                                                    + container.getId().toString(),
+                                            true);
                                     this.appendMessage("Login command:ssh " + splits[0], true);
                                     this.appendMessage("Password:" + splits[1], true);
                                 }
@@ -3018,12 +3512,18 @@ public class ApplicationMaster extends CompositeService {
                                 if (digitsUrlMap.size() == (workerNum + psNum)) {
                                     for (Container container : workerContainers) {
                                         String url = digitsUrlMap.get(new HboxContainerId(container.getId()));
-                                        this.appendMessage("Received digits server url from " + container.getId().toString(), true);
+                                        this.appendMessage(
+                                                "Received digits server url from "
+                                                        + container.getId().toString(),
+                                                true);
                                         this.appendMessage("digits server url: " + url, true);
                                     }
                                     for (Container container : psContainers) {
                                         String url = digitsUrlMap.get(new HboxContainerId(container.getId()));
-                                        this.appendMessage("Received digits server url from " + container.getId().toString(), true);
+                                        this.appendMessage(
+                                                "Received digits server url from "
+                                                        + container.getId().toString(),
+                                                true);
                                         this.appendMessage("digits server url: " + url, true);
                                     }
                                     digitsFlag = false;
@@ -3040,8 +3540,14 @@ public class ApplicationMaster extends CompositeService {
                             HboxContainerId containerId = new HboxContainerId(container.getId());
                             if (applicationContext.getContainerGPUDevice(containerId) != null) {
                                 String gpus = applicationContext.getContainerGPUDevice(containerId);
-                                if (gpus.equals("") || gpus.equals(null) || gpus.split(",").length != conf.getInt(HboxConfiguration.HBOX_PS_GPU, HboxConfiguration.DEFAULT_HBOX_PS_GPU))
-                                    throw new RuntimeException("ps container " + containerId.toString() + " is not assigned the correct gpu device. Now assigned info is " + gpus);
+                                if (gpus.equals("")
+                                        || gpus.equals(null)
+                                        || gpus.split(",").length
+                                                != conf.getInt(
+                                                        HboxConfiguration.HBOX_PS_GPU,
+                                                        HboxConfiguration.DEFAULT_HBOX_PS_GPU))
+                                    throw new RuntimeException("ps container " + containerId.toString()
+                                            + " is not assigned the correct gpu device. Now assigned info is " + gpus);
                             }
                         }
                     }
@@ -3051,8 +3557,14 @@ public class ApplicationMaster extends CompositeService {
                             HboxContainerId containerId = new HboxContainerId(container.getId());
                             if (applicationContext.getContainerGPUDevice(containerId) != null) {
                                 String gpus = applicationContext.getContainerGPUDevice(containerId);
-                                if (gpus.equals("") || gpus.equals(null) || gpus.split(",").length != conf.getInt(HboxConfiguration.HBOX_WORKER_GPU, HboxConfiguration.DEFAULT_HBOX_WORKER_GPU))
-                                    throw new RuntimeException("worker container " + containerId.toString() + " is not assigned the correct gpu device. Now assigned info is " + gpus);
+                                if (gpus.equals("")
+                                        || gpus.equals(null)
+                                        || gpus.split(",").length
+                                                != conf.getInt(
+                                                        HboxConfiguration.HBOX_WORKER_GPU,
+                                                        HboxConfiguration.DEFAULT_HBOX_WORKER_GPU))
+                                    throw new RuntimeException("worker container " + containerId.toString()
+                                            + " is not assigned the correct gpu device. Now assigned info is " + gpus);
                             }
                         }
                     }
@@ -3083,7 +3595,7 @@ public class ApplicationMaster extends CompositeService {
                         float finalProgress = total / workerContainers.size();
                         DecimalFormat df = new DecimalFormat("0.00");
                         df.setRoundingMode(RoundingMode.HALF_UP);
-                        //this.appendMessage("reporter progress:" + Float.toString(finalProgress*100) + "%", false);
+                        // this.appendMessage("reporter progress:" + Float.toString(finalProgress*100) + "%", false);
                         this.appendMessage("reporter progress:" + df.format(finalProgress * 100) + "%", false);
                         rmCallbackHandler.setProgress(finalProgress);
                     }
@@ -3095,7 +3607,11 @@ public class ApplicationMaster extends CompositeService {
                 LOG.info("Train completed");
                 containerListener.setTrainFinished();
 
-                if ((("TENSORFLOW".equals(hboxAppType) || "TENSOR2TENSOR".equals(hboxAppType) || "MXNET".equals(hboxAppType) || "XDL".equals(hboxAppType)) && psNum > 0)
+                if ((("TENSORFLOW".equals(hboxAppType)
+                                        || "TENSOR2TENSOR".equals(hboxAppType)
+                                        || "MXNET".equals(hboxAppType)
+                                        || "XDL".equals(hboxAppType))
+                                && psNum > 0)
                         || "DISTLIGHTLDA".equals(hboxAppType)
                         || "XFLOW".equals(hboxAppType)) {
                     LOG.info("Waiting all ps containers completed");
@@ -3117,21 +3633,26 @@ public class ApplicationMaster extends CompositeService {
                 }
                 LOG.info("All containers completed");
             }
-            boolean uploadWhenFailed = this.conf.getBoolean(HboxConfiguration.HBOX_FAILED_UPLOAD, HboxConfiguration.DEFAULT_HBOX_FAILED_UPLOAD);
-            if (uploadWhenFailed)
-                LOG.info("This application allow failed container to upload output files!");
+            boolean uploadWhenFailed = this.conf.getBoolean(
+                    HboxConfiguration.HBOX_FAILED_UPLOAD, HboxConfiguration.DEFAULT_HBOX_FAILED_UPLOAD);
+            if (uploadWhenFailed) LOG.info("This application allow failed container to upload output files!");
             if (finalSuccess || uploadWhenFailed) {
                 if ((conf.getBoolean(HboxConfiguration.HBOX_OUTPUT_STREAM, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STREAM)
-                        || conf.get(HboxConfiguration.HBOX_OUTPUT_STRATEGY, HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY).equals("STREAM")) && outputInfos.size() > 0) {
+                                || conf.get(
+                                                HboxConfiguration.HBOX_OUTPUT_STRATEGY,
+                                                HboxConfiguration.DEFAULT_HBOX_OUTPUT_STRATEGY)
+                                        .equals("STREAM"))
+                        && outputInfos.size() > 0) {
                     LOG.info("HBOX_OUTPUT_STRATEGY is STREAM, AM handling the final result...");
                     FileSystem fs = new Path(outputInfos.get(0).getDfsLocation()).getFileSystem(conf);
                     Map<HboxContainerId, String> mapPath = applicationContext.getMapedTaskID();
                     for (Container finishedContainer : acquiredWorkerContainers) {
                         String taskID = mapPath.get(new HboxContainerId(finishedContainer.getId()));
-                        Path tmpResultPath = new Path(outputInfos.get(0).getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString()
-                                + "/_temporary/0/_temporary/" + taskID);
+                        Path tmpResultPath = new Path(outputInfos.get(0).getDfsLocation() + "/_temporary/"
+                                + finishedContainer.getId().toString() + "/_temporary/0/_temporary/" + taskID);
                         LOG.info("tmpResultPath is " + tmpResultPath.toString());
-                        Path finalResultPath = new Path(outputInfos.get(0).getDfsLocation() + "/" + finishedContainer.getId().toString());
+                        Path finalResultPath = new Path(outputInfos.get(0).getDfsLocation() + "/"
+                                + finishedContainer.getId().toString());
                         LOG.info("finalResultPath is " + finalResultPath.toString());
                         if (fs.exists(tmpResultPath)) {
                             LOG.info("Move from " + tmpResultPath.toString() + " to " + finalResultPath.toString());
@@ -3150,27 +3671,38 @@ public class ApplicationMaster extends CompositeService {
                         }
                         FileSystem fs = new Path(outputInfo.getDfsLocation()).getFileSystem(conf);
                         Path finalResultPath = new Path(outputInfo.getDfsLocation());
-                        //spec one container to upload
+                        // spec one container to upload
                         if (outputIndex >= 0) {
-                            Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + outputInfo.getLocalLocation());
+                            Path tmpResultPath = new Path(
+                                    outputInfo.getDfsLocation() + "/_temporary/" + outputInfo.getLocalLocation());
                             if (fs.exists(tmpResultPath)) {
                                 LOG.debug("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
                                 fs.rename(tmpResultPath, finalResultPath);
                             }
                         } else {
                             for (Container finishedContainer : acquiredWorkerContainers) {
-                                Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString());
-                                if (workerNum == 1 && !conf.getBoolean(HboxConfiguration.HBOX_CREATE_CONTAINERID_DIR, HboxConfiguration.DEFAULT_HBOX_CREATE_CONTAINERID_DIR)) {
-                                    tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + outputInfo.getLocalLocation());
+                                Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/"
+                                        + finishedContainer.getId().toString());
+                                if (workerNum == 1
+                                        && !conf.getBoolean(
+                                                HboxConfiguration.HBOX_CREATE_CONTAINERID_DIR,
+                                                HboxConfiguration.DEFAULT_HBOX_CREATE_CONTAINERID_DIR)) {
+                                    tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/"
+                                            + outputInfo.getLocalLocation());
                                 }
                                 if (fs.exists(tmpResultPath)) {
                                     LOG.debug("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
                                     fs.rename(tmpResultPath, finalResultPath);
                                 }
                             }
-                            if (psNum > 0 && (hboxAppType.equals("DISTLIGHTLDA") || hboxAppType.equals("TENSORFLOW") || "TENSOR2TENSOR".equals(hboxAppType) || hboxAppType.equals("XDL"))) {
+                            if (psNum > 0
+                                    && (hboxAppType.equals("DISTLIGHTLDA")
+                                            || hboxAppType.equals("TENSORFLOW")
+                                            || "TENSOR2TENSOR".equals(hboxAppType)
+                                            || hboxAppType.equals("XDL"))) {
                                 for (Container finishedContainer : acquiredPsContainers) {
-                                    Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/" + finishedContainer.getId().toString());
+                                    Path tmpResultPath = new Path(outputInfo.getDfsLocation() + "/_temporary/"
+                                            + finishedContainer.getId().toString());
                                     if (fs.exists(tmpResultPath)) {
                                         LOG.debug("Move from " + tmpResultPath.toString() + " to " + finalResultPath);
                                         fs.rename(tmpResultPath, finalResultPath);
@@ -3189,14 +3721,16 @@ public class ApplicationMaster extends CompositeService {
             }
         } catch (Exception e) {
             finalSuccess = false;
-            this.appendMessage("Some error occurs "
-                    + org.apache.hadoop.util.StringUtils.stringifyException(e), true);
+            this.appendMessage("Some error occurs " + org.apache.hadoop.util.StringUtils.stringifyException(e), true);
             diagnostics = e.getMessage();
         }
 
-        int appAttempts = conf.getInt(HboxConfiguration.HBOX_APP_MAX_ATTEMPTS, HboxConfiguration.DEFAULT_HBOX_APP_MAX_ATTEMPTS);
-        if (appAttempts > conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS)) {
-            appAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+        int appAttempts =
+                conf.getInt(HboxConfiguration.HBOX_APP_MAX_ATTEMPTS, HboxConfiguration.DEFAULT_HBOX_APP_MAX_ATTEMPTS);
+        if (appAttempts
+                > conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS)) {
+            appAttempts =
+                    conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
         }
 
         if (!finalSuccess && applicationAttemptID.getAttemptId() < appAttempts) {
@@ -3205,8 +3739,7 @@ public class ApplicationMaster extends CompositeService {
         }
 
         this.appendMessage("Unregister  Application", true);
-        unregisterApp(finalSuccess ? FinalApplicationStatus.SUCCEEDED
-                : FinalApplicationStatus.FAILED, diagnostics);
+        unregisterApp(finalSuccess ? FinalApplicationStatus.SUCCEEDED : FinalApplicationStatus.FAILED, diagnostics);
 
         return finalSuccess;
     }
@@ -3375,12 +3908,14 @@ public class ApplicationMaster extends CompositeService {
         }
 
         @Override
-        public Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuMemMetrics() {
+        public Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>>
+                getContainersGpuMemMetrics() {
             return containerListener.getContainersGpuMemMetrics();
         }
 
         @Override
-        public Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>> getContainersGpuUtilMetrics() {
+        public Map<HboxContainerId, ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>>
+                getContainersGpuUtilMetrics() {
             return containerListener.getContainersGpuUtilMetrics();
         }
 
@@ -3406,7 +3941,8 @@ public class ApplicationMaster extends CompositeService {
 
         @Override
         public String getLastInterSavingPath() {
-            Path interPath = new Path(conf.get(HboxConfiguration.HBOX_INTERRESULT_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
+            Path interPath = new Path(conf.get(
+                            HboxConfiguration.HBOX_INTERRESULT_DIR, HboxConfiguration.DEFAULT_HBOX_INTERRESULT_DIR)
                     + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(containerListener.interResultTimeStamp()));
             return interPath.toString();
         }
@@ -3428,7 +3964,8 @@ public class ApplicationMaster extends CompositeService {
 
         @Override
         public void startSavingModelStatus(Boolean flag) {
-            LOG.info("current savingModelStatus is " + startSavingModel + ", the last savingStatus is " + lastSavingStatus);
+            LOG.info("current savingModelStatus is " + startSavingModel + ", the last savingStatus is "
+                    + lastSavingStatus);
             if (flag && !startSavingModel) {
                 lastSavingStatus = false;
                 startSavingModel = true;
@@ -3510,7 +4047,6 @@ public class ApplicationMaster extends CompositeService {
         public void sendSignal(int sid) {
             containerListener.sendSignal(sid);
         }
-
     }
 
     /**
@@ -3532,5 +4068,4 @@ public class ApplicationMaster extends CompositeService {
             System.exit(1);
         }
     }
-
 }

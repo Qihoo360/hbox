@@ -3,6 +3,10 @@
  */
 package net.qihoo.hbox.AM;
 
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -10,11 +14,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync.CallbackHandler;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class RMCallbackHandler implements CallbackHandler {
     private static final Log LOG = LogFactory.getLog(RMCallbackHandler.class);
@@ -152,23 +151,24 @@ public class RMCallbackHandler implements CallbackHandler {
     @Override
     public void onContainersAllocated(List<Container> containers) {
         HboxConfiguration configuration = new HboxConfiguration();
-        containerType = configuration.get(HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);
-        //add blackHosts addition and limit number per host
-        if (this.hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET")  || this.hboxAppType.equals("HOROVOD")) {
+        containerType = configuration.get(
+                HboxConfiguration.CONTAINER_EXECUTOR_TYPE, HboxConfiguration.DEFAULT_CONTAINER_EXECUTOR_TYPE);
+        // add blackHosts addition and limit number per host
+        if (this.hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || this.hboxAppType.equals("HOROVOD")) {
             blackHostsLimit = 1;
         } else if (containerType.equalsIgnoreCase("DOCKER")) {
-            blackHostsLimit = configuration.getInt(HboxConfiguration.HBOX_DOCKER_NUM_PER_WORKER, HboxConfiguration.DEDAULT_HBOX_DOCKER_NUM_PER_WORKER);
+            blackHostsLimit = configuration.getInt(
+                    HboxConfiguration.HBOX_DOCKER_NUM_PER_WORKER, HboxConfiguration.DEDAULT_HBOX_DOCKER_NUM_PER_WORKER);
         }
         for (Container acquiredContainer : containers) {
             String host = acquiredContainer.getNodeId().getHost();
             LOG.info("Acquired container " + acquiredContainer.getId() + " on host " + host);
             if (!blackHosts.contains(host)) {
-                //count and process blackHosts
+                // count and process blackHosts
                 int countContainerNum = countMap.get(host) == null ? 1 : countMap.get(host) + 1;
                 countMap.put(host, countContainerNum);
-                if (countMap.get(host) >= blackHostsLimit)
-                    blackHosts.add(host);
-                //add worker or ps
+                if (countMap.get(host) >= blackHostsLimit) blackHosts.add(host);
+                // add worker or ps
                 if (evaluatorWorkerContainersAllocating.get()) {
                     acquiredEvaluatorWorkerContainers.add(acquiredContainer);
                 } else if (chiefWorkerContainersAllocating.get()) {
@@ -192,9 +192,9 @@ public class RMCallbackHandler implements CallbackHandler {
 
     @Override
     public float getProgress() {
-        //int totalNeededCount = neededPsContainersCount + neededWorkerContainersCount;
-        //return totalNeededCount == 0 ?
-        //0.0f : (acquiredWorkerContainersCount.get() + acquiredPsContainersCount.get()) / totalNeededCount;
+        // int totalNeededCount = neededPsContainersCount + neededWorkerContainersCount;
+        // return totalNeededCount == 0 ?
+        // 0.0f : (acquiredWorkerContainersCount.get() + acquiredPsContainersCount.get()) / totalNeededCount;
         return progress;
     }
 
@@ -203,12 +203,10 @@ public class RMCallbackHandler implements CallbackHandler {
     }
 
     @Override
-    public void onShutdownRequest() {
-    }
+    public void onShutdownRequest() {}
 
     @Override
-    public void onNodesUpdated(List<NodeReport> updatedNodes) {
-    }
+    public void onNodesUpdated(List<NodeReport> updatedNodes) {}
 
     @Override
     public void onError(Throwable e) {

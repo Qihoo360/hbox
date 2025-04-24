@@ -28,8 +28,9 @@ public class HsWebApp extends WebApp implements AMParams {
         bind(HistoryContext.class).toInstance(history);
         route("/", HsController.class);
         route(pajoin("/job", APP_ID), HsController.class, "job");
-        route(pajoin("/logs", NM_NODENAME, CONTAINER_ID, ENTITY_STRING, APP_OWNER,
-                CONTAINER_LOG_TYPE), HsController.class, "logs");
+        route(
+                pajoin("/logs", NM_NODENAME, CONTAINER_ID, ENTITY_STRING, APP_OWNER, CONTAINER_LOG_TYPE),
+                HsController.class,
+                "logs");
     }
 }
-

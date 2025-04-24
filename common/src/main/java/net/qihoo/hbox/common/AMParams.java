@@ -76,5 +76,4 @@ public interface AMParams {
     public static final String USAGE_AVG = "Avg";
 
     public static final String USAGE_MAX = "Max";
-
 }
