@@ -54,7 +54,7 @@ jobs:
         distribution: 'temurin'
         cache: maven
     - name: Lint Maven Pom Format
-      run: ./mvnw -V -B -ntp -Dmirror.of.proxy= sortpom:verify -Dsort.verifyFail=STOP
+      run: ./mvnw -V -B -ntp -Dmirror.of.proxy= spotless:check
     - name: Lint Check Maven Plugins
       run: ./mvnw -B -ntp -Dmirror.of.proxy= artifact:check-buildplan
 
