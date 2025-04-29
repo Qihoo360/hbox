@@ -1,5 +1,10 @@
 package net.qihoo.hbox.client;
 
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
@@ -7,7 +12,6 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import net.qihoo.hbox.AM.ApplicationMaster;
 import net.qihoo.hbox.api.ApplicationMessageProtocol;
@@ -18,6 +22,8 @@ import net.qihoo.hbox.common.Message;
 import net.qihoo.hbox.common.exceptions.RequestOverLimitException;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.conf.HboxConfiguration2;
+import net.qihoo.hbox.opentelemetry.HboxOpenTelemetry;
+import net.qihoo.hbox.opentelemetry.HboxResourceProvider;
 import net.qihoo.hbox.util.ShellEscapeUtils;
 import net.qihoo.hbox.util.Utilities;
 import org.apache.commons.cli.ParseException;
@@ -43,14 +49,10 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
 
 public class Client {
-
     private static final Log LOG = LogFactory.getLog(Client.class);
     private ClientArguments clientArguments;
     private final HboxConfiguration conf;
     private YarnClient yarnClient;
-    private YarnClientApplication newAPP;
-    private ApplicationMessageProtocol hboxClient;
-    private transient AtomicBoolean isRunning;
     private StringBuffer appFilesRemotePath;
     private StringBuffer appArchiveFilesRemotePath;
     private StringBuffer appLibJarsRemotePath;
@@ -72,7 +74,6 @@ public class Client {
     private Client(String[] args) throws IOException, ParseException, ClassNotFoundException {
         this.conf = new HboxConfiguration();
         this.clientArguments = new ClientArguments(args);
-        this.isRunning = new AtomicBoolean(false);
         this.appFilesRemotePath = new StringBuffer(1000);
         this.appArchiveFilesRemotePath = new StringBuffer(1000);
         this.appLibJarsRemotePath = new StringBuffer(1000);
@@ -204,10 +205,6 @@ public class Client {
 
         yarnClient = YarnClient.createYarnClient();
         yarnClient.init(conf);
-        yarnClient.start();
-        LOG.info("Requesting a new application from cluster with "
-                + yarnClient.getYarnClusterMetrics().getNumNodeManagers() + " NodeManagers");
-        newAPP = yarnClient.createApplication();
     }
 
     private static boolean yarnRMSupportsGPU(final YarnClient yarnClient) {
@@ -430,11 +427,6 @@ public class Client {
         if (clientArguments.s3Inputs != null) {
             addInputPath(HboxConstants.S3, clientArguments.s3Inputs);
         }
-    }
-
-    private static ApplicationReport getApplicationReport(ApplicationId appId, YarnClient yarnClient)
-            throws YarnException, IOException {
-        return yarnClient.getApplicationReport(appId);
     }
 
     private static ApplicationMessageProtocol getAppMessageHandler(
@@ -1100,6 +1092,12 @@ public class Client {
                 ShellEscapeUtils.escapeInDoubleQuotes("\"${JAVA_HOME}/bin/java\"")); // expand in the inner bash
         appMasterArgs.add("-Xms" + Math.min(driverMem, maxContainerMem) + "m");
         appMasterArgs.add("-Xmx" + Math.min(driverMem, maxContainerMem) + "m");
+
+        // propagate opentelemetry properties
+        appMasterArgs.add(
+                ShellEscapeUtils.escapeInDoubleQuotes(HboxResourceProvider.serviceNamePropertyForContainer()));
+        appMasterArgs.add(ShellEscapeUtils.escapeInDoubleQuotes(HboxResourceProvider.resourcePropertyForContainer()));
+
         appMasterArgs.add(ShellEscapeUtils.escapeContainerLaunch(ApplicationMaster.class.getName()));
 
         for (final String arg : clientArguments.hboxCommandArgs) {
@@ -1221,10 +1219,17 @@ public class Client {
             assignCacheArchives();
         }
 
+        final Span span = Span.current();
+
+        yarnClient.start();
+        LOG.info("Requesting a new application from cluster with "
+                + yarnClient.getYarnClusterMetrics().getNumNodeManagers() + " NodeManagers");
+        final YarnClientApplication newAPP = yarnClient.createApplication();
         GetNewApplicationResponse newAppResponse = newAPP.getNewApplicationResponse();
         applicationId = newAppResponse.getApplicationId();
         LOG.info("Got new Application: " + applicationId.toString());
         conf.set(HboxConfiguration.HBOX_APP_ID, applicationId.toString());
+        span.setAttribute("yarn.application.id", applicationId.toString());
         maxContainerMem = newAppResponse.getMaximumResourceCapability().getMemory();
 
         if (clientArguments.appType.equals("VPC")
@@ -1269,6 +1274,10 @@ public class Client {
         prepareClassPathEnvForAM(appMasterEnv);
 
         appMasterEnv.putAll(appMasterUserEnv);
+
+        // propagate opentelemetry context to am
+        HboxOpenTelemetry.injectIntoEnvMap(appMasterEnv);
+
         List<String> appMasterLaunchcommands = prepareLaunchCommandForAM(appMasterEnv, applicationContext);
         ContainerLaunchContext amContainer = ContainerLaunchContext.newInstance(
                 localResources, appMasterEnv, appMasterLaunchcommands, null, null, null);
@@ -1287,17 +1296,12 @@ public class Client {
         applicationContext.setQueue(
                 conf.get(HboxConfiguration.HBOX_APP_QUEUE, HboxConfiguration.DEFAULT_HBOX_APP_QUEUE));
 
-        try {
-            LOG.info("Submitting application to ResourceManager");
-            applicationId = yarnClient.submitApplication(applicationContext);
-            isRunning.set(applicationId != null);
-            if (isRunning.get()) {
-                LOG.info("Application submitAndMonitor succeed");
-            } else {
-                throw new RuntimeException("Application submitAndMonitor failed!");
-            }
-        } catch (YarnException e) {
-            throw new RuntimeException(e.getMessage());
+        LOG.info("Submitting application to ResourceManager");
+        applicationId = yarnClient.submitApplication(applicationContext);
+        if (applicationId != null) {
+            LOG.info("Application submitAndMonitor succeed");
+        } else {
+            throw new RuntimeException("Application submitAndMonitor failed!");
         }
 
         final String hboxHome = System.getenv("HBOX_HOME");
@@ -1328,36 +1332,35 @@ public class Client {
     }
 
     private boolean waitCompleted() throws IOException, YarnException {
-        ApplicationReport applicationReport = getApplicationReport(applicationId, yarnClient);
+        final Span span = Span.current();
+        ApplicationReport applicationReport = yarnClient.getApplicationReport(applicationId);
+        ApplicationMessageProtocol hboxClient = null;
+        YarnApplicationState lastYarnApplicationState = null;
+        boolean isRunning = true;
+
         LOG.info("The url to track the job: " + applicationReport.getTrackingUrl());
         while (true) {
             assert (applicationReport != null);
-            if (hboxClient == null && isRunning.get()) {
-                LOG.info("Application report for " + applicationId + " (state: "
-                        + applicationReport.getYarnApplicationState().toString() + ")");
-                hboxClient = getAppMessageHandler(conf, applicationReport.getHost(), applicationReport.getRpcPort());
-            }
-
             YarnApplicationState yarnApplicationState = applicationReport.getYarnApplicationState();
             FinalApplicationStatus finalApplicationStatus = applicationReport.getFinalApplicationStatus();
-            if (YarnApplicationState.FINISHED == yarnApplicationState) {
-                hboxClient = null;
-                isRunning.set(false);
-                if (FinalApplicationStatus.SUCCEEDED == finalApplicationStatus) {
-                    return true;
-                } else {
-                    LOG.error("Application has completed failed with YarnApplicationState="
-                            + yarnApplicationState.toString() + " and FinalApplicationStatus="
-                            + finalApplicationStatus.toString());
-                    return false;
+
+            if (null != lastYarnApplicationState && yarnApplicationState != lastYarnApplicationState) {
+                Attributes attributes = Attributes.of(
+                        AttributeKey.stringKey("hbox.application.status.old"), lastYarnApplicationState.toString(),
+                        AttributeKey.stringKey("hbox.application.status.new"), yarnApplicationState.toString());
+                if (EnumSet.of(YarnApplicationState.FINISHED, YarnApplicationState.KILLED, YarnApplicationState.FAILED)
+                        .contains(yarnApplicationState)) {
+                    attributes = attributes.toBuilder()
+                            .put("hbox.application.status.final", finalApplicationStatus.toString())
+                            .build();
                 }
-            } else if (YarnApplicationState.KILLED == yarnApplicationState
-                    || YarnApplicationState.FAILED == yarnApplicationState) {
-                hboxClient = null;
-                isRunning.set(false);
-                LOG.error("Application has completed with YarnApplicationState=" + yarnApplicationState.toString()
-                        + " and FinalApplicationStatus=" + finalApplicationStatus.toString());
-                return false;
+                span.addEvent("yarn_application_status_changed", attributes);
+            }
+            lastYarnApplicationState = yarnApplicationState;
+
+            if (hboxClient == null && isRunning) {
+                LOG.info("Application report for " + applicationId + " (state: " + yarnApplicationState + ")");
+                hboxClient = getAppMessageHandler(conf, applicationReport.getHost(), applicationReport.getRpcPort());
             }
 
             if (hboxClient != null) {
@@ -1378,30 +1381,88 @@ public class Client {
                 }
             }
 
+            if (YarnApplicationState.FINISHED == yarnApplicationState) {
+                hboxClient = null;
+                isRunning = false;
+                if (FinalApplicationStatus.SUCCEEDED == finalApplicationStatus) {
+                    return true;
+                } else {
+                    LOG.error("Application has completed failed with YarnApplicationState="
+                            + yarnApplicationState + " and FinalApplicationStatus="
+                            + finalApplicationStatus);
+                    return false;
+                }
+            } else if (YarnApplicationState.KILLED == yarnApplicationState
+                    || YarnApplicationState.FAILED == yarnApplicationState) {
+                hboxClient = null;
+                isRunning = false;
+                LOG.error("Application has completed with YarnApplicationState=" + yarnApplicationState
+                        + " and FinalApplicationStatus=" + finalApplicationStatus);
+                return false;
+            }
+
             int logInterval = conf.getInt(
                     HboxConfiguration.HBOX_LOG_PULL_INTERVAL, HboxConfiguration.DEFAULT_HBOX_LOG_PULL_INTERVAL);
             Utilities.sleep(logInterval);
-            applicationReport = getApplicationReport(applicationId, yarnClient);
+            applicationReport = yarnClient.getApplicationReport(applicationId);
         }
     }
 
     public static void main(String[] args) {
-        showWelcome();
-        boolean result = false;
+        Client clientInit = null;
         try {
-            LOG.info("Initializing Client");
-            Client client = new Client(args);
-            client.init();
-            result = client.submitAndMonitor();
-        } catch (Exception e) {
-            LOG.fatal("Error running Client", e);
+            clientInit = new Client(args); // exit process if --help or --version
+            clientInit.init();
+        } catch (final Exception e) {
+            LOG.error("Fail to create Client", e);
             System.exit(1);
         }
-        if (result) {
-            LOG.info("Application completed successfully");
-            System.exit(0);
+
+        final Client client = clientInit;
+
+        showWelcome();
+
+        // init opentelemetry
+        HboxOpenTelemetry.init(args, client.conf, Client.class);
+
+        final Span mainSpan = HboxOpenTelemetry.startSpan("hbox-submit", b -> b.setAttribute(
+                        "process.working_directory", System.getProperty("user.dir"))
+                .setAttribute("hbox.app.name", client.clientArguments.appName)
+                .setAttribute("hbox.app.type", client.clientArguments.appType)
+                .setAttribute(
+                        AttributeKey.stringArrayKey("hbox.args"), Arrays.asList(client.clientArguments.hboxCommandArgs))
+                .setAttribute("hbox.worker.num", client.clientArguments.workerNum)
+                .setAttribute("hbox.ps.num", client.clientArguments.psNum));
+        int exitCode = 1; // error for exceptions
+
+        try (final Scope scope = mainSpan.makeCurrent()) {
+            exitCode = client.submitAndMonitor() ? 0 : 2;
+        } catch (final Throwable e) {
+            LOG.fatal("Error running Client", e);
+            mainSpan.recordException(e);
+            mainSpan.setStatus(StatusCode.ERROR, e.getMessage());
+        } finally {
+            try {
+                switch (exitCode) {
+                    case 1:
+                        break;
+                    case 0:
+                        LOG.info("Application completed successfully");
+                        mainSpan.setStatus(StatusCode.OK);
+                        break;
+                    default:
+                        LOG.error("Application run failed!");
+                        mainSpan.setStatus(StatusCode.ERROR);
+                        break;
+                }
+                mainSpan.setAttribute("process.exit.code", (long) exitCode);
+                Utilities.sleep(3 * 1000); // wait for remote child spans
+            } finally {
+                mainSpan.end();
+                HboxOpenTelemetry.flush();
+            }
         }
-        LOG.error("Application run failed!");
-        System.exit(2);
+
+        System.exit(exitCode);
     }
 }

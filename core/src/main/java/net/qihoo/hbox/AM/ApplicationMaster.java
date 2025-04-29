@@ -2,6 +2,9 @@ package net.qihoo.hbox.AM;
 
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.gson.Gson;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +29,8 @@ import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.conf.HboxConfiguration2;
 import net.qihoo.hbox.container.HboxContainer;
 import net.qihoo.hbox.container.HboxContainerId;
+import net.qihoo.hbox.opentelemetry.HboxOpenTelemetry;
+import net.qihoo.hbox.opentelemetry.HboxResourceProvider;
 import net.qihoo.hbox.storage.AmazonS3;
 import net.qihoo.hbox.storage.S3File;
 import net.qihoo.hbox.util.HboxVersion;
@@ -1857,6 +1862,11 @@ public class ApplicationMaster extends CompositeService {
         vargs.add(ShellEscapeUtils.escapeInDoubleQuotes("\"${JAVA_HOME}/bin/java\"")); // expand in the inner bash
         vargs.add("-Xmx" + jvmContainerMem + "m");
         vargs.add("-Xms" + jvmContainerMem + "m");
+
+        // propagate opentelemetry properties
+        vargs.add(ShellEscapeUtils.escapeInDoubleQuotes(HboxResourceProvider.serviceNamePropertyForContainer()));
+        vargs.add(ShellEscapeUtils.escapeInDoubleQuotes(HboxResourceProvider.resourcePropertyForContainer()));
+
         String javaOpts = conf.get(
                 HboxConfiguration.HBOX_CONTAINER_EXTRA_JAVA_OPTS,
                 HboxConfiguration.DEFAULT_HBOX_CONTAINER_JAVA_OPTS_EXCEPT_MEMORY);
@@ -2262,6 +2272,10 @@ public class ApplicationMaster extends CompositeService {
             }
         }
         containerEnv.put(HboxConstants.Environment.HBOX_TF_INDEX.toString(), String.valueOf(index));
+
+        // propagate opentelemetry context to containers
+        HboxOpenTelemetry.injectIntoEnvMap(containerEnv);
+
         ContainerLaunchContext ctx = ContainerLaunchContext.newInstance(
                 containerLocalResource, containerEnv, containerLaunchcommands, null, null, null);
 
@@ -3348,7 +3362,10 @@ public class ApplicationMaster extends CompositeService {
                     throw new HboxExecException(failMessage);
                 }
             }
+
             this.appendMessage(new Message(LogType.STDERR, "All containers are launched successfully"));
+            Span.current().addEvent("all_container_started");
+
             while (mpiExitCode == -1) {
                 Utilities.sleep(statusUpdateInterval);
                 try {
@@ -3361,6 +3378,8 @@ public class ApplicationMaster extends CompositeService {
                 }
             }
             appendMessage(new Message(LogType.STDERR, "finish mpiexec with code " + mpiExitCode));
+        } else {
+            Span.current().addEvent("all_container_started");
         }
 
         String diagnostics = "";
@@ -3413,6 +3432,7 @@ public class ApplicationMaster extends CompositeService {
         }
 
         containerStarted = true;
+
         try {
             boolean flag = true;
             boolean digitsFlag = true;
@@ -3633,6 +3653,9 @@ public class ApplicationMaster extends CompositeService {
                 }
                 LOG.info("All containers completed");
             }
+
+            Span.current().addEvent("all_container_completed");
+
             boolean uploadWhenFailed = this.conf.getBoolean(
                     HboxConfiguration.HBOX_FAILED_UPLOAD, HboxConfiguration.DEFAULT_HBOX_FAILED_UPLOAD);
             if (uploadWhenFailed) LOG.info("This application allow failed container to upload output files!");
@@ -3738,7 +3761,7 @@ public class ApplicationMaster extends CompositeService {
             throw new RuntimeException("Application Failed, retry starting. Note that container memory auto scale");
         }
 
-        this.appendMessage("Unregister  Application", true);
+        this.appendMessage("Unregister Application", true);
         unregisterApp(finalSuccess ? FinalApplicationStatus.SUCCEEDED : FinalApplicationStatus.FAILED, diagnostics);
 
         return finalSuccess;
@@ -4053,19 +4076,38 @@ public class ApplicationMaster extends CompositeService {
      * @param args Command line args
      */
     public static void main(final String[] args) {
-        try {
+        // init opentelemetry
+        HboxOpenTelemetry.init(args, null, ApplicationMaster.class);
+        final Span mainSpan = HboxOpenTelemetry.startSpan(
+                "hbox-application-master",
+                b -> b.setAttribute("process.working_directory", System.getProperty("user.dir")));
+
+        int exitCode = 0;
+        try (final Scope scope = mainSpan.makeCurrent()) {
             final ApplicationMaster appMaster = new ApplicationMaster(args);
             appMaster.init();
             if (appMaster.run()) {
                 LOG.info("Application completed successfully.");
-                System.exit(0);
+                mainSpan.setStatus(StatusCode.OK);
             } else {
                 LOG.info("Application failed.");
-                System.exit(1);
+                mainSpan.setStatus(StatusCode.ERROR);
+                exitCode = 1;
             }
-        } catch (Exception e) {
+        } catch (final Throwable e) {
             LOG.fatal("ApplicationMaster Exit With Info: ", e);
-            System.exit(1);
+            mainSpan.setStatus(StatusCode.ERROR);
+            exitCode = 1;
+            mainSpan.recordException(e);
+        } finally {
+            try {
+                mainSpan.setAttribute("process.exit.code", (long) exitCode);
+                Utilities.sleep(3 * 1000); // wait for remote child spans
+            } finally {
+                mainSpan.end();
+                HboxOpenTelemetry.flush();
+            }
         }
+        System.exit(exitCode);
     }
 }

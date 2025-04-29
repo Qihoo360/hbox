@@ -3,6 +3,9 @@ package net.qihoo.hbox.container;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
@@ -21,6 +24,7 @@ import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.*;
 import net.qihoo.hbox.conf.HboxConfiguration;
 import net.qihoo.hbox.conf.HboxConfiguration2;
+import net.qihoo.hbox.opentelemetry.HboxOpenTelemetry;
 import net.qihoo.hbox.storage.AmazonS3;
 import net.qihoo.hbox.storage.S3DownloadTask;
 import net.qihoo.hbox.storage.S3File;
@@ -1290,6 +1294,9 @@ public class HboxContainer {
         }
         LOG.info("Executing command: " + String.join(" ", args));
 
+        // propagate opentelemetry context to the subprocess
+        HboxOpenTelemetry.injectIntoEnvList(envList);
+
         Runtime rt = Runtime.getRuntime();
 
         // close reserved socket as tf will bind this port later
@@ -1934,6 +1941,13 @@ public class HboxContainer {
         heartbeatThread.setContainersFinishTime(now.toString());
         heartbeatThread.setContainerStatus(HboxContainerStatus.FAILED);
         Utilities.sleep(heartbeatInterval);
+
+        Span.current()
+                .setStatus(StatusCode.ERROR)
+                .setAttribute("process.exit.code", (long) -1)
+                .end();
+        HboxOpenTelemetry.flush();
+
         System.exit(-1);
     }
 
@@ -1942,15 +1956,26 @@ public class HboxContainer {
         heartbeatThread.setContainersFinishTime(now.toString());
         heartbeatThread.setContainerStatus(HboxContainerStatus.SUCCEEDED);
         Utilities.sleep(heartbeatInterval);
-        if (!conf.getBoolean(HboxConfiguration.HBOX_LOG_SAMPLING, HboxConfiguration.DEFAULT_HBOX_LOG_SAMPLING)) {
-            LOG.info("HBox log sampling is disabled! Container exit with code -1.");
-            System.exit(-1);
-        } else System.exit(0);
+
+        Span.current()
+                .setStatus(StatusCode.OK)
+                .setAttribute("process.exit.code", (long) 0)
+                .end();
+        HboxOpenTelemetry.flush();
+
+        System.exit(0);
     }
 
     public static void main(String[] args) {
         HboxContainer container = new HboxContainer();
-        try {
+
+        // init opentelemetry
+        HboxOpenTelemetry.init(args, null, container.getClass());
+        final Span mainSpan = HboxOpenTelemetry.startSpan(
+                "hbox-container" + (null != container.role && !container.role.isEmpty() ? "-" + container.role : ""),
+                b -> b.setAttribute("process.working_directory", System.getProperty("user.dir")));
+
+        try (final Scope scope = mainSpan.makeCurrent()) {
             container.init();
             if (container.run(args)) {
                 LOG.info("HboxContainer " + container.getContainerId().toString() + " finish successfully");
@@ -1959,9 +1984,13 @@ public class HboxContainer {
                 LOG.error("HboxContainer run failed! Exit code is: " + container.exitCode);
                 container.reportFailedAndExit();
             }
-        } catch (Exception e) {
+        } catch (final Throwable e) {
             LOG.error("Some errors has occurred during container running!", e);
+            mainSpan.recordException(e);
             container.reportFailedAndExit();
+        } finally {
+            mainSpan.end();
+            HboxOpenTelemetry.flush();
         }
     }
 }
