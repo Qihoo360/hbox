@@ -131,6 +131,26 @@
         <artifactId>aws-java-sdk-s3</artifactId>
         <version>[1.12.261]</version>
       </dependency>
+      <!-- open-telemetry -->
+      <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-bom</artifactId>
+        <version>1.49.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <!-- dependency of opentelemetry-exporter-otlp -->
+        <groupId>com.squareup.okio</groupId>
+        <artifactId>okio</artifactId>
+        <version>3.6.0</version>
+      </dependency>
+      <!-- JUL log bridge to slf4j 1.7 then to log4j 1.2 -->
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jul-to-slf4j</artifactId>
+        <version>1.7.36</version>
+      </dependency>
       <!-- junit -->
       <dependency>
         <groupId>org.junit</groupId>
@@ -252,6 +272,12 @@
                   <exclude>plugin.properties</exclude>
 
                   <exclude>META-INF/DEPENDENCIES</exclude>
+
+                  <!-- exclude kotlin model -->
+                  <exclude>META-INF/*.kotlin_module</exclude>
+
+                  <!-- exclude module-info -->
+                  <exclude>**/module-info.class</exclude>
                 </excludes>
               </filter>
             </filters>

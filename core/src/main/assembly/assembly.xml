@@ -49,6 +49,11 @@
             <excludes>
                 <!-- use shade -->
                 <exclude>net.qihoo:*</exclude>
+                <exclude>io.opentelemetry:*</exclude>
+                <exclude>com.squareup.okhttp3:*</exclude>
+                <exclude>com.squareup.okio:*</exclude>
+                <exclude>org.jetbrains.kotlin:*</exclude>
+                <exclude>org.jetbrains:annotations</exclude>
             </excludes>
         </dependencySet>
         <dependencySet>

@@ -104,6 +104,24 @@
       <artifactId>aws-java-sdk-s3</artifactId>
     </dependency>
 
+    <!-- open-telemetry -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk-extension-autoconfigure</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-exporter-otlp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jul-to-slf4j</artifactId>
+    </dependency>
+
     <!-- test -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -144,11 +162,26 @@
               <artifactSet>
                 <includes>
                   <include>net.qihoo:*</include>
+                  <include>io.opentelemetry:*</include>
+
+                  <!-- dependencies for opentelemetry-exporter-otlp -->
+                  <include>com.squareup.okhttp3:*</include>
+                  <include>com.squareup.okio:*</include>
+                  <include>org.jetbrains.kotlin:*</include>
+
+                  <!-- log bridge from jul to slf 1.7 -->
+                  <include>org.slf4j:jul-to-slf4j</include>
                 </includes>
                 <excludes>
                   <exclude>net.qihoo:hbox-history-server</exclude>
                 </excludes>
               </artifactSet>
+              <relocations>
+                <relocation>
+                  <pattern>okio</pattern>
+                  <shadedPattern>hbox-shaded.okio</shadedPattern>
+                </relocation>
+              </relocations>
             </configuration>
           </execution>
         </executions>
