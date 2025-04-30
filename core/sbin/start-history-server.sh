@@ -11,7 +11,7 @@ set -euo pipefail
 #   JAVACMD - required, path to java binary
 #   HBOX_CLASSPATH - required, classpath to run hbox
 #   HBOX_PRE_CLASSPATH - optional, classpath before main jar, e.g. special hdfs client
-#   HBOX_JAR - required, result array for finding the hbox main jars, may find 0 or multiple ones
+#   HBOX_JAR - required, the only hbox main jar for the current command
 #   HBOX_CLIENT_OPTS - optional, java cli opts to pass to hbox client
 #   HBOX_EXTRA_ARGS - optional, extra args for hbox client
 
@@ -19,10 +19,10 @@ set -euo pipefail
 #  - prepend classpath
 #  - hbox history server jar
 #  - HBOX_CLASSPATH
-HBOX_CLASSPATH="${HBOX_JAR[0]}:$HBOX_CLASSPATH"
+HBOX_CLASSPATH="$HBOX_JAR:$HBOX_CLASSPATH"
 [[ ! ${HBOX_PRE_CLASSPATH-} ]] || HBOX_CLASSPATH="$HBOX_PRE_CLASSPATH:$HBOX_CLASSPATH"
 
-if [[ "${__HBOX_TEST_HISTORY_SERVER-}" != true ]]; then
+if [[ ${__HBOX_TEST_HISTORY_SERVER-} != true ]]; then
   nohup "$JAVACMD" -cp "$HBOX_CLASSPATH" net.qihoo.hbox.jobhistory.JobHistoryServer "$@" 2>&1 &
 else
   exec "$JAVACMD" -cp "$HBOX_CLASSPATH" net.qihoo.hbox.jobhistory.JobHistoryServer "$@"

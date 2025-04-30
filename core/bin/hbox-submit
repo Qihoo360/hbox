@@ -10,7 +10,7 @@ set -euo pipefail
 # hbox-common-env.sh setups required and optional environments:
 #   JAVACMD - required, path to java binary
 #   HBOX_CLASSPATH - required, classpath to run hbox
-#   HBOX_JAR - required, result array for finding the hbox main jars, may find 0 or multiple ones
+#   HBOX_JAR - required, the only hbox main jar for the current command
 #   HBOX_CLIENT_OPTS - optional, java cli opts to pass to hbox client
 #   HBOX_EXTRA_ARGS - optional, extra args for hbox client
 
@@ -18,4 +18,4 @@ if [[ ${HBOX_EXTRA_ARGS[*]-} ]]; then
   set -- --conf hbox.internal.extra.args.count=$((${#HBOX_EXTRA_ARGS[@]} + 2)) "${HBOX_EXTRA_ARGS[@]}" "$@"
 fi
 
-exec "$JAVACMD" ${HBOX_CLIENT_OPTS-} -cp "$HBOX_CLASSPATH" org.apache.hadoop.util.RunJar "${HBOX_JAR[0]}" "$@"
+exec "$JAVACMD" ${HBOX_CLIENT_OPTS-} -cp "$HBOX_CLASSPATH" org.apache.hadoop.util.RunJar "$HBOX_JAR" "$@"

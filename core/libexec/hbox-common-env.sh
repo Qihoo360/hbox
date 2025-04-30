@@ -4,7 +4,7 @@
 #   JAVACMD - required, path to java binary
 #   HBOX_CLASSPATH - required, classpath to run hbox
 #   HBOX_PRE_CLASSPATH - optional, classpath before main jar, e.g. special hdfs client
-#   HBOX_JAR - required, result array for finding the hbox main jars, may find 0 or multiple ones
+#   HBOX_JAR - required, the only hbox main jar for the current command
 #   HBOX_CLIENT_OPTS - optional, java cli opts to pass to hbox client
 #   HBOX_EXTRA_ARGS - optional, extra args for hbox client
 
@@ -54,9 +54,30 @@ HBOX_CLASSPATH="$HBOX_CONF_DIR:$HBOX_HOME/lib/*:$(yarn classpath)"
 # shellcheck disable=SC2034
 HBOX_CLIENT_OPTS="-Xmx1024m"
 
+__find_hbox_jar() {
+  __pattern="${1:?usage __find_hbox_jar <find-name-pattern>}"
+  readarray -t __HBOX_JAR < <(find "$HBOX_HOME/" -maxdepth 1 -name "hbox-core-*.jar")
+  if ((${#__HBOX_JAR[@]} == 0)); then
+    echo "[ERROR] Failed to find $__pattern in $HBOX_HOME/lib." >&2
+    return 66
+  elif ((${#__HBOX_JAR[@]} > 1)); then
+    echo "[ERROR] Found multiple $__pattern in $HBOX_HOME/lib:" >&2
+    printf "  %s\n" "${__HBOX_JAR[@]}"
+    echo "Please remove all but one jar." >&2
+    return 67
+  fi
+  HBOX_JAR="${__HBOX_JAR[0]-}"
+  unset __HBOX_JAR
+
+  if [[ ! -r ${HBOX_JAR-} ]]; then
+    echo "[ERROR] HBOX_JAR ${HBOX_JAR-} is not readable." >&2
+    return 68
+  fi
+}
+
 case "${1-}" in
 run-submit)
-  readarray -t HBOX_JAR < <(find "$HBOX_HOME/" -maxdepth 1 -name "hbox-core-*.jar")
+  __find_hbox_jar 'hbox-core-*.jar' || return $?
   HBOX_EXTRA_ARGS=()
 
   if [[ ${OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED-} == true ]]; then
@@ -99,17 +120,7 @@ run-submit)
   fi
   ;;
 
-run-history-server) readarray -t HBOX_JAR < <(find "$HBOX_HOME/" -maxdepth 1 -name "hbox-history-server-*.jar") ;;
+run-history-server) __find_hbox_jar 'hbox-history-server-*.jar' || return $? ;;
 esac
 
-if [[ ${1-} ]]; then
-  if ((${#HBOX_JAR[@]} == 0)); then
-    echo "[ERROR] Failed to find Hbox jar in $HBOX_HOME/lib." >&2
-    return 66
-  elif ((${#HBOX_JAR[@]} > 1)); then
-    echo "[ERROR] Found multiple Hbox jars in $HBOX_HOME/lib:" >&2
-    printf "  %s\n" "${HBOX_JAR[@]}"
-    echo "Please remove all but one jar." >&2
-    return 67
-  fi
-fi
+unset __find_hbox_jar
