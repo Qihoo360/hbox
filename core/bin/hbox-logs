@@ -10,7 +10,7 @@ set -euo pipefail
 # hbox-common-env.sh setups required and optional environments:
 #   JAVACMD - required, path to java binary
 #   HBOX_CLASSPATH - required, classpath to run hbox
-#   HBOX_JAR - required, result array for finding the hbox main jars, may find 0 or multiple ones
+#   HBOX_JAR - required, the only hbox main jar for the current command
 #   HBOX_CLIENT_OPTS - optional, java cli opts to pass to hbox client
 
 exec "$JAVACMD" -cp "$HBOX_CLASSPATH" org.apache.hadoop.yarn.client.cli.LogsCLI "$@"

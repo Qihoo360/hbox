@@ -3,6 +3,8 @@ package net.qihoo.hbox.container;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
@@ -102,8 +104,6 @@ public class HboxContainer {
     private String lightLDAEndpoint;
 
     private String mpiAppDir;
-
-    private int signalID;
 
     private int reservePortBegin = 0;
 
@@ -259,7 +259,6 @@ public class HboxContainer {
         } else {
             containerLaunch = new YarnLaunch(containerId.getContainerId().toString());
         }
-        this.signalID = -1;
         this.s3Cluster = conf.get(HboxConfiguration.HBOX_S3_CLUSTER, HboxConfiguration.DEFAULT_HBOX_S3_CLUSTER);
         this.s3AccessKey = conf.get(HboxConfiguration.HBOX_S3_ACCESS_KEY, HboxConfiguration.DEFAULT_HBOX_S3_ACCESS_KEY);
         this.s3SecretKey = conf.get(HboxConfiguration.HBOX_S3_SECRET_KEY, HboxConfiguration.DEFAULT_HBOX_S3_SECRET_KEY);
@@ -1308,6 +1307,9 @@ public class HboxContainer {
         }
         final Process hboxProcess = containerLaunch.exec(args, env, envs, dir);
 
+        final Span span = Span.current();
+        span.addEvent("process_launched");
+
         Date now = new Date();
         heartbeatThread.setContainersStartTime(now.toString());
 
@@ -1834,42 +1836,43 @@ public class HboxContainer {
             int updateAppStatusRetry = this.conf.getInt(
                     HboxConfiguration.HBOX_MPI_CONTAINER_UPDATE_APP_STATUS_RETRY,
                     HboxConfiguration.DEFAULT_HBOX_MPI_CONTAINER_UPDATE_APP_STATUS_RETRY);
-            boolean isAppFinished = false;
             while (true) {
-                int retry = 0;
-                while (true) {
-                    try {
-                        isAppFinished = this.amClient.isApplicationCompleted();
-                        break;
-                    } catch (Exception e) {
-                        retry++;
-                        if (retry < updateAppStatusRetry) {
-                            LOG.info("Getting application status failed in retry " + retry);
-                            Utilities.sleep(updateAppStatusInterval);
-                        } else {
-                            LOG.info(
-                                    "Getting application status failed in retry " + retry + ", container will suicide!",
-                                    e);
-                            return false;
-                        }
-                    }
-                }
-                if (isAppFinished) {
+                if (this.amClient.isApplicationCompleted()) {
+                    int code = 0;
                     this.uploadOutputFiles();
                     File customExit = new File(this.mpiAppDir + "/"
                             + conf.get(HboxConfiguration.HBOX_CUSTOM_EXIT, HboxConfiguration.DEFAULT_HBOX_CUSTOM_EXIT));
                     if (customExit.exists()) {
-                        int code = 0;
                         try {
                             String exitCode = FileUtils.readLines(customExit).get(0);
                             code = Integer.parseInt(exitCode);
+                            span.addEvent("mpi_custom_exit", Attributes.of(AttributeKey.longKey("hbox.mpi.exit"), (long)
+                                    code));
                         } catch (Exception e) {
-                            e.printStackTrace();
-                            LOG.error("Hbox get wrong custom exit code!");
+                            LOG.error("Hbox get wrong custom exit code!", e);
+                            span.recordException(e);
+                            code = 1; // mark as error
                         }
-                        return code == 0;
+                    } else {
+                        try {
+                            code = hboxProcess.exitValue();
+                            LOG.info("MPI process exit code is: " + code);
+                            span.addEvent(
+                                    "mpi_exit", Attributes.of(AttributeKey.longKey("hbox.mpi.exit"), (long) code));
+                        } catch (final IllegalThreadStateException e) {
+                            LOG.warn("MPI Process is still running while app is finished");
+                            code = 0; // maybe other work fails
+                            span.addEvent("mpi_still_running");
+                        }
                     }
-                    return true;
+                    return code == 0;
+                } else {
+                    final int signalID = amClient.getSignal();
+                    if (signalID >= 0) {
+                        rt.exec("kill -" + signalID + " -" + this.hboxCmdProcessId);
+                        LOG.info("Send the signal " + signalID + " to process " + this.hboxCmdProcessId);
+                        amClient.sendSignal(-1);
+                    }
                 }
                 Utilities.sleep(updateAppStatusInterval);
             }
@@ -1882,10 +1885,10 @@ public class HboxContainer {
                     LOG.info("Container process exit code is: " + code);
                 } catch (IllegalThreadStateException e) {
                     LOG.debug("Hbox Process is running");
-                    this.signalID = amClient.getSignal();
-                    if (this.signalID >= 0) {
-                        rt.exec("kill -" + this.signalID + " " + this.hboxCmdProcessId);
-                        LOG.info("Send the signal " + this.signalID + " to process " + this.hboxCmdProcessId);
+                    final int signalID = amClient.getSignal();
+                    if (signalID >= 0) {
+                        rt.exec("kill -" + signalID + " -" + this.hboxCmdProcessId);
+                        LOG.info("Send the signal " + signalID + " to process " + this.hboxCmdProcessId);
                         amClient.sendSignal(-1);
                     }
                 }

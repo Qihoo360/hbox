@@ -2,6 +2,8 @@ package net.qihoo.hbox.AM;
 
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.gson.Gson;
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
@@ -1935,17 +1937,17 @@ public class ApplicationMaster extends CompositeService {
         mpiexecArgs.add("/usr/bin/env");
         mpiexecArgs.add("-u");
         mpiexecArgs.add("PMIX_INSTALL_PREFIX"); // unset PMIX_INSTALL_PREFIX which inherits path from mpi master node
-        mpiexecArgs.add("/bin/sh");
+        mpiexecArgs.add("/bin/bash");
         mpiexecArgs.add("-c");
         mpiexecArgs.add(String.format(
-                "[ \"$%s\" != 1 ] && exec \"$@\" 1>> \"$%s\"/%s 2>> \"$%s\"/%s; \"$@\" 2>&1 | tee -a \"$%s\"/%s",
+                "[ \"$%s\" != 1 ] && exec \"$@\" 1>> \"$%s\"/%s 2>> \"$%s\"/%s; exec \"$@\" > >(tee -a \"$%s\"/%s) 2>&1",
                 HboxConstants.Environment.HBOX_TF_INDEX,
                 HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR,
                 HboxConstants.MPI_STD_OUT_FILE,
                 HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR,
                 HboxConstants.MPI_STD_ERR_FILE,
                 HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR,
-                HboxConstants.MPI_STD_OUT_FILE)); // envs are expanded by /bin/sh
+                HboxConstants.MPI_STD_OUT_FILE)); // envs are expanded by /bin/bash
         mpiexecArgs.add("--");
         for (final String arg : hboxCommandArgs) {
             mpiexecArgs.add(arg);
@@ -2318,13 +2320,15 @@ public class ApplicationMaster extends CompositeService {
     }
 
     @SuppressWarnings("deprecation")
-    private boolean run() throws IOException, NoSuchAlgorithmException, RuntimeException {
+    private boolean run() throws IOException, NoSuchAlgorithmException {
         LOG.info("ApplicationMaster Starting ...");
         regResp = registerApplicationMaster();
 
         LOG.info("Application submit hbox client is: "
                 + conf.get(HboxConfiguration.HBOX_CLIENT_HOSTNAME, HboxConfiguration.DEFAULT_HBOX_CLIENT_HOSTNAME));
         LOG.info("HBox release version: " + HboxVersion.VERSION);
+
+        final Span span = Span.current();
         if (conf.getBoolean(HboxConfiguration.HBOX_AM_CMD_ENABLE, HboxConfiguration.DEFAULT_HBOX_AM_ENABLE)) {
             String cmd = conf.get(HboxConfiguration.HBOX_AM_CMD, HboxConfiguration.DEDAULT_HBOX_AM_CMD);
             if (cmd != null && !cmd.equals("")) {
@@ -3364,7 +3368,7 @@ public class ApplicationMaster extends CompositeService {
             }
 
             this.appendMessage(new Message(LogType.STDERR, "All containers are launched successfully"));
-            Span.current().addEvent("all_container_started");
+            span.addEvent("all_container_started");
 
             while (mpiExitCode == -1) {
                 Utilities.sleep(statusUpdateInterval);
@@ -3379,7 +3383,7 @@ public class ApplicationMaster extends CompositeService {
             }
             appendMessage(new Message(LogType.STDERR, "finish mpiexec with code " + mpiExitCode));
         } else {
-            Span.current().addEvent("all_container_started");
+            span.addEvent("all_container_started");
         }
 
         String diagnostics = "";
@@ -3641,6 +3645,7 @@ public class ApplicationMaster extends CompositeService {
                     LOG.info("All ps containers completed");
                 }
                 finalSuccess = containerListener.isAllWorkerContainersSucceeded();
+                span.addEvent("all_container_completed");
             } else {
                 containerListener.setAMFinished();
                 LOG.info("Waiting all containers completed");
@@ -3652,9 +3657,9 @@ public class ApplicationMaster extends CompositeService {
                     }
                 }
                 LOG.info("All containers completed");
+                span.addEvent("all_container_completed", Attributes.of(AttributeKey.longKey("hbox.mpiexec.exit"), (long)
+                        mpiExitCode));
             }
-
-            Span.current().addEvent("all_container_completed");
 
             boolean uploadWhenFailed = this.conf.getBoolean(
                     HboxConfiguration.HBOX_FAILED_UPLOAD, HboxConfiguration.DEFAULT_HBOX_FAILED_UPLOAD);
@@ -3741,11 +3746,13 @@ public class ApplicationMaster extends CompositeService {
                         fs.createNewFile(new Path(outputInfo.getDfsLocation() + "/_SUCCESS"));
                     }
                 }
+                span.addEvent("upload_done");
             }
         } catch (Exception e) {
             finalSuccess = false;
             this.appendMessage("Some error occurs " + org.apache.hadoop.util.StringUtils.stringifyException(e), true);
             diagnostics = e.getMessage();
+            span.recordException(e);
         }
 
         int appAttempts =
