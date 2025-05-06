@@ -1816,7 +1816,7 @@ public class ApplicationMaster extends CompositeService {
         }
 
         if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
-            if (!mpiExecDir.equals("")) {
+            if (null != mpiExecDir && !mpiExecDir.equals("") && !mpiExecDir.equals(envs.get("PWD"))) {
                 containerEnv.put(HboxConstants.Environment.MPI_EXEC_DIR.toString(), mpiExecDir);
             }
             if (reLinkFiles.length() > 0) {
@@ -1862,6 +1862,9 @@ public class ApplicationMaster extends CompositeService {
         if (jvmContainerMem > containerMemory) jvmContainerMem = containerMemory;
         vargs.add("exec");
         vargs.add(ShellEscapeUtils.escapeInDoubleQuotes("\"${JAVA_HOME}/bin/java\"")); // expand in the inner bash
+        vargs.add("1>>'" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "'/" + ApplicationConstants.STDOUT);
+        vargs.add("2>>'" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "'/" + ApplicationConstants.STDERR);
+
         vargs.add("-Xmx" + jvmContainerMem + "m");
         vargs.add("-Xms" + jvmContainerMem + "m");
 
@@ -1886,9 +1889,6 @@ public class ApplicationMaster extends CompositeService {
             }
         }
 
-        vargs.add("1>>'" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "'/" + ApplicationConstants.STDOUT);
-        vargs.add("2>>'" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "'/" + ApplicationConstants.STDERR);
-
         LOG.info("Container launch command of the " + role + " role: " + String.join(" ", vargs));
         return vargs;
     }
@@ -1905,20 +1905,24 @@ public class ApplicationMaster extends CompositeService {
         final StringBuilder ldLibraryPath = new StringBuilder();
         final String mpiExtraLdLibraryPath = conf.get(HboxConfiguration.HBOX_MPI_EXTRA_LD_LIBRARY_PATH);
 
-        if (mpiExtraLdLibraryPath != null) {
-            ldLibraryPath.append(mpiExtraLdLibraryPath);
-            LOG.info("add " + ldLibraryPath + " to LD_LIBRARY_PATH");
-        }
-
         String mpiInstallDir = Paths.get(conf.get(
                         HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR))
                 .toAbsolutePath()
                 .toString();
-        ldLibraryPath.append(":").append(mpiInstallDir).append(File.separator).append("lib");
+
+        if (mpiExtraLdLibraryPath != null) {
+            ldLibraryPath.append(mpiExtraLdLibraryPath).append(":");
+            LOG.info("add " + ldLibraryPath + " to LD_LIBRARY_PATH");
+        }
+        ldLibraryPath.append(mpiInstallDir).append(File.separator).append("lib");
+        if (null != System.getenv("LD_LIBRARY_PATH")) {
+            ldLibraryPath.append(":").append(System.getenv("LD_LIBRARY_PATH"));
+        }
 
         mpiexec.append(mpiInstallDir).append(File.separator).append("bin").append(File.separator);
         mpiexec.append("mpiexec");
         mpiexecArgs.add(mpiexec.toString());
+        mpiexecArgs.add("--tag-output");
         mpiexecArgs.add("--host");
         for (Container container : acquiredWorkerContainers) {
             nodes.append(container.getNodeId().getHost()).append(",");
@@ -1931,29 +1935,39 @@ public class ApplicationMaster extends CompositeService {
         // container as an argv array. To redirect stdout/stderr of the user command as a subprocess
         // of orted, we can insert a shell like this:
         //   /bin/sh -xc 'exec "$@" 1>>stdout 2>>stderr' -- hboxCommandArgs
-        // The command is not processed by yarn nm service, so <LOG_DIR> cannot be replaced by yarn.
-        // This command is also executed directly by execv syscall, so add them here as raw string:
-        // For rank 0 (within this code which TF_INDEX is 1 for mpi), logs will be directed to both console and stdout
-        mpiexecArgs.add("/usr/bin/env");
-        mpiexecArgs.add("-u");
-        mpiexecArgs.add("PMIX_INSTALL_PREFIX"); // unset PMIX_INSTALL_PREFIX which inherits path from mpi master node
+        // The worker command is not processed by yarn nm service, so <LOG_DIR> cannot be replaced by yarn.
+        // This command is also executed directly by execv syscall, so add them here as raw string.
+        //
+        // The first bash snippet run on workers:
+        // * unset PMIX_INSTALL_PREFIX, avoid introduce the openmpi prefix path on AM
+        // * fix PATH, remove the openmpi prefix of AM which is appended to the worker when OPAL_PREFIX of AM is set
+        // * fix LD_LIBRARY_PATH, also remove the openmpi prefix of AM
+        // * redirect stderr to both mpi-stderr and normal stderr (which is shend back to mpiexec by orted)
         mpiexecArgs.add("/bin/bash");
-        mpiexecArgs.add("-c");
+        mpiexecArgs.add("-ec");
         mpiexecArgs.add(String.format(
-                "[ \"$%s\" != 1 ] && exec \"$@\" 1>> \"$%s\"/%s 2>> \"$%s\"/%s; exec \"$@\" > >(tee -a \"$%s\"/%s) 2>&1",
+                "unset PMIX_INSTALL_PREFIX; LD_LIBRARY_PATH=\"${LD_LIBRARY_PATH#*:}\" PATH=\"${PATH#*:}\" exec 2> >(tee \"$%s/%s\" >&2) \"$@\"",
+                HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_ERR_FILE));
+        mpiexecArgs.add("--");
+
+        // The second bash snippet run on workers:
+        // * for the 1st rank, redirected stdout to both mpi-stdout and normal stdout
+        //   (which is shend back to mpiexec by orted)
+        // * for other ranks, stdout is only redirected to mpi-stdout
+        mpiexecArgs.add("/bin/bash");
+        mpiexecArgs.add("-ec");
+        mpiexecArgs.add(String.format(
+                "(( %s != 1 )) && exec >\"$%s/%s\" \"$@\"; exec > >(tee \"$%s/%s\") \"$@\"",
                 HboxConstants.Environment.HBOX_TF_INDEX,
                 HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR,
                 HboxConstants.MPI_STD_OUT_FILE,
                 HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR,
-                HboxConstants.MPI_STD_ERR_FILE,
-                HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR,
-                HboxConstants.MPI_STD_OUT_FILE)); // envs are expanded by /bin/bash
+                HboxConstants.MPI_STD_OUT_FILE));
         mpiexecArgs.add("--");
+
         for (final String arg : hboxCommandArgs) {
             mpiexecArgs.add(arg);
         }
-
-        ldLibraryPath.append(":").append(System.getenv("LD_LIBRARY_PATH"));
 
         List<String> envLists = new ArrayList<>();
 

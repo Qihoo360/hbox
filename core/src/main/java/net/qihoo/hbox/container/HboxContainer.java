@@ -826,6 +826,25 @@ public class HboxContainer {
         return Long.toString(pid);
     }
 
+    private static void inheritEnv(final List<String> envList, final String key) {
+        final String value = System.getenv(key);
+        if (null != value && !value.isEmpty()) {
+            envList.add(String.format("%s=%s", key, value));
+        }
+    }
+
+    private static void pathListEnv(final List<String> envList, final String key, final String... values) {
+        List<String> validValues = new ArrayList<>();
+        for (final String v : values) {
+            if (null != v && !v.isEmpty()) {
+                validValues.add(v);
+            }
+        }
+        if (validValues.size() > 0) {
+            envList.add(String.format("%s=%s", key, String.join(":", validValues)));
+        }
+    }
+
     private Boolean run(String args[]) throws IOException {
         try {
             if (conf.getBoolean(
@@ -1063,17 +1082,29 @@ public class HboxContainer {
             }
         }
 
-        envList.add("PATH=" + System.getenv("PATH"));
-        envList.add("JAVA_HOME=" + System.getenv("JAVA_HOME"));
-        envList.add("HADOOP_HOME=" + System.getenv("HADOOP_HOME"));
-        envList.add("HADOOP_HDFS_HOME=" + System.getenv("HADOOP_HDFS_HOME"));
-        envList.add("LD_LIBRARY_PATH=" + "./:" + System.getenv("LD_LIBRARY_PATH") + ":" + System.getenv("JAVA_HOME")
-                + "/jre/lib/amd64/server:" + System.getenv("HADOOP_HOME") + "/lib/native");
-        envList.add("CLASSPATH=" + "./:" + System.getenv("CLASSPATH") + ":" + System.getProperty("java.class.path"));
-        envList.add("PYTHONUNBUFFERED=1");
+        inheritEnv(envList, "PATH");
+        inheritEnv(envList, "JAVA_HOME");
         envList.add("INDEX=" + this.index);
         envList.add("HADOOP_VERSION=" + VersionInfo.getVersion());
-        envList.add("HADOOP_CONF_DIR=./:" + System.getenv("HADOOP_CONF_DIR"));
+        pathListEnv(envList, "HADOOP_CONF_DIR", "./", System.getenv("HADOOP_CONF_DIR"));
+        inheritEnv(envList, "HADOOP_HOME");
+        inheritEnv(envList, "HADOOP_HDFS_HOME");
+        inheritEnv(envList, "HADOOP_USER_NAME");
+        inheritEnv(envList, "HADOOP_COMMON_HOME");
+        inheritEnv(envList, "HADOOP_YARN_HOME");
+        inheritEnv(envList, "CONTAINER_ID");
+        if (null != System.getenv("JAVA_HOME")) {
+            pathListEnv(
+                    envList,
+                    "LD_LIBRARY_PATH",
+                    System.getenv("LD_LIBRARY_PATH"),
+                    System.getenv("JAVA_HOME") + "/jre/lib/amd64/server",
+                    System.getenv("HADOOP_HOME"));
+        } else {
+            pathListEnv(envList, "LD_LIBRARY_PATH", System.getenv("LD_LIBRARY_PATH"), System.getenv("HADOOP_HOME"));
+        }
+        pathListEnv(envList, "CLASSPATH", "./", System.getenv("CLASSPATH"), System.getProperty("java.class.path"));
+        envList.add("PYTHONUNBUFFERED=1");
         envList.add(
                 "HBOX_CONTAINER_LOG_DIR=" + System.getenv(HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR.toString()));
 
@@ -1126,11 +1157,9 @@ public class HboxContainer {
         } else if (hboxAppType.equals("DIGITS")) {
             envList.add("PYTHONPATH=" + System.getenv("PYTHONPATH"));
         } else if (hboxAppType.equals("MPI") || hboxAppType.equals("TENSORNET") || hboxAppType.equals("HOROVOD")) {
-            StringBuilder ldLibraryPath = new StringBuilder();
-            String mpiExtraLdLibraryPath = conf.get(HboxConfiguration.HBOX_MPI_EXTRA_LD_LIBRARY_PATH);
+            final String mpiExtraLdLibraryPath = conf.get(HboxConfiguration.HBOX_MPI_EXTRA_LD_LIBRARY_PATH);
             if (mpiExtraLdLibraryPath != null) {
-                ldLibraryPath.append(mpiExtraLdLibraryPath);
-                LOG.info("add " + ldLibraryPath + " to LD_LIBRARY_PATH");
+                LOG.info("prepend " + mpiExtraLdLibraryPath + " to LD_LIBRARY_PATH");
             }
 
             String mpiInstallDir = Paths.get(conf.get(
@@ -1138,21 +1167,21 @@ public class HboxContainer {
                     .toAbsolutePath()
                     .toString();
 
-            ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib");
-            ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib/openmpi");
-            ldLibraryPath.append(":" + mpiInstallDir + File.separator + "lib/pmix");
-
             envList.add("OPAL_PREFIX=" + mpiInstallDir);
             // for rsh agent, will use $HOME as working dir
             envList.add("HOME=" + this.mpiAppDir);
-
-            ldLibraryPath.append(":" + System.getenv("LD_LIBRARY_PATH"));
-            envList.add("PATH=" + System.getenv("PATH"));
             envList.add("PWD=" + this.mpiAppDir);
             envList.add(HboxConstants.Environment.HBOX_TF_INDEX + "=" + this.index);
             envList.add("HBOX_CUSTOM_EXIT="
                     + conf.get(HboxConfiguration.HBOX_CUSTOM_EXIT, HboxConfiguration.DEFAULT_HBOX_CUSTOM_EXIT));
-            envList.add("LD_LIBRARY_PATH=" + ldLibraryPath.toString());
+            pathListEnv(
+                    envList,
+                    "LD_LIBRARY_PATH",
+                    mpiExtraLdLibraryPath,
+                    mpiInstallDir + File.separator + "lib",
+                    mpiInstallDir + File.separator + "lib" + File.separator + "openmpi",
+                    mpiInstallDir + File.separator + "lib" + File.separator + "pmix",
+                    System.getenv("LD_LIBRARY_PATH"));
         } else if (hboxAppType.equals("XFLOW")) {
             String dmlcID;
             String heapprofile;

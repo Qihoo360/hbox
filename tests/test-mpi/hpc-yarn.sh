@@ -19,4 +19,16 @@ submit_opts+=(--worker-cores 2)
 submit_opts+=(--worker-memory 8G)
 
 exec "$HBOX_HOME"/bin/hbox-submit "${submit_opts[@]}" \
- /bin/sh -xc 'hostname; pwd; whoami; ls -alh; cat launch_container.sh; env'
+/bin/sh -xc 'hostname; pwd; whoami; ls -alh; cat launch_container.sh; env
+cid=( $(env | grep -o '"'container_[a-f0-9]\+[_0-9]\+'"' | sort -u | grep -v "${CONTAINER_ID:-$(basename "$PWD")}") );
+if (( ${#cid[@]} > 0 )); then
+  echo "[ERROR] found non local container id:" >&2
+  printf "%s\n" "${cid[@]}"
+  exit 1
+fi
+env | grep "PMIX_INSTALL_PREFIX[=]"
+if (( $? != 1 )); then
+  echo "[ERROR] PMIX_INSTALL_PREFIX should be unset, but set to [$PMIX_INSTALL_PREFIX]" >&2
+  exit 1
+fi
+'
