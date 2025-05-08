@@ -89,11 +89,11 @@ public class Client {
     }
 
     private void init() throws IOException, YarnException {
-        String appSubmitterUserName = System.getenv(ApplicationConstants.Environment.USER.name());
-        if (conf.get("hadoop.job.ugi") == null) {
-            UserGroupInformation ugi = UserGroupInformation.createRemoteUser(appSubmitterUserName);
-            conf.set("hadoop.job.ugi", ugi.getUserName() + "," + ugi.getUserName());
+        final String hadoopUser = UserGroupInformation.getCurrentUser().getUserName();
+        if (conf.get("hadoop.job.ugi") != null && !conf.get("hadoop.job.ugi").equals(hadoopUser)) {
+            LOG.warn("hadoop.job.ugi in conf is ignored");
         }
+        conf.set("hadoop.job.ugi", hadoopUser + "," + hadoopUser);
 
         conf.set(HboxConfiguration.HBOX_CLUSTER_NAME, String.valueOf(clientArguments.clusterName));
         conf.set(HboxConfiguration.HBOX_DRIVER_MEMORY, String.valueOf(clientArguments.driverMem));
@@ -134,7 +134,7 @@ public class Client {
         conf.set(HboxConfiguration.HBOX_CLIENT_HOSTNAME, this.clientHost);
 
         if (clientArguments.queue == null || clientArguments.queue.equals("")) {
-            clientArguments.queue = appSubmitterUserName;
+            clientArguments.queue = hadoopUser;
         }
         conf.set(HboxConfiguration.HBOX_APP_QUEUE, clientArguments.queue);
 
@@ -1306,24 +1306,25 @@ public class Client {
 
         final String hboxHome = System.getenv("HBOX_HOME");
         final String hboxConf = System.getenv("HBOX_CONF_DIR");
-        final String killCmd = null == hboxConf
-                ? String.format(
-                        "%s/bin/hbox-kill %s",
-                        ShellEscapeUtils.escapePlain(hboxHome), ShellEscapeUtils.escapePlain(applicationId.toString()))
+        final String localUser = System.getProperty("process.owner", System.getProperty("user.name"));
+        final String hadoopUser = UserGroupInformation.getCurrentUser().getUserName();
+        final String withConfEnv =
+                null == hboxConf ? "" : String.format("HBOX_CONF_DIR=%s ", ShellEscapeUtils.escapePlain(hboxConf));
+        final String withUserEnv = localUser.equals(hadoopUser)
+                ? ""
                 : String.format(
-                        "HBOX_CONF_DIR=%s %s/bin/hbox-kill %s",
-                        ShellEscapeUtils.escapePlain(hboxConf),
-                        ShellEscapeUtils.escapePlain(hboxHome),
-                        ShellEscapeUtils.escapePlain(applicationId.toString()));
-        final String logsCmd = null == hboxConf
-                ? String.format(
-                        "%s/bin/hbox-logs %s",
-                        ShellEscapeUtils.escapePlain(hboxHome), ShellEscapeUtils.escapePlain(applicationId.toString()))
-                : String.format(
-                        "HBOX_CONF_DIR=%s %s/bin/hbox-logs -applicationId %s",
-                        ShellEscapeUtils.escapePlain(hboxConf),
-                        ShellEscapeUtils.escapePlain(hboxHome),
-                        ShellEscapeUtils.escapePlain(applicationId.toString()));
+                        "%s=%s ", HboxConstants.Environment.HADOOP_USER_NAME, ShellEscapeUtils.escapePlain(hadoopUser));
+        final String killCmd = String.format(
+                "%s%s/bin/hbox-kill %s",
+                withConfEnv,
+                ShellEscapeUtils.escapePlain(hboxHome),
+                ShellEscapeUtils.escapePlain(applicationId.toString()));
+        final String logsCmd = String.format(
+                "%s%s%s/bin/hbox-logs -applicationId %s",
+                withConfEnv,
+                withUserEnv,
+                ShellEscapeUtils.escapePlain(hboxHome),
+                ShellEscapeUtils.escapePlain(applicationId.toString()));
         LOG.info("To kill this job: " + killCmd);
         LOG.info("To view job logs: " + logsCmd);
 

@@ -7,6 +7,7 @@ import io.opentelemetry.api.internal.ConfigUtil;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.autoconfigure.spi.ResourceProvider;
 import io.opentelemetry.sdk.resources.Resource;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.file.Paths;
@@ -23,6 +24,7 @@ import net.qihoo.hbox.util.HboxVersion;
 import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -42,6 +44,7 @@ public final class HboxResourceProvider implements ResourceProvider {
     private static final AttributeKey<String> HOST_NAME = AttributeKey.stringKey("host.name");
     private static final AttributeKey<String> HOST_ARCH = AttributeKey.stringKey("host.arch");
     private static final AttributeKey<String> OS_TYPE = AttributeKey.stringKey("os.type");
+    private static final AttributeKey<String> HADOOP_USER = AttributeKey.stringKey("hadoop.user");
     private static final AttributeKey<String> YARN_CONTAINER_ID = AttributeKey.stringKey("yarn.container.id");
     private static final AttributeKey<String> YARN_APP_ATTEMP = AttributeKey.stringKey("yarn.application.attemp");
     private static final AttributeKey<String> YARN_APP_ID = AttributeKey.stringKey("yarn.application.id");
@@ -117,7 +120,7 @@ public final class HboxResourceProvider implements ResourceProvider {
         }
 
         // owner resource
-        attrBuilder.put(PROCESS_OWNER, System.getProperty("user.name"));
+        attrBuilder.put(PROCESS_OWNER, System.getProperty(PROCESS_OWNER.toString(), System.getProperty("user.name")));
 
         // runtime resource
         attrBuilder.put(RUNTIME_NAME, System.getProperty("java.runtime.name"));
@@ -165,6 +168,12 @@ public final class HboxResourceProvider implements ResourceProvider {
         }
 
         // yarn resource
+        try {
+            attrBuilder.put(HADOOP_USER, UserGroupInformation.getCurrentUser().getUserName());
+        } catch (final IOException e) {
+            LOG.warn("cannot get hadoop user", e);
+            attrBuilder.put(HADOOP_USER, "unknown-hadoop-user");
+        }
         final String containerIdString = System.getenv(ApplicationConstants.Environment.CONTAINER_ID.name());
         if (null != containerIdString && !containerIdString.isEmpty()) {
             final ContainerId containerId = ContainerId.fromString(containerIdString);
