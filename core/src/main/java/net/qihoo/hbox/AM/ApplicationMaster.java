@@ -2071,7 +2071,6 @@ public class ApplicationMaster extends CompositeService {
 
         if (mpiExecOutput.startsWith("command") || mpiExecOutput.contains("<template>")) {
             LOG.info("Container mpi Command " + mpiExecOutput);
-            appendMessage(new Message(LogType.STDERR, mpiExecOutput));
             if (mpiExecOutput.startsWith("command")) {
                 // add orted prefix
                 mpiContainerCommand =

@@ -55,25 +55,45 @@ HBOX_CLASSPATH="$HBOX_CONF_DIR:$HBOX_HOME/lib/*:$(yarn classpath)"
 HBOX_CLIENT_OPTS="-Xmx1024m"
 
 __find_hbox_jar() {
-  __pattern="${1:?usage __find_hbox_jar <find-name-pattern>}"
-  readarray -t __HBOX_JAR < <(find "$HBOX_HOME/" -maxdepth 1 -name "hbox-core-*.jar")
-  if ((${#__HBOX_JAR[@]} == 0)); then
-    echo "[ERROR] Failed to find $__pattern in $HBOX_HOME/lib." >&2
+  local jars=() pattern="${1:?usage __find_hbox_jar <find-name-pattern>}"
+  readarray -t jars < <(find "$HBOX_HOME/" -maxdepth 1 -name "hbox-core-*.jar")
+  if ((${#jars[@]} == 0)); then
+    echo "[ERROR] Failed to find $pattern in $HBOX_HOME/lib." >&2
     return 66
-  elif ((${#__HBOX_JAR[@]} > 1)); then
-    echo "[ERROR] Found multiple $__pattern in $HBOX_HOME/lib:" >&2
-    printf "  %s\n" "${__HBOX_JAR[@]}"
+  elif ((${#jars[@]} > 1)); then
+    echo "[ERROR] Found multiple $pattern in $HBOX_HOME/lib:" >&2
+    printf "  %s\n" "${jars[@]}"
     echo "Please remove all but one jar." >&2
     return 67
   fi
-  HBOX_JAR="${__HBOX_JAR[0]-}"
-  unset __HBOX_JAR
+  HBOX_JAR="${jars[0]-}"
 
   if [[ ! -r ${HBOX_JAR-} ]]; then
     echo "[ERROR] HBOX_JAR ${HBOX_JAR-} is not readable." >&2
     return 68
   fi
 }
+
+# hadoop ugi info
+if [[ ${HADOOP_USER_NAME:-${USER:-$(id -un)}} == "$(id -un)" ]]; then
+  # use login user as ugi
+  if [[ ${USER-} != "${HADOOP_USER_NAME-${USER-}}" ]]; then
+    echo "[WARN] env USER is overrided by env HADOOP_USER_NAME"
+  fi
+  unset HADOOP_USER_NAME
+  USER=$(id -un)
+elif [[ ${HADOOP_USER_NAME:-} ]]; then
+  # prefer HADOOP_USER_NAME
+  if [[ ${USER-} != "$HADOOP_USER_NAME" ]] && [[ ${USER-} != "$(id -un)" ]]; then
+    echo "[WARN] env USER is overrided by env HADOOP_USER_NAME"
+  fi
+  USER="$HADOOP_USER_NAME"
+  HBOX_CLIENT_OPTS+=" -Duser.name=$HADOOP_USER_NAME"
+else
+  # prefer USER
+  export HADOOP_USER_NAME="$USER"
+  HBOX_CLIENT_OPTS+=" -Duser.name=$USER -Dprocess.owner=$(id -un)"
+fi
 
 case "${1-}" in
 run-submit)
@@ -87,7 +107,7 @@ run-submit)
       local v="${2:-${!k:-${3:-}}}"
       if [[ ${v-} ]]; then
         HBOX_EXTRA_ARGS+=(--conf "hbox.am.env.$k=$v" --conf "hbox.container.env.$k=$v")
-        export "${k?}"
+        export "${k?}"="$v"
       else
         unset "$k"
       fi
