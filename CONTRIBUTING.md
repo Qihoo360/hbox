@@ -11,11 +11,11 @@ https://github.com/Qihoo360/hbox/actions
 Dev Tasks
 ===
 
-Bump maven plugins: `./mvnw versions:display-plugin-updates -pl .`
-Bump maven wrapper: `./mvnw wrapper:wrapper`
-Bump project major version: `./mvnw validate -Pbump-major-version`
-Bump project minor version: `./mvnw validate -Pbump-minor-version`
-Format codes: `./mvnw spotless:apply`
+* Bump maven plugins: `./mvnw versions:display-plugin-updates -pl .`
+* Bump maven wrapper: `./mvnw wrapper:wrapper`
+* Bump project major version: `./mvnw validate -Pbump-major-version`
+* Bump project minor version: `./mvnw validate -Pbump-minor-version`
+* Format codes: `./mvnw spotless:apply`
 
 Release Steps
 ===
