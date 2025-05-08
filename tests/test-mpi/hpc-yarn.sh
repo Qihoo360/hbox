@@ -18,6 +18,7 @@ submit_opts+=(--worker-num 2)
 submit_opts+=(--worker-cores 2)
 submit_opts+=(--worker-memory 8G)
 
+# shellcheck disable=SC2016
 exec "$HBOX_HOME"/bin/hbox-submit "${submit_opts[@]}" \
 /bin/sh -xc 'hostname; pwd; whoami; ls -alh; cat launch_container.sh; env
 cid=( $(env | grep -o '"'container_[a-f0-9]\+[_0-9]\+'"' | sort -u | grep -v "${CONTAINER_ID:-$(basename "$PWD")}") );
