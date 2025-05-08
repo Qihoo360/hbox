@@ -18,4 +18,4 @@ if [[ ${HBOX_EXTRA_ARGS[*]-} ]]; then
   set -- --conf hbox.internal.extra.args.count=$((${#HBOX_EXTRA_ARGS[@]} + 2)) "${HBOX_EXTRA_ARGS[@]}" "$@"
 fi
 
-exec "$JAVACMD" ${HBOX_CLIENT_OPTS-} -cp "$HBOX_CLASSPATH" org.apache.hadoop.util.RunJar "$HBOX_JAR" "$@"
+exec "$JAVACMD" "${HBOX_CLIENT_OPTS[@]}" -cp "$HBOX_CLASSPATH" org.apache.hadoop.util.RunJar "$HBOX_JAR" "$@"

@@ -52,7 +52,7 @@ fi
 HBOX_CLASSPATH="$HBOX_CONF_DIR:$HBOX_HOME/lib/*:$(yarn classpath)"
 
 # shellcheck disable=SC2034
-HBOX_CLIENT_OPTS="-Xmx1024m"
+HBOX_CLIENT_OPTS=("-Xmx1024m")
 
 __find_hbox_jar() {
   local jars=() pattern="${1:?usage __find_hbox_jar <find-name-pattern>}"
@@ -88,11 +88,11 @@ elif [[ ${HADOOP_USER_NAME:-} ]]; then
     echo "[WARN] env USER is overrided by env HADOOP_USER_NAME"
   fi
   USER="$HADOOP_USER_NAME"
-  HBOX_CLIENT_OPTS+=" -Duser.name=$HADOOP_USER_NAME"
+  HBOX_CLIENT_OPTS+=("-Duser.name=$HADOOP_USER_NAME")
 else
   # prefer USER
   export HADOOP_USER_NAME="$USER"
-  HBOX_CLIENT_OPTS+=" -Duser.name=$USER -Dprocess.owner=$(id -un)"
+  HBOX_CLIENT_OPTS+=("-Duser.name=$USER" "-Dprocess.owner=$(id -un)")
 fi
 
 case "${1-}" in
