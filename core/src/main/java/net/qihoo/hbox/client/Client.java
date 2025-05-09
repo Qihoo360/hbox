@@ -1457,7 +1457,27 @@ public class Client {
                         break;
                 }
                 mainSpan.setAttribute("process.exit.code", (long) exitCode);
-                Utilities.sleep(3 * 1000); // wait for remote child spans
+
+                if (null != client.applicationId) {
+                    String historyWebappAddress = client.conf.get(
+                            HboxConfiguration.HBOX_HISTORY_WEBAPP_ADDRESS,
+                            HboxConfiguration.DEFAULT_HBOX_HISTORY_WEBAPP_ADDRESS);
+                    final String cluster = client.conf.get(
+                            HboxConfiguration.HBOX_CLUSTER_NAME, HboxConfiguration.DEFAULT_HBOX_CLUSTER_NAME);
+                    if (!cluster.equals("")) {
+                        final String clusterHistoryWebappAddress = client.conf.get(
+                                HboxConfiguration.HBOX_CLUSTER_HISTORY_WEBAPP_ADDRESS.replace("cluster.name", cluster));
+                        if (clusterHistoryWebappAddress == null || clusterHistoryWebappAddress.equals("")) {
+                            LOG.warn("Note that not set the cluster history webaddress.");
+                        } else {
+                            historyWebappAddress = clusterHistoryWebappAddress;
+                        }
+                    }
+                    LOG.info(String.format(
+                            "history url: http://%s/jobhistory/job/%s", historyWebappAddress, client.applicationId));
+                }
+
+                Utilities.sleep(2 * 1000); // wait for remote child spans
             } finally {
                 mainSpan.end();
                 HboxOpenTelemetry.flush();
