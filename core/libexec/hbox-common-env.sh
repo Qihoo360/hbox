@@ -88,7 +88,7 @@ elif [[ ${HADOOP_USER_NAME:-} ]]; then
     echo "[WARN] env USER is overrided by env HADOOP_USER_NAME"
   fi
   USER="$HADOOP_USER_NAME"
-  HBOX_CLIENT_OPTS+=("-Duser.name=$HADOOP_USER_NAME")
+  HBOX_CLIENT_OPTS+=("-Duser.name=$HADOOP_USER_NAME" "-Dprocess.owner=$(id -un)")
 else
   # prefer USER
   export HADOOP_USER_NAME="$USER"
