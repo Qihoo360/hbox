@@ -4122,7 +4122,7 @@ public class ApplicationMaster extends CompositeService {
         } finally {
             try {
                 mainSpan.setAttribute("process.exit.code", (long) exitCode);
-                Utilities.sleep(3 * 1000); // wait for remote child spans
+                Utilities.sleep(2 * 1000); // wait for remote child spans
             } finally {
                 mainSpan.end();
                 HboxOpenTelemetry.flush();
