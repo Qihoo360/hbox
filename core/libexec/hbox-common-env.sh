@@ -114,11 +114,13 @@ run-submit)
     }
 
     __propagate_otel_env OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED
+    __propagate_otel_env OTEL_EXPORTER_OTLP_COMPRESSION
     __propagate_otel_env OTEL_EXPORTER_OTLP_ENDPOINT
-    __propagate_otel_env OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
     __propagate_otel_env OTEL_EXPORTER_OTLP_PROTOCOL
-    __propagate_otel_env OTEL_EXPORTER_OTLP_TRACES_PROTOCOL
     __propagate_otel_env OTEL_EXPORTER_OTLP_TIMEOUT
+    __propagate_otel_env OTEL_EXPORTER_OTLP_TRACES_COMPRESSION
+    __propagate_otel_env OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+    __propagate_otel_env OTEL_EXPORTER_OTLP_TRACES_PROTOCOL
     __propagate_otel_env OTEL_EXPORTER_OTLP_TRACES_TIMEOUT
     __propagate_otel_env OTEL_METRICS_EXPORTER '' none
 
