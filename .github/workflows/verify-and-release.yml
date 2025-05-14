@@ -98,13 +98,13 @@ jobs:
       shell: bash
       run: |
         set -ux
-        ./mvnw -V -B -ntp -e -Dmirror.of.proxy= install -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
-        ./mvnw -B -ntp -e -Dmirror.of.proxy= clean
+        GITHUB_REF="refs/heads/${GITHUB_REF#refs/tags/}" ./mvnw -V -B -ntp -e -Dmirror.of.proxy= install -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
+        GITHUB_REF="refs/heads/${GITHUB_REF#refs/tags/}" ./mvnw -B -ntp -e -Dmirror.of.proxy= clean
         mkdir -p target
 
         true artifact:compare should not contain warning or error
         trap 'cat target/build.log' ERR
-        ./mvnw -B -ntp -e -Dmirror.of.proxy= -l target/build.log package artifact:compare -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
+        GITHUB_REF="refs/heads/${GITHUB_REF#refs/tags/}" ./mvnw -B -ntp -e -Dmirror.of.proxy= -l target/build.log package artifact:compare -Dmaven.test.skip=true -DskipTests -Dinvoker.skip -Dbuildinfo.detect.skip=false
 
         test 0 = "$(sed -n '/^\\[INFO\\] --- maven-artifact-plugin:[^:][^:]*:compare/,/^\\[INFO\\] ---/ p' target/build.log | grep -c '^\\[\\(WARNING\\|ERROR\\)\\]')"
 
