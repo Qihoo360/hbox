@@ -20,20 +20,36 @@ Dev Tasks
 Release Steps
 ===
 
-```bash
-# 1. pass integration tests
-./mvnw clean verify
+0. NOTE: DO _NOT_ create tag on the web page, instead,
+RUN the following scripts manually on a dev machine by release managers.
 
-# 2. pass smoking test cases in the tests/ folder
-# run on gateways
+0. Checkout or clone the latest `master` branch
 
-# 3. prepare release version, git tag and next version
-./mvnw release:clean release:prepare -DpushChanges=false
+0. Pass integration tests
 
-# 4. push to git repo
-git push --follow-tags
+   ```bash
+   ./mvnw clean verify
+   ```
 
-# 5. cleanup and sync with the remote repo
-./mvnw release:clean
-git fetch
-```
+0. Pass smoking test cases in the `tests/` folder on some gateway machines
+
+0. Prepare release version, git tag and next version
+   ```bash
+   ./mvnw release:clean release:prepare -DpushChanges=false
+   ```
+
+0. Push to git repo
+   ```bash
+   git push --follow-tags
+   ```
+
+0. Cleanup and sync with the remote repo
+   ```bash
+   ./mvnw release:clean
+   git fetch
+   ```
+
+0. Make sure github action jobs are success: https://github.com/Qihoo360/hbox/actions/workflows/verify-and-release.yml
+
+0. Edit the draft release at https://github.com/Qihoo360/hbox/releases ,
+   update the changelog and release notes, then publish the new release.

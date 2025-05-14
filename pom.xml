@@ -42,7 +42,6 @@
     <!-- release, only deploy the tgz archive -->
     <autoVersionSubmodules>true</autoVersionSubmodules>
     <tagNameFormat>v@{project.version}</tagNameFormat>
-    <projectVersionPolicyId>SemVerVersionPolicy</projectVersionPolicyId>
     <preparationGoals>-pl . spotless:apply resources:copy-resources@update-ver-for-tests scm:add -Dincludes=tests/ver.sh</preparationGoals>
     <completionGoals>-pl . spotless:apply resources:copy-resources@update-ver-for-tests scm:add -Dincludes=tests/ver.sh</completionGoals>
     <checkModificationExcludeList>${project.basedir}/tests/ver.sh</checkModificationExcludeList>
