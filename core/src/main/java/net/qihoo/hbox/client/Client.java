@@ -1220,6 +1220,11 @@ public class Client {
         }
 
         final Span span = Span.current();
+        final String localUser = System.getProperty("process.owner", System.getProperty("user.name"));
+        final String hadoopUser = UserGroupInformation.getCurrentUser().getUserName();
+        if (!localUser.equals(hadoopUser)) {
+            LOG.info("Submit as user " + hadoopUser);
+        }
 
         yarnClient.start();
         LOG.info("Requesting a new application from cluster with "
@@ -1306,8 +1311,6 @@ public class Client {
 
         final String hboxHome = System.getenv("HBOX_HOME");
         final String hboxConf = System.getenv("HBOX_CONF_DIR");
-        final String localUser = System.getProperty("process.owner", System.getProperty("user.name"));
-        final String hadoopUser = UserGroupInformation.getCurrentUser().getUserName();
         final String withConfEnv =
                 null == hboxConf ? "" : String.format("HBOX_CONF_DIR=%s ", ShellEscapeUtils.escapePlain(hboxConf));
         final String withUserEnv = localUser.equals(hadoopUser)
