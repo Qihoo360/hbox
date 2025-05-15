@@ -4,7 +4,7 @@
 
   <groupId>net.qihoo</groupId>
   <artifactId>hbox-parent</artifactId>
-  <version>1.9.1</version>
+  <version>1.9.2-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>HBox Parent Pom</name>
@@ -26,7 +26,7 @@
   <properties>
     <maven.min-version>3.6.3</maven.min-version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.build.outputTimestamp>2025-05-15T03:21:42Z</project.build.outputTimestamp>
+    <project.build.outputTimestamp>2025-05-15T03:22:08Z</project.build.outputTimestamp>
 
     <!-- Supporting Tech Matrix
     ~ Build-time JDK: 8+, select by developer or ci environment, prefer LTS JDKs
@@ -443,7 +443,7 @@
     <connection>scm:git:https://github.com/Qihoo360/hbox.git</connection>
     <developerConnection>scm:git:git@github.com:Qihoo360/hbox.git</developerConnection>
     <url>https://github.com/Qihoo360/hbox/tree/master</url>
-    <tag>v1.9.1</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <issueManagement>
