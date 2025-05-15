@@ -55,8 +55,9 @@ HBOX_CLASSPATH="$HBOX_CONF_DIR:$HBOX_HOME/lib/*:$(yarn classpath)"
 HBOX_CLIENT_OPTS=("-Xmx1024m")
 
 __find_hbox_jar() {
-  local jars=() pattern="${1:?usage __find_hbox_jar <find-name-pattern>}"
-  readarray -t jars < <(find "$HBOX_HOME/" -maxdepth 1 -name "hbox-core-*.jar")
+  local jars=() pattern="${1:?usage __find_hbox_jar <find-name-pattern>}" full_hbox_home
+  full_hbox_home=$(cd -- "$HBOX_HOME" && pwd) || return 66
+  readarray -t jars < <(cd / && find "$full_hbox_home/" -maxdepth 1 -name "hbox-core-*.jar")
   if ((${#jars[@]} == 0)); then
     echo "[ERROR] Failed to find $pattern in $HBOX_HOME/lib." >&2
     return 66
@@ -74,26 +75,35 @@ __find_hbox_jar() {
   fi
 }
 
+# priority to select a submit user
+#   * $HADOOP_USER_NAME
+#   * $USER if $USER != $LOGNAME
+#   * $(id -un)
+__select_submit_user() {
+  local eu
+  eu="$(id -un)"
+  local logu="${LOGNAME:-${eu-}}"
+  local u="${USER:-${logu-}}"
+  if [[ ${u-} == "${logu-}" ]]; then
+    local submit_as="${HADOOP_USER_NAME:-${eu-}}"
+  else
+    local submit_as="${HADOOP_USER_NAME:-${u:-${eu-}}}"
+  fi
+
+  if [[ ${submit_as-} == "${eu-}" ]]; then
+    # submit as effective user
+    unset HADOOP_USER_NAME
+    USER="${eu-}"
+    LOGNAME="${eu-}"
+  else
+    export HADOOP_USER_NAME="${submit_as-}"
+    USER="${submit_as-}"
+    HBOX_CLIENT_OPTS+=("-Duser.name=${submit_as-}" "-Dprocess.owner=${eu-}")
+  fi
+}
+
 # hadoop ugi info
-if [[ ${HADOOP_USER_NAME:-${USER:-$(id -un)}} == "$(id -un)" ]]; then
-  # use login user as ugi
-  if [[ ${USER-} != "${HADOOP_USER_NAME-${USER-}}" ]]; then
-    echo "[WARN] env USER is overrided by env HADOOP_USER_NAME"
-  fi
-  unset HADOOP_USER_NAME
-  USER=$(id -un)
-elif [[ ${HADOOP_USER_NAME:-} ]]; then
-  # prefer HADOOP_USER_NAME
-  if [[ ${USER-} != "$HADOOP_USER_NAME" ]] && [[ ${USER-} != "$(id -un)" ]]; then
-    echo "[WARN] env USER is overrided by env HADOOP_USER_NAME"
-  fi
-  USER="$HADOOP_USER_NAME"
-  HBOX_CLIENT_OPTS+=("-Duser.name=$HADOOP_USER_NAME" "-Dprocess.owner=$(id -un)")
-else
-  # prefer USER
-  export HADOOP_USER_NAME="$USER"
-  HBOX_CLIENT_OPTS+=("-Duser.name=$USER" "-Dprocess.owner=$(id -un)")
-fi
+__select_submit_user
 
 case "${1-}" in
 run-submit)
@@ -145,4 +155,4 @@ run-submit)
 run-history-server) __find_hbox_jar 'hbox-history-server-*.jar' || return $? ;;
 esac
 
-unset __find_hbox_jar
+unset __find_hbox_jar __select_submit_user
