@@ -24,6 +24,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import net.qihoo.hbox.api.HboxConstants;
 import net.qihoo.hbox.common.*;
 import net.qihoo.hbox.common.exceptions.HboxExecException;
@@ -1921,8 +1922,66 @@ public class ApplicationMaster extends CompositeService {
 
         mpiexec.append(mpiInstallDir).append(File.separator).append("bin").append(File.separator);
         mpiexec.append("mpiexec");
+
+        // get mpi version
+        Process mpiexecVersion = null;
+        String mpiexecVersionDesc = null;
+        try {
+            mpiexecVersion = new ProcessBuilder(
+                            "env",
+                            "OPAL_PREFIX=" + mpiInstallDir,
+                            "LD_LIBRARY_PATH=" + ldLibraryPath.toString(),
+                            mpiexec.toString(),
+                            "-V")
+                    .redirectErrorStream(true)
+                    .start();
+            if (null != mpiexecVersion) {
+                mpiexecVersion.getOutputStream().close();
+                final long startMs = System.currentTimeMillis();
+                try (final BufferedReader reader =
+                        new BufferedReader(new InputStreamReader(mpiexecVersion.getInputStream()))) {
+                    while (mpiexecVersion.isAlive() && System.currentTimeMillis() - startMs < 1000) {
+                        if (reader.ready()) {
+                            mpiexecVersionDesc = reader.readLine();
+                            if (null != mpiexecVersionDesc) {
+                                break;
+                            }
+                        }
+                        Utilities.sleep(50);
+                    }
+                    if (null == mpiexecVersionDesc) {
+                        mpiexecVersionDesc = reader.readLine();
+                    }
+                }
+            }
+        } catch (final Throwable e) {
+            LOG.warn("cannot read the mpiexec version", e);
+        } finally {
+            if (null != mpiexecVersion) {
+                mpiexecVersion.destroy();
+                try {
+                    if (!mpiexecVersion.waitFor(1, TimeUnit.SECONDS)) {
+                        mpiexecVersion.destroyForcibly();
+                    }
+                    if (0 != mpiexecVersion.exitValue()) {
+                        LOG.warn("mpiexec -V fail" + (null == mpiexecVersionDesc ? "" : ": " + mpiexecVersionDesc));
+                        mpiexecVersionDesc = null;
+                    }
+                } catch (final InterruptedException ignore) {
+                    Thread.currentThread().interrupt();
+                    mpiexecVersion.destroyForcibly();
+                } catch (final IllegalThreadStateException e) {
+                    LOG.warn("cannot read the mpiexec version", e);
+                }
+                mpiexecVersion.getInputStream().close();
+                mpiexecVersion = null;
+            }
+            if (null != mpiexecVersionDesc) {
+                Span.current().setAttribute("mpi.runtime.desc", mpiexecVersionDesc);
+            }
+        }
+
         mpiexecArgs.add(mpiexec.toString());
-        mpiexecArgs.add("--tag-output");
         mpiexecArgs.add("--host");
         for (Container container : acquiredWorkerContainers) {
             nodes.append(container.getNodeId().getHost()).append(",");
@@ -1942,17 +2001,30 @@ public class ApplicationMaster extends CompositeService {
         // * unset PMIX_INSTALL_PREFIX, avoid introduce the openmpi prefix path on AM
         // * fix PATH, remove the openmpi prefix of AM which is appended to the worker when OPAL_PREFIX of AM is set
         // * fix LD_LIBRARY_PATH, also remove the openmpi prefix of AM
-        // * redirect stderr to both mpi-stderr and normal stderr (which is shend back to mpiexec by orted)
+        // * redirect stderr to both mpi-stderr and normal stderr (which is send back to mpiexec by orted)
         mpiexecArgs.add("/bin/bash");
         mpiexecArgs.add("-ec");
-        mpiexecArgs.add(String.format(
-                "unset PMIX_INSTALL_PREFIX; LD_LIBRARY_PATH=\"${LD_LIBRARY_PATH#*:}\" PATH=\"${PATH#*:}\" exec 2> >(tee \"$%s/%s\" >&2) \"$@\"",
-                HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR, HboxConstants.MPI_STD_ERR_FILE));
+        if (conf.getBoolean(
+                HboxConfiguration.HBOX_AGG_ALL_MPI_STDERR, HboxConfiguration.DEFAULT_HBOX_AGG_ALL_MPI_STDERR)) {
+            mpiexecArgs.add(String.format(
+                    "unset PMIX_INSTALL_PREFIX; LD_LIBRARY_PATH=\"${LD_LIBRARY_PATH#*:}\" PATH=\"${PATH#*:}\" exec 2> >(tee \"$%s/%s\" | sed \"s/^/[rank $((%s-1)) stderr] /\" >&2) \"$@\"",
+                    HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR,
+                    HboxConstants.MPI_STD_ERR_FILE,
+                    HboxConstants.Environment.HBOX_TF_INDEX));
+        } else {
+            mpiexecArgs.add(String.format(
+                    "unset PMIX_INSTALL_PREFIX; (( %s == 1 )) && exec 2> >(tee \"$%s/%s\" >&2) || exec 2>\"$%s/%s\"; LD_LIBRARY_PATH=\"${LD_LIBRARY_PATH#*:}\" PATH=\"${PATH#*:}\" exec \"$@\"",
+                    HboxConstants.Environment.HBOX_TF_INDEX,
+                    HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR,
+                    HboxConstants.MPI_STD_ERR_FILE,
+                    HboxConstants.Environment.HBOX_CONTAINER_LOG_DIR,
+                    HboxConstants.MPI_STD_ERR_FILE));
+        }
         mpiexecArgs.add("--");
 
         // The second bash snippet run on workers:
         // * for the 1st rank, redirected stdout to both mpi-stdout and normal stdout
-        //   (which is shend back to mpiexec by orted)
+        //   (which is send back to mpiexec by orted)
         // * for other ranks, stdout is only redirected to mpi-stdout
         mpiexecArgs.add("/bin/bash");
         mpiexecArgs.add("-ec");
@@ -2309,17 +2381,31 @@ public class ApplicationMaster extends CompositeService {
     }
 
     private void appendMessage(Message message) {
-        if (applicationMessageQueue.size()
-                >= conf.getInt(
-                        HboxConfiguration.HBOX_MESSAGES_LEN_MAX, HboxConfiguration.DEFAULT_HBOX_MESSAGES_LEN_MAX)) {
-            applicationMessageQueue.poll();
+        for (int retries = 10; retries > 0; --retries) {
+            try {
+                if (applicationMessageQueue.offer(message, 1, TimeUnit.SECONDS)) {
+                    return;
+                }
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+                LOG.warn("Dropped message by InterruptedException: " + message.getMessage());
+                return;
+            }
         }
-        if (!applicationMessageQueue.offer(message)) {
-            LOG.warn("Message queue is full, this message will be ingored");
-        }
+        LOG.warn("Dropped message after retries: " + message.getMessage());
     }
 
     private void unregisterApp(FinalApplicationStatus finalStatus, String diagnostics) {
+        for (int retry = 30; retry > 0; ++retry) {
+            if (applicationMessageQueue.isEmpty()) {
+                break;
+            }
+            Utilities.sleep(1 * 1000);
+        }
+        if (!applicationMessageQueue.isEmpty()) {
+            LOG.error("applicationMessageQueue is not drained");
+        }
+
         try {
             amrmAsync.unregisterApplicationMaster(finalStatus, diagnostics, applicationHistoryUrl);
             amrmAsync.stop();
@@ -3781,7 +3867,7 @@ public class ApplicationMaster extends CompositeService {
             throw new RuntimeException("Application Failed, retry starting. Note that container memory auto scale");
         }
 
-        this.appendMessage("Unregister Application", true);
+        this.appendMessage("Flush log and Unregister Application", true);
         unregisterApp(finalSuccess ? FinalApplicationStatus.SUCCEEDED : FinalApplicationStatus.FAILED, diagnostics);
 
         return finalSuccess;

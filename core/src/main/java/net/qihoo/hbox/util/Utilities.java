@@ -29,7 +29,8 @@ public final class Utilities {
     public static void sleep(long millis) {
         try {
             Thread.sleep(millis);
-        } catch (InterruptedException e) {
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
             LOG.warn("Sleeping are Interrupted ...", e);
         }
     }

@@ -57,7 +57,7 @@ public class ApplicationMessageService extends AbstractService implements Applic
 
     @Override
     public Message[] fetchApplicationMessages() {
-        int defaultMaxBatch = 100;
+        int defaultMaxBatch = ApplicationMessageProtocol.DEFAULT_BATCH;
         return fetchApplicationMessages(defaultMaxBatch);
     }
 

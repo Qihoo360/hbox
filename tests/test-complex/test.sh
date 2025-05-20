@@ -10,7 +10,7 @@ if [[ ! ${HBOX_HOME-} ]]; then
 fi
 
 submit_opts=(--app-name "[HBOX][test] submit a complex command")
-submit_opts+=(--app-type  fake-app-type)
+submit_opts+=(--app-type fake-app-type)
 submit_opts+=(--worker-num 1)
 submit_opts+=(--worker-cores 1)
 submit_opts+=(--worker-memory 2G)

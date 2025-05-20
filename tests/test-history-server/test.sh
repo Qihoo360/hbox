@@ -11,10 +11,10 @@ fi
 
 host=$(hostname -f)
 
-submit_opts=( -D hbox.history.address="$host:10121" )
-submit_opts+=( -D hbox.history.webapp.address="$host:19966" )
-submit_opts+=( -D hbox.history.webapp.https.address="$host:19967" )
-submit_opts+=( -D hbox.history.log.max-age-ms="2147483647" )
+submit_opts=(-D hbox.history.address="$host:10121")
+submit_opts+=(-D hbox.history.webapp.address="$host:19966")
+submit_opts+=(-D hbox.history.webapp.https.address="$host:19967")
+submit_opts+=(-D hbox.history.log.max-age-ms="2147483647")
 
 # do not nohup
 export __HBOX_TEST_HISTORY_SERVER=true
