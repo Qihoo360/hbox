@@ -1341,7 +1341,9 @@ public class Client {
         ApplicationMessageProtocol hboxClient = null;
         YarnApplicationState lastYarnApplicationState = null;
         boolean isRunning = true;
+        boolean result = false;
 
+        long lastUpdateMs = System.currentTimeMillis();
         LOG.info("The url to track the job: " + applicationReport.getTrackingUrl());
         while (true) {
             assert (applicationReport != null);
@@ -1367,10 +1369,12 @@ public class Client {
                 hboxClient = getAppMessageHandler(conf, applicationReport.getHost(), applicationReport.getRpcPort());
             }
 
+            boolean messageQueueFull = false;
             if (hboxClient != null) {
                 try {
                     Message[] messages = hboxClient.fetchApplicationMessages();
                     if (messages != null && messages.length > 0) {
+                        messageQueueFull = messages.length >= ApplicationMessageProtocol.DEFAULT_BATCH;
                         for (Message message : messages) {
                             if (message.getLogType() == LogType.STDERR) {
                                 LOG.info(message.getMessage());
@@ -1389,12 +1393,14 @@ public class Client {
                 hboxClient = null;
                 isRunning = false;
                 if (FinalApplicationStatus.SUCCEEDED == finalApplicationStatus) {
-                    return true;
+                    result = true;
+                    break;
                 } else {
                     LOG.error("Application has completed failed with YarnApplicationState="
                             + yarnApplicationState + " and FinalApplicationStatus="
                             + finalApplicationStatus);
-                    return false;
+                    result = false;
+                    break;
                 }
             } else if (YarnApplicationState.KILLED == yarnApplicationState
                     || YarnApplicationState.FAILED == yarnApplicationState) {
@@ -1402,14 +1408,55 @@ public class Client {
                 isRunning = false;
                 LOG.error("Application has completed with YarnApplicationState=" + yarnApplicationState
                         + " and FinalApplicationStatus=" + finalApplicationStatus);
-                return false;
+                result = false;
+                break;
             }
 
-            int logInterval = conf.getInt(
+            final int logInterval = conf.getInt(
                     HboxConfiguration.HBOX_LOG_PULL_INTERVAL, HboxConfiguration.DEFAULT_HBOX_LOG_PULL_INTERVAL);
-            Utilities.sleep(logInterval);
-            applicationReport = yarnClient.getApplicationReport(applicationId);
+
+            if (!messageQueueFull) {
+                Utilities.sleep(logInterval);
+            }
+
+            final long currentMs = System.currentTimeMillis();
+            if (currentMs - lastUpdateMs >= logInterval) {
+                applicationReport = yarnClient.getApplicationReport(applicationId);
+                lastUpdateMs = currentMs;
+            }
         }
+
+        if (hboxClient != null) {
+            boolean first = true;
+            while (true) {
+                try {
+                    final Message[] messages = hboxClient.fetchApplicationMessages(1000);
+                    if (messages == null || messages.length == 0) {
+                        break;
+                    }
+
+                    for (final Message message : messages) {
+                        if (first) {
+                            first = false;
+                            LOG.info("Flushing logs from AM ...");
+                        }
+                        if (message.getLogType() == LogType.STDERR) {
+                            LOG.info(message.getMessage());
+                        } else {
+                            System.out.println(message.getMessage());
+                        }
+                    }
+                } catch (final UndeclaredThrowableException e) {
+                    LOG.info("Connecting to ApplicationManager failed when flushing logs from am: ", e);
+                    break;
+                }
+            }
+            if (!first) {
+                LOG.info("AM logs are drained.");
+            }
+        }
+
+        return result;
     }
 
     public static void main(String[] args) {
@@ -1437,6 +1484,24 @@ public class Client {
                         AttributeKey.stringArrayKey("hbox.args"), Arrays.asList(client.clientArguments.hboxCommandArgs))
                 .setAttribute("hbox.worker.num", client.clientArguments.workerNum)
                 .setAttribute("hbox.ps.num", client.clientArguments.psNum));
+        if ((client.clientArguments.appType.equals("MPI")
+                || client.clientArguments.appType.equals("TENSORNET")
+                || client.clientArguments.appType.equals("HOROVOD"))) {
+            mainSpan.setAttribute(
+                    HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE,
+                    client.conf.getBoolean(
+                            HboxConfiguration.HBOX_MPI_INSTALL_DIR_ENABLE,
+                            HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR_ENABLE));
+            mainSpan.setAttribute(
+                    HboxConfiguration.HBOX_MPI_INSTALL_DIR,
+                    client.conf.get(
+                            HboxConfiguration.HBOX_MPI_INSTALL_DIR, HboxConfiguration.DEFAULT_HBOX_MPI_INSTALL_DIR));
+            final String mpiRemotePath = client.conf.get(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH);
+            if (null != mpiRemotePath) {
+                mainSpan.setAttribute(HboxConfiguration.HBOX_CACHED_MPI_PACKAGE_PATH, mpiRemotePath);
+            }
+        }
+
         int exitCode = 1; // error for exceptions
 
         try (final Scope scope = mainSpan.makeCurrent()) {

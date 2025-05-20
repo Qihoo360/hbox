@@ -517,6 +517,12 @@ class ClientArguments {
             }
         }
 
+        if (null == hboxCommandArgs || hboxCommandArgs.length == 0) {
+            LOG.error("No commands to submit");
+            printUsage(allOptions);
+            System.exit(1);
+        }
+
         if (cliParser.hasOption("isRenameInputFile")) {
             String renameInputFile = cliParser.getOptionValue("isRenameInputFile");
             isRenameInputFile = Boolean.parseBoolean(renameInputFile);

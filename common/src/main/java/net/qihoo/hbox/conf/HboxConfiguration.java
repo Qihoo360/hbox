@@ -50,7 +50,7 @@ public class HboxConfiguration extends YarnConfiguration {
 
     public static final String HBOX_LOG_PULL_INTERVAL = "hbox.log.pull.interval";
 
-    public static final int DEFAULT_HBOX_LOG_PULL_INTERVAL = 10000;
+    public static final int DEFAULT_HBOX_LOG_PULL_INTERVAL = 2000;
 
     public static final String HBOX_MEMORY_OVERHEAD_FRACTION = "hbox.memory.overhead.fraction";
 
@@ -302,7 +302,7 @@ public class HboxConfiguration extends YarnConfiguration {
 
     public static final String HBOX_MESSAGES_LEN_MAX = "hbox.messages.len.max";
 
-    public static final int DEFAULT_HBOX_MESSAGES_LEN_MAX = 1000;
+    public static final int DEFAULT_HBOX_MESSAGES_LEN_MAX = 10000;
 
     public static final String HBOX_EXECUTE_NODE_LIMIT = "hbox.execute.node.limit";
 
@@ -556,6 +556,9 @@ public class HboxConfiguration extends YarnConfiguration {
 
     public static final String HBOX_MPI_CONTAINER_UPDATE_APP_STATUS_RETRY = "hbox.mpi.container.update.status.retry";
     public static final int DEFAULT_HBOX_MPI_CONTAINER_UPDATE_APP_STATUS_RETRY = 3;
+
+    public static final String HBOX_AGG_ALL_MPI_STDERR = "hbox.agg.all.mpi.stderr";
+    public static final boolean DEFAULT_HBOX_AGG_ALL_MPI_STDERR = false;
 
     /**
      * Configuration for horovod app

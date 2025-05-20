@@ -9,6 +9,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 public interface ApplicationMessageProtocol extends VersionedProtocol {
 
     public static final long versionID = 1L;
+    public static final int DEFAULT_BATCH = 200;
 
     /*
      * Fetch application from ApplicationMaster.
