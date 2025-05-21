@@ -27,6 +27,8 @@ public interface HboxConstants {
 
     String SCHEDULER = "scheduler";
 
+    String SERVER = "server";
+
     String STREAM_INPUT_DIR = "mapreduce.input.fileinputformat.inputdir";
 
     String STREAM_OUTPUT_DIR = "mapreduce.output.fileoutputformat.outputdir";

@@ -36,6 +36,10 @@ public class HsController extends Controller implements AMParams {
     private final Configuration conf;
     private static final Log LOG = LogFactory.getLog(HsController.class);
 
+    private static final Type metricsJsonType =
+            new TypeToken<ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>>() {}.getType();
+    private static final Type statsJsonType = new TypeToken<Map<String, List<Double>>>() {}.getType();
+
     @Inject
     HsController(App app, Configuration conf, RequestContext ctx) {
         super(ctx);
@@ -77,7 +81,7 @@ public class HsController extends Controller implements AMParams {
             set("chiefWorkerMemory", "");
             set("evaluatorWorkerMemory", "");
             set("USAGED_INFO", "false");
-            if (readLog.keySet().contains("hboxVersion")) {
+            if (readLog.keySet().contains("hboxVersion")) { // since 1.3a
                 set("VERSION", readLog.get("hboxVersion").get(0));
                 int i = 0;
                 int workeri = 0;
@@ -144,159 +148,142 @@ public class HsController extends Controller implements AMParams {
                             set(TIMESTAMP_TOTAL, String.valueOf(j));
                         }
                     } else if (info.indexOf("container") > -1) {
-                        set(CONTAINER_ID + i, info);
-                        set(CONTAINER_HTTP_ADDRESS + i, readLog.get(info).get(0));
-                        if (readLog.get(info).get(1).trim().length() != 0) {
-                            set(CONTAINER_GPU_DEVICE + i, readLog.get(info).get(1));
-                            if ((readLog.get(info).get(2).equals("worker")
-                                            || readLog.get(info).get(2).equals(HboxConstants.EVALUATOR)
-                                            || readLog.get(info).get(2).equals(HboxConstants.CHIEF))
-                                    && !readLog.get(info).get(1).equals("-")
-                                    && readLog.get(info).size() > 8) {
-                                String containersGpuMemMetrics =
-                                        readLog.get(info).get(5);
-                                String containersGpuUtilMetrics =
-                                        readLog.get(info).get(6);
-                                if (containersGpuMemMetrics != null && containersGpuMemMetrics != "-") {
-                                    Type type = new TypeToken<
-                                            ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>>() {}.getType();
-                                    ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> map =
-                                            new Gson().fromJson(containersGpuMemMetrics, type);
-                                    for (String str : map.keySet()) {
-                                        set("workergpuMemMetrics" + workeri + str, new Gson().toJson(map.get(str)));
-                                    }
-                                }
-                                if (containersGpuUtilMetrics != null && containersGpuUtilMetrics != "-") {
-                                    Type type = new TypeToken<
-                                            ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>>() {}.getType();
-                                    ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> map =
-                                            new Gson().fromJson(containersGpuUtilMetrics, type);
-                                    for (String str : map.keySet()) {
-                                        set("workergpuUtilMetrics" + workeri + str, new Gson().toJson(map.get(str)));
-                                    }
-                                }
-                                set(
-                                        "WORKER_GPU_DEVICE" + workeri,
-                                        readLog.get(info).get(1));
-                                if (readLog.get(info).size() > 11) {
-                                    String containersGpuMemStatistics =
-                                            readLog.get(info).get(12);
-                                    String containersGpuUtilStatistics =
-                                            readLog.get(info).get(13);
-                                    if (containersGpuMemStatistics != null) {
-                                        Type type = new TypeToken<Map<String, List<Double>>>() {}.getType();
-                                        Map<String, List<Double>> map =
-                                                new Gson().fromJson(containersGpuMemStatistics, type);
-                                        for (String str : map.keySet()) {
-                                            set(
-                                                    "worker" + GPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS
-                                                            + USAGE_AVG + workeri + str,
-                                                    String.format(
-                                                            "%.2f", map.get(str).get(0)));
-                                            set(
-                                                    "worker" + GPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS
-                                                            + USAGE_MAX + workeri + str,
-                                                    String.format(
-                                                            "%.2f", map.get(str).get(1)));
-                                        }
-                                    }
-                                    if (containersGpuUtilStatistics != null) {
-                                        Type type = new TypeToken<Map<String, List<Double>>>() {}.getType();
-                                        Map<String, List<Double>> map =
-                                                new Gson().fromJson(containersGpuUtilStatistics, type);
-                                        for (String str : map.keySet()) {
-                                            set(
-                                                    "worker" + GPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS
-                                                            + USAGE_AVG + workeri + str,
-                                                    String.format(
-                                                            "%.2f", map.get(str).get(0)));
-                                            set(
-                                                    "worker" + GPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS
-                                                            + USAGE_MAX + workeri + str,
-                                                    String.format(
-                                                            "%.2f", map.get(str).get(1)));
-                                        }
-                                    }
-                                }
-                            }
-                            if ((readLog.get(info).get(2).equals("ps")
-                                            || readLog.get(info).get(2).equals("server")
-                                            || readLog.get(info).get(2).equals("scheduler"))
-                                    && !readLog.get(info).get(1).equals("-")
-                                    && readLog.get(info).size() > 8) {
-                                String containersGpuMemMetrics =
-                                        readLog.get(info).get(5);
-                                String containersGpuUtilMetrics =
-                                        readLog.get(info).get(6);
-                                if (containersGpuMemMetrics != null && containersGpuMemMetrics != "-") {
-                                    Type type = new TypeToken<
-                                            ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>>() {}.getType();
-                                    ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> map =
-                                            new Gson().fromJson(containersGpuMemMetrics, type);
-                                    for (String str : map.keySet()) {
-                                        set("psgpuMemMetrics" + psi + str, new Gson().toJson(map.get(str)));
-                                    }
-                                }
-                                if (containersGpuUtilMetrics != null && containersGpuUtilMetrics != "-") {
-                                    Type type = new TypeToken<
-                                            ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>>>() {}.getType();
-                                    ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> map =
-                                            new Gson().fromJson(containersGpuUtilMetrics, type);
-                                    for (String str : map.keySet()) {
-                                        set("psgpuUtilMetrics" + psi + str, new Gson().toJson(map.get(str)));
-                                    }
-                                }
-                                set("PS_GPU_DEVICE" + psi, readLog.get(info).get(1));
-                                if (readLog.get(info).size() > 11) {
-                                    String containersGpuMemStatistics =
-                                            readLog.get(info).get(12);
-                                    String containersGpuUtilStatistics =
-                                            readLog.get(info).get(13);
-                                    if (containersGpuMemStatistics != null && containersGpuMemStatistics != "-") {
-                                        Type type = new TypeToken<Map<String, List<Double>>>() {}.getType();
-                                        Map<String, List<Double>> map =
-                                                new Gson().fromJson(containersGpuMemStatistics, type);
-                                        for (String str : map.keySet()) {
-                                            set(
-                                                    "ps" + GPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG
-                                                            + psi + str,
-                                                    String.format(
-                                                            "%.2f", map.get(str).get(0)));
-                                            set(
-                                                    "ps" + GPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX
-                                                            + psi + str,
-                                                    String.format(
-                                                            "%.2f", map.get(str).get(1)));
-                                        }
-                                    }
-                                    if (containersGpuUtilStatistics != null && containersGpuUtilStatistics != "-") {
-                                        Type type = new TypeToken<Map<String, List<Double>>>() {}.getType();
-                                        Map<String, List<Double>> map =
-                                                new Gson().fromJson(containersGpuUtilStatistics, type);
-                                        for (String str : map.keySet()) {
-                                            set(
-                                                    "ps" + GPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG
-                                                            + psi + str,
-                                                    String.format(
-                                                            "%.2f", map.get(str).get(0)));
-                                            set(
-                                                    "ps" + GPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX
-                                                            + psi + str,
-                                                    String.format(
-                                                            "%.2f", map.get(str).get(1)));
-                                        }
-                                    }
-                                }
-                            }
+                        final String containerId = info;
+                        final List<String> containerInfo = readLog.get(info);
+                        final int infoSize = containerInfo.size();
+                        set(CONTAINER_ID + i, containerId);
+                        set(CONTAINER_HTTP_ADDRESS + i, containerInfo.get(0));
+
+                        final String gpuDevId = containerInfo.get(1).trim();
+                        final boolean validGpuDevId = gpuDevId.length() > 0 && !gpuDevId.equals("-");
+                        set(CONTAINER_GPU_DEVICE + i, validGpuDevId ? gpuDevId : "-");
+
+                        final String role = containerInfo.get(2);
+                        final boolean isWorkerRole = role.equals(HboxConstants.WORKER)
+                                || role.equals(HboxConstants.EVALUATOR)
+                                || role.equals(HboxConstants.CHIEF);
+                        final boolean isPsRole = role.equals(HboxConstants.PS)
+                                || role.equals(HboxConstants.SERVER)
+                                || role.equals(HboxConstants.SCHEDULER);
+
+                        if (role.equals(HboxConstants.EVALUATOR) || role.equals(HboxConstants.CHIEF)) {
+                            set(CONTAINER_ROLE + i, String.format("%s/%s", HboxConstants.WORKER, role));
                         } else {
-                            set(CONTAINER_GPU_DEVICE + i, "-");
+                            set(CONTAINER_ROLE + i, role);
                         }
-                        if ((readLog.get(info).get(2).equals("worker")
-                                        || readLog.get(info).get(2).equals(HboxConstants.EVALUATOR)
-                                        || readLog.get(info).get(2).equals(HboxConstants.CHIEF))
-                                && readLog.get(info).size() > 8) {
-                            String cpuMetrics = readLog.get(info).get(4);
-                            if (cpuMetrics != null && cpuMetrics != "-") {
+
+                        set(CONTAINER_STATUS + i, containerInfo.get(3));
+                        set(CONTAINER_START_TIME + i, containerInfo.get(7));
+                        set(CONTAINER_FINISH_TIME + i, containerInfo.get(8));
+                        set(CONTAINER_REPORTER_PROGRESS + i, containerInfo.get(9));
+                        set(CONTAINER_LOG_ADDRESS + i, containerInfo.get(10));
+                        set(CONTAINER_RANK + i, infoSize > 15 ? containerInfo.get(15) : "-");
+
+                        if (isWorkerRole && validGpuDevId) {
+                            final int base = workeri;
+                            set("WORKER_GPU_DEVICE" + base, gpuDevId);
+
+                            final String containersGpuMemMetrics = containerInfo.get(5);
+                            if (containersGpuMemMetrics != null && !containersGpuMemMetrics.equals("-")) {
+                                final ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> map =
+                                        new Gson().fromJson(containersGpuMemMetrics, metricsJsonType);
+                                map.forEach((k, v) -> set("workergpuMemMetrics" + base + k, new Gson().toJson(v)));
+                            }
+                            final String containersGpuUtilMetrics = containerInfo.get(6);
+                            if (containersGpuUtilMetrics != null && !containersGpuUtilMetrics.equals("-")) {
+                                final ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> map =
+                                        new Gson().fromJson(containersGpuUtilMetrics, metricsJsonType);
+                                map.forEach((k, v) -> set("workergpuUtilMetrics" + base + k, new Gson().toJson(v)));
+                            }
+
+                            final String containersGpuMemStatistics = containerInfo.get(12);
+                            if (containersGpuMemStatistics != null && !containersGpuMemStatistics.equals("-")) {
+                                final Map<String, List<Double>> map =
+                                        new Gson().fromJson(containersGpuMemStatistics, statsJsonType);
+                                map.forEach((k, v) -> {
+                                    set(
+                                            "worker" + GPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG
+                                                    + base + k,
+                                            String.format("%.2f", v.get(0)));
+                                    set(
+                                            "worker" + GPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX
+                                                    + base + k,
+                                            String.format("%.2f", v.get(1)));
+                                });
+                            }
+
+                            final String containersGpuUtilStatistics = containerInfo.get(13);
+                            if (containersGpuUtilStatistics != null && !containersGpuUtilStatistics.equals("-")) {
+                                final Map<String, List<Double>> map =
+                                        new Gson().fromJson(containersGpuUtilStatistics, statsJsonType);
+                                map.forEach((k, v) -> {
+                                    set(
+                                            "worker" + GPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG
+                                                    + base + k,
+                                            String.format("%.2f", v.get(0)));
+                                    set(
+                                            "worker" + GPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX
+                                                    + base + k,
+                                            String.format("%.2f", v.get(1)));
+                                });
+                            }
+                        }
+
+                        if (isPsRole && validGpuDevId) {
+                            final int base = psi;
+                            set("PS_GPU_DEVICE" + base, gpuDevId);
+
+                            final String containersGpuMemMetrics = containerInfo.get(5);
+                            if (containersGpuMemMetrics != null && !containersGpuMemMetrics.equals("-")) {
+                                final ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> map =
+                                        new Gson().fromJson(containersGpuMemMetrics, metricsJsonType);
+                                map.forEach((k, v) -> set("psgpuMemMetrics" + base + k, new Gson().toJson(v)));
+                            }
+
+                            final String containersGpuUtilMetrics = containerInfo.get(6);
+                            if (containersGpuUtilMetrics != null && !containersGpuUtilMetrics.equals("-")) {
+                                ConcurrentHashMap<String, LinkedBlockingDeque<List<Long>>> map =
+                                        new Gson().fromJson(containersGpuUtilMetrics, metricsJsonType);
+                                map.forEach((k, v) -> set("psgpuUtilMetrics" + base + k, new Gson().toJson(v)));
+                            }
+
+                            final String containersGpuMemStatistics = containerInfo.get(12);
+                            if (containersGpuMemStatistics != null && !containersGpuMemStatistics.equals("-")) {
+                                final Map<String, List<Double>> map =
+                                        new Gson().fromJson(containersGpuMemStatistics, statsJsonType);
+                                map.forEach((k, v) -> {
+                                    set(
+                                            "ps" + GPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + base
+                                                    + k,
+                                            String.format("%.2f", v.get(0)));
+                                    set(
+                                            "ps" + GPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX + base
+                                                    + k,
+                                            String.format("%.2f", v.get(1)));
+                                });
+                            }
+
+                            final String containersGpuUtilStatistics = containerInfo.get(13);
+                            if (containersGpuUtilStatistics != null && !containersGpuUtilStatistics.equals("-")) {
+                                final Map<String, List<Double>> map =
+                                        new Gson().fromJson(containersGpuUtilStatistics, statsJsonType);
+                                map.forEach((k, v) -> {
+                                    set(
+                                            "ps" + GPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG + base
+                                                    + k,
+                                            String.format("%.2f", v.get(0)));
+                                    set(
+                                            "ps" + GPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX + base
+                                                    + k,
+                                            String.format("%.2f", v.get(1)));
+                                });
+                            }
+                        }
+
+                        if (isWorkerRole) {
+                            set("WORKER_CONTAINER_ID" + workeri, containerId);
+                            String cpuMetrics = containerInfo.get(4);
+                            if (cpuMetrics != null && !cpuMetrics.equals("-")) {
                                 Gson gson2 = new GsonBuilder()
                                         .registerTypeAdapter(
                                                 new TypeToken<ConcurrentHashMap<String, Object>>() {}.getType(),
@@ -307,7 +294,6 @@ public class HsController extends Controller implements AMParams {
                                                             Type typeOfT,
                                                             JsonDeserializationContext context)
                                                             throws JsonParseException {
-
                                                         ConcurrentHashMap<String, Object> treeMap =
                                                                 new ConcurrentHashMap<>();
                                                         JsonObject jsonObject = json.getAsJsonObject();
@@ -320,75 +306,68 @@ public class HsController extends Controller implements AMParams {
                                                     }
                                                 })
                                         .create();
-
                                 Type type = new TypeToken<ConcurrentHashMap<String, Object>>() {}.getType();
                                 ConcurrentHashMap<String, Object> map = gson2.fromJson(cpuMetrics, type);
                                 set("workercpuMemMetrics" + workeri, new Gson().toJson(map.get("CPUMEM")));
                                 set("workercpuUtilMetrics" + workeri, new Gson().toJson(map.get("CPUUTIL")));
                             }
-                            if (readLog.get(info).size() > 11) {
-                                String cpuStatistics = readLog.get(info).get(11);
-                                if (cpuStatistics != null && cpuStatistics != "-") {
-                                    Type type = new TypeToken<Map<String, List<Double>>>() {}.getType();
-                                    Map<String, List<Double>> map = new Gson().fromJson(cpuStatistics, type);
-                                    if (map.size() > 0) {
-                                        set(
-                                                "worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG
-                                                        + workeri,
-                                                String.format(
-                                                        "%.2f",
-                                                        map.get("CPUMEM").get(0)));
-                                        set(
-                                                "worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX
-                                                        + workeri,
-                                                String.format(
-                                                        "%.2f",
-                                                        map.get("CPUMEM").get(1)));
-                                        set(
-                                                "worker" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG
-                                                        + workeri,
-                                                String.format(
-                                                        "%.2f",
-                                                        map.get("CPUUTIL").get(0)));
-                                        set(
-                                                "worker" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX
-                                                        + workeri,
-                                                String.format(
-                                                        "%.2f",
-                                                        map.get("CPUUTIL").get(1)));
-                                    } else {
-                                        set(
-                                                "worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG
-                                                        + workeri,
-                                                "");
-                                        set(
-                                                "worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX
-                                                        + workeri,
-                                                "");
-                                        set(
-                                                "worker" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG
-                                                        + workeri,
-                                                "");
-                                        set(
-                                                "worker" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX
-                                                        + workeri,
-                                                "");
-                                    }
-                                }
-                                if (readLog.get(info).size() > 14) {
+
+                            String cpuStatistics = containerInfo.get(11);
+                            if (cpuStatistics != null && !cpuStatistics.equals("-")) {
+                                Type type = new TypeToken<Map<String, List<Double>>>() {}.getType();
+                                Map<String, List<Double>> map = new Gson().fromJson(cpuStatistics, type);
+                                if (map.size() > 0) {
                                     set(
-                                            "worker" + CONTAINER_MEM_USAGE_WARN + workeri,
-                                            readLog.get(info).get(14));
+                                            "worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG
+                                                    + workeri,
+                                            String.format(
+                                                    "%.2f", map.get("CPUMEM").get(0)));
+                                    set(
+                                            "worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX
+                                                    + workeri,
+                                            String.format(
+                                                    "%.2f", map.get("CPUMEM").get(1)));
+                                    set(
+                                            "worker" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG
+                                                    + workeri,
+                                            String.format(
+                                                    "%.2f", map.get("CPUUTIL").get(0)));
+                                    set(
+                                            "worker" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX
+                                                    + workeri,
+                                            String.format(
+                                                    "%.2f", map.get("CPUUTIL").get(1)));
+                                } else {
+                                    set(
+                                            "worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG
+                                                    + workeri,
+                                            "");
+                                    set(
+                                            "worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX
+                                                    + workeri,
+                                            "");
+                                    set(
+                                            "worker" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG
+                                                    + workeri,
+                                            "");
+                                    set(
+                                            "worker" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX
+                                                    + workeri,
+                                            "");
+                                }
+                                if (infoSize > 14 && !containerInfo.get(14).equals("-")) {
+                                    set("worker" + CONTAINER_MEM_USAGE_WARN + workeri, containerInfo.get(14));
                                 }
                                 set("USAGED_INFO", "true");
                             }
+
+                            workeri++;
                         }
-                        if ((readLog.get(info).get(2).equals("ps")
-                                        || readLog.get(info).get(2).equals("server")
-                                        || readLog.get(info).get(2).equals("scheduler"))
-                                && readLog.get(info).size() > 8) {
-                            String cpuMetrics = readLog.get(info).get(4);
-                            if (cpuMetrics != null && cpuMetrics != "-") {
+
+                        if (isPsRole) {
+                            set("PS_CONTAINER_ID" + psi, containerId);
+                            String cpuMetrics = containerInfo.get(4);
+                            if (cpuMetrics != null && !cpuMetrics.equals("-")) {
                                 Gson gson2 = new GsonBuilder()
                                         .registerTypeAdapter(
                                                 new TypeToken<ConcurrentHashMap<String, Object>>() {}.getType(),
@@ -399,7 +378,6 @@ public class HsController extends Controller implements AMParams {
                                                             Type typeOfT,
                                                             JsonDeserializationContext context)
                                                             throws JsonParseException {
-
                                                         ConcurrentHashMap<String, Object> treeMap =
                                                                 new ConcurrentHashMap<>();
                                                         JsonObject jsonObject = json.getAsJsonObject();
@@ -412,107 +390,48 @@ public class HsController extends Controller implements AMParams {
                                                     }
                                                 })
                                         .create();
-
                                 Type type = new TypeToken<ConcurrentHashMap<String, Object>>() {}.getType();
                                 ConcurrentHashMap<String, Object> map = gson2.fromJson(cpuMetrics, type);
                                 set("pscpuMemMetrics" + psi, new Gson().toJson(map.get("CPUMEM")));
                                 set("pscpuUtilMetrics" + psi, new Gson().toJson(map.get("CPUUTIL")));
                             }
 
-                            if (readLog.get(info).size() > 11) {
-                                String cpuStatistics = readLog.get(info).get(11);
-                                if (cpuStatistics != null && cpuStatistics != "-") {
-                                    Type type = new TypeToken<Map<String, List<Double>>>() {}.getType();
-                                    Map<String, List<Double>> map = new Gson().fromJson(cpuStatistics, type);
-                                    if (map.size() > 0) {
-                                        set(
-                                                "ps" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG
-                                                        + psi,
-                                                String.format(
-                                                        "%.2f",
-                                                        map.get("CPUMEM").get(0)));
-                                        set(
-                                                "ps" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX
-                                                        + psi,
-                                                String.format(
-                                                        "%.2f",
-                                                        map.get("CPUMEM").get(1)));
-                                        set(
-                                                "ps" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG
-                                                        + psi,
-                                                String.format(
-                                                        "%.2f",
-                                                        map.get("CPUUTIL").get(0)));
-                                        set(
-                                                "ps" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX
-                                                        + psi,
-                                                String.format(
-                                                        "%.2f",
-                                                        map.get("CPUUTIL").get(1)));
-                                    } else {
-                                        set(
-                                                "ps" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG
-                                                        + psi,
-                                                "");
-                                        set(
-                                                "ps" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX
-                                                        + psi,
-                                                "");
-                                        set(
-                                                "ps" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG
-                                                        + psi,
-                                                "");
-                                        set(
-                                                "ps" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX
-                                                        + psi,
-                                                "");
-                                    }
-                                }
-                                if (readLog.get(info).size() > 14) {
+                            String cpuStatistics = containerInfo.get(11);
+                            if (cpuStatistics != null && !cpuStatistics.equals("-")) {
+                                Type type = new TypeToken<Map<String, List<Double>>>() {}.getType();
+                                Map<String, List<Double>> map = new Gson().fromJson(cpuStatistics, type);
+                                if (map.size() > 0) {
                                     set(
-                                            "ps" + CONTAINER_MEM_USAGE_WARN + psi,
-                                            readLog.get(info).get(14));
+                                            "ps" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + psi,
+                                            String.format(
+                                                    "%.2f", map.get("CPUMEM").get(0)));
+                                    set(
+                                            "ps" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX + psi,
+                                            String.format(
+                                                    "%.2f", map.get("CPUMEM").get(1)));
+                                    set(
+                                            "ps" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG + psi,
+                                            String.format(
+                                                    "%.2f", map.get("CPUUTIL").get(0)));
+                                    set(
+                                            "ps" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX + psi,
+                                            String.format(
+                                                    "%.2f", map.get("CPUUTIL").get(1)));
+                                } else {
+                                    set("ps" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + psi, "");
+                                    set("ps" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX + psi, "");
+                                    set("ps" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_AVG + psi, "");
+                                    set("ps" + CPU_USAGE_TYPE + CONTAINER_UTIL_USAGE_STATISTICS + USAGE_MAX + psi, "");
+                                }
+                                if (infoSize > 14 && !containerInfo.get(14).equals("-")) {
+                                    set("ps" + CONTAINER_MEM_USAGE_WARN + psi, containerInfo.get(14));
                                 }
                                 set("USAGED_INFO", "true");
                             }
-                        }
-                        if (readLog.get(info).get(2).equals(HboxConstants.EVALUATOR)
-                                || readLog.get(info).get(2).equals(HboxConstants.CHIEF)) {
-                            set(
-                                    CONTAINER_ROLE + i,
-                                    HboxConstants.WORKER + "/"
-                                            + readLog.get(info).get(2));
-                        } else {
-                            set(CONTAINER_ROLE + i, readLog.get(info).get(2));
-                        }
-                        set(CONTAINER_STATUS + i, readLog.get(info).get(3));
-                        if (readLog.get(info).size() > 8) {
-                            set(CONTAINER_START_TIME + i, readLog.get(info).get(7));
-                            set(CONTAINER_FINISH_TIME + i, readLog.get(info).get(8));
-                            set(
-                                    CONTAINER_REPORTER_PROGRESS + i,
-                                    readLog.get(info).get(9));
-                            set(CONTAINER_LOG_ADDRESS + i, readLog.get(info).get(10));
-                        } else {
-                            set(CONTAINER_START_TIME + i, readLog.get(info).get(4));
-                            set(CONTAINER_FINISH_TIME + i, readLog.get(info).get(5));
-                            set(
-                                    CONTAINER_REPORTER_PROGRESS + i,
-                                    readLog.get(info).get(6));
-                            set(CONTAINER_LOG_ADDRESS + i, readLog.get(info).get(7));
-                        }
-                        if (readLog.get(info).get(2).equals("worker")
-                                || readLog.get(info).get(2).equals(HboxConstants.EVALUATOR)
-                                || readLog.get(info).get(2).equals(HboxConstants.CHIEF)) {
-                            set("WORKER_CONTAINER_ID" + workeri, info);
-                            workeri++;
-                        }
-                        if (readLog.get(info).get(2).equals("ps")
-                                || readLog.get(info).get(2).equals("server")
-                                || readLog.get(info).get(2).equals("scheduler")) {
-                            set("PS_CONTAINER_ID" + psi, info);
+
                             psi++;
                         }
+
                         i++;
                     } else if (info.equals("workerGcores")) {
                         set("WORKER_GCORES", readLog.get(info).get(0));
@@ -542,9 +461,10 @@ public class HsController extends Controller implements AMParams {
                         }
                     }
                 }
+
                 set(CONTAINER_NUMBER, String.valueOf(i));
 
-                if ($("VERSION").indexOf("1.2") != 0 && Boolean.parseBoolean($(BOARD_INFO_FLAG))) {
+                if (Boolean.parseBoolean($(BOARD_INFO_FLAG))) {
                     if ($(BOARD_INFO).equals("-")) {
                         String boardInfo =
                                 "Board server don't start, You can set argument \"--boardEnable true\" in your submit script to start.";
@@ -563,6 +483,7 @@ public class HsController extends Controller implements AMParams {
                     }
                 }
             } else {
+                // for old jobs without hboxVersion
                 int i = 0;
                 set(OUTPUT_TOTAL, String.valueOf(0));
                 set(TIMESTAMP_TOTAL, String.valueOf(0));

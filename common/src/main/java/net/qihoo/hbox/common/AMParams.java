@@ -29,6 +29,8 @@ public interface AMParams {
 
     public static final String CONTAINER_ROLE = "container.role";
 
+    public static final String CONTAINER_RANK = "container.rank";
+
     public static final String CONTAINER_GPU_DEVICE = "container.gpu.device";
 
     public static final String CONTAINER_LOG_ADDRESS = "container.log.address";

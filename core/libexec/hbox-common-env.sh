@@ -57,7 +57,7 @@ HBOX_CLIENT_OPTS=("-Xmx1024m")
 __find_hbox_jar() {
   local jars=() pattern="${1:?usage __find_hbox_jar <find-name-pattern>}" full_hbox_home
   full_hbox_home=$(cd -- "$HBOX_HOME" && pwd) || return 66
-  readarray -t jars < <(cd / && find "$full_hbox_home/" -maxdepth 1 -name "hbox-core-*.jar")
+  readarray -t jars < <(cd / && find "$full_hbox_home/" -maxdepth 1 -name "$pattern")
   if ((${#jars[@]} == 0)); then
     echo "[ERROR] Failed to find $pattern in $HBOX_HOME/lib." >&2
     return 66

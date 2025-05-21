@@ -99,6 +99,8 @@ public class AppController extends Controller implements AMParams {
         set(WORKER_VCORES, String.valueOf(workerVCores));
         set(PS_VCORES, String.valueOf(psVCores));
         int i = 0;
+        int workIdx = 0;
+        int psIdx = 0;
         for (Container container : workerContainers) {
             set(CONTAINER_HTTP_ADDRESS + i, container.getNodeHttpAddress());
             set(CONTAINER_ID + i, container.getId().toString());
@@ -114,11 +116,14 @@ public class AppController extends Controller implements AMParams {
             if (conf.getBoolean(HboxConfiguration.HBOX_TF_EVALUATOR, HboxConfiguration.DEFAULT_HBOX_TF_EVALUATOR)
                     && container.getId().toString().equals(app.context.getTfEvaluatorId())) {
                 set(CONTAINER_ROLE + i, HboxConstants.WORKER + "/" + HboxConstants.EVALUATOR);
+                set(CONTAINER_RANK + i, "-");
             } else if (app.context.getChiefWorker()
                     && container.getId().toString().equals(app.context.getChiefWorkerId())) {
                 set(CONTAINER_ROLE + i, HboxConstants.WORKER + "/" + HboxConstants.CHIEF);
+                set(CONTAINER_RANK + i, "-");
             } else {
                 set(CONTAINER_ROLE + i, HboxConstants.WORKER);
+                set(CONTAINER_RANK + i, "" + (workIdx++));
             }
             if (app.context.getContainerGPUDevice(new HboxContainerId(container.getId())) != null) {
                 if (app.context
@@ -274,17 +279,24 @@ public class AppController extends Controller implements AMParams {
                 set(CONTAINER_STATUS + i, "-");
             }
             if ($(APP_TYPE).equals("Tensorflow")) {
-                set(CONTAINER_ROLE + i, "ps");
+                set(CONTAINER_ROLE + i, HboxConstants.PS);
+                set(CONTAINER_RANK + i, "" + (psIdx++));
             } else if ($(APP_TYPE).equals("Mxnet")
                     || $(APP_TYPE).equals("Distlightlda")
                     || $(APP_TYPE).equals("Xflow")) {
-                set(CONTAINER_ROLE + i, "server");
+                set(CONTAINER_ROLE + i, HboxConstants.SERVER);
+                set(CONTAINER_RANK + i, "" + (psIdx++));
             } else if ($(APP_TYPE).equals("Xdl")) {
                 if (container.getId().toString().equals(app.context.getSchedulerId())) {
                     set(CONTAINER_ROLE + i, HboxConstants.SCHEDULER);
+                    set(CONTAINER_RANK + i, "-");
                 } else {
                     set(CONTAINER_ROLE + i, HboxConstants.PS);
+                    set(CONTAINER_RANK + i, "" + (psIdx++));
                 }
+            } else {
+                set(CONTAINER_ROLE + i, HboxConstants.PS);
+                set(CONTAINER_RANK + i, "" + (psIdx++));
             }
 
             if (app.context.getContainerGPUDevice(new HboxContainerId(container.getId())) != null) {
