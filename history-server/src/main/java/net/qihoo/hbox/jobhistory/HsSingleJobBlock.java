@@ -61,6 +61,8 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
                     .th("ui-state-default", "Container ID")
                     .th("ui-state-default", "Container Host")
                     .th("ui-state-default", "GPU Device ID")
+                    .th("ui-state-default", "Role")
+                    .th("ui-state-default", "Rank")
                     .th("ui-state-default", "Container Status")
                     .th("ui-state-default", "Start Time")
                     .th("ui-state-default", "Finish Time")
@@ -85,6 +87,8 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
                     td.__()
                             .td(containerMachine.split(":")[0])
                             .td($(CONTAINER_GPU_DEVICE + i))
+                            .td($(CONTAINER_ROLE + i))
+                            .td($(CONTAINER_RANK + i))
                             .td($(CONTAINER_STATUS + i))
                             .td($(CONTAINER_START_TIME + i))
                             .td($(CONTAINER_FINISH_TIME + i))
@@ -94,6 +98,8 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
                     td.__()
                             .td(containerMachine.split(":")[0])
                             .td($(CONTAINER_GPU_DEVICE + i))
+                            .td($(CONTAINER_ROLE + i))
+                            .td($(CONTAINER_RANK + i))
                             .td($(CONTAINER_STATUS + i))
                             .td($(CONTAINER_START_TIME + i))
                             .td($(CONTAINER_FINISH_TIME + i))
@@ -103,6 +109,8 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
                     td.__()
                             .td(containerMachine.split(":")[0])
                             .td($(CONTAINER_GPU_DEVICE + i))
+                            .td($(CONTAINER_ROLE + i))
+                            .td($(CONTAINER_RANK + i))
                             .td($(CONTAINER_STATUS + i))
                             .td($(CONTAINER_START_TIME + i))
                             .td($(CONTAINER_FINISH_TIME + i))
@@ -176,7 +184,8 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
                             .td(String.valueOf(workerGcores))
                             .__();
                 }
-                if ($("chiefWorkerMemory") != null && $("chiefWorkerMemory").trim() != "") {
+                if ($("chiefWorkerMemory") != null
+                        && $("chiefWorkerMemory").trim().length() > 0) {
                     resourceAppliedInfo
                             .__()
                             .tbody("ui-widget-content")
@@ -190,7 +199,7 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
                             .__();
                 }
                 if ($("evaluatorWorkerMemory") != null
-                        && $("evaluatorWorkerMemory").trim() != "") {
+                        && $("evaluatorWorkerMemory").trim().length() > 0) {
                     resourceAppliedInfo
                             .__()
                             .tbody("ui-widget-content")
@@ -212,6 +221,8 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
                         .thead("ui-widget-header")
                         .tr()
                         .th("ui-state-default", "ContainerID")
+                        .th("ui-state-default", "Role")
+                        .th("ui-state-default", "Rank")
                         .th("ui-state-default", "CPU memory average usages(GB)")
                         .th("ui-state-default", "CPU memory max usages(GB)")
                         .th("ui-state-default", "CPU utilization average usages(%)")
@@ -228,11 +239,13 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
                             .tr()
                             .$style("text-align:center;")
                             .td($("WORKER_CONTAINER_ID" + i))
+                            .td($(CONTAINER_ROLE + i))
+                            .td($(CONTAINER_RANK + i))
                             .td($("worker" + CPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + i))
                             .td();
 
                     String memWarn = $("worker" + CONTAINER_MEM_USAGE_WARN + i);
-                    if (memWarn != null && memWarn != "" && Boolean.valueOf(memWarn)) {
+                    if (memWarn != null && memWarn.length() > 0 && Boolean.valueOf(memWarn)) {
                         td.$style("color:red")
                                 .b(String.format(
                                         "%s\t( Current cpu memory used is much less than applied. Please adjust !! )",
@@ -256,6 +269,8 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
                             .tr()
                             .th("ui-state-default", "ContainerID")
                             .th("ui-state-default", "GPU DEVICE ID")
+                            .th("ui-state-default", "Role")
+                            .th("ui-state-default", "Rank")
                             .th("ui-state-default", "GPU memory average usages(MB)")
                             .th("ui-state-default", "GPU memory max usages(MB)")
                             .th("ui-state-default", "GPU utilization average usages(%)")
@@ -275,6 +290,8 @@ public class HsSingleJobBlock extends HtmlBlock implements AMParams {
                                     .$style("text-align:center;")
                                     .td($("WORKER_CONTAINER_ID" + i))
                                     .td(gpusIndex[j])
+                                    .td($(CONTAINER_ROLE + i))
+                                    .td($(CONTAINER_RANK + i))
                                     .td($("worker" + GPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_AVG + i
                                             + gpusIndex[j]))
                                     .td($("worker" + GPU_USAGE_TYPE + CONTAINER_MEM_USAGE_STATISTICS + USAGE_MAX + i

@@ -594,10 +594,29 @@ public class ApplicationMaster extends CompositeService {
                     Map<HboxContainerId, String> containersAppFinishTime =
                             applicationContext.getContainersAppFinishTime();
 
+                    // container info schema (since 1.3a b30b967d7c283e8ac542b66413fcc2bc5c5fb95c):
+                    // 0: node url
+                    // 1: gpu device id
+                    // 2: role
+                    // 3: status
+                    // 4: cpu metrics
+                    // 5: gpu mem metrics
+                    // 6: gpu util metrics
+                    // 7: start time
+                    // 8: finish time
+                    // 9: percent progress
+                    // 10: log url
+                    // 11: stats - cpu
+                    // 12: stats - gpu mem
+                    // 13: stats - gpu utils
+                    // 14: stats - mem usage warn (if cpuStatistics.size > 0 || version >= 1.9.2)
+                    // 15: rank (since 1.9.2)
+                    int workerIdx = 0;
                     for (Container container : workerContainers) {
                         List<String> containerMessage = new ArrayList<>();
                         containerMessage.add(container.getNodeHttpAddress());
                         HboxContainerId currentContainerID = new HboxContainerId(container.getId());
+                        String rank = "-";
                         if (applicationContext.getContainerGPUDevice(currentContainerID) != null) {
                             if (applicationContext
                                             .getContainerGPUDevice(currentContainerID)
@@ -617,6 +636,7 @@ public class ApplicationMaster extends CompositeService {
                             containerMessage.add(HboxConstants.CHIEF);
                         } else {
                             containerMessage.add(HboxConstants.WORKER);
+                            rank = "" + workerIdx++;
                         }
 
                         HboxContainerStatus status = applicationContext.getContainerStatus(currentContainerID);
@@ -677,6 +697,8 @@ public class ApplicationMaster extends CompositeService {
                             } else {
                                 usageStatistics.add("false");
                             }
+                        } else {
+                            usageStatistics.add("-"); // container info schema idx=14
                         }
 
                         if (containersAppStartTime.get(currentContainerID) != null
@@ -729,13 +751,16 @@ public class ApplicationMaster extends CompositeService {
                                 container.getId().toString(),
                                 userName));
                         containerMessage.addAll(usageStatistics);
+                        containerMessage.add(rank); // container info schema idx=15
                         logMessage.put(container.getId().toString(), containerMessage);
                     }
 
+                    int psIdx = 0;
                     for (Container container : psContainers) {
                         List<String> containerMessage = new ArrayList<>();
                         containerMessage.add(container.getNodeHttpAddress());
                         HboxContainerId currentContainerID = new HboxContainerId(container.getId());
+                        String rank = "-";
                         if (applicationContext.getContainerGPUDevice(currentContainerID) != null) {
                             if (applicationContext
                                             .getContainerGPUDevice(currentContainerID)
@@ -750,17 +775,22 @@ public class ApplicationMaster extends CompositeService {
                             containerMessage.add("-");
                         }
                         if (hboxAppType.equals("TENSORFLOW") || "TENSOR2TENSOR".equals(hboxAppType)) {
-                            containerMessage.add("ps");
+                            containerMessage.add(HboxConstants.PS);
+                            rank = "" + psIdx++;
                         } else if (hboxAppType.equals("MXNET")
                                 || hboxAppType.equals("DISTLIGHTLDA")
                                 || hboxAppType.equals("XFLOW")) {
-                            containerMessage.add("server");
+                            containerMessage.add(HboxConstants.SERVER);
                         } else if (hboxAppType.equals("XDL")) {
                             if (currentContainerID.toString().equals(schedulerContainerId)) {
                                 containerMessage.add(HboxConstants.SCHEDULER);
                             } else {
-                                containerMessage.add("ps");
+                                containerMessage.add(HboxConstants.PS);
+                                rank = "" + psIdx++;
                             }
+                        } else {
+                            containerMessage.add(HboxConstants.PS);
+                            rank = "" + psIdx++;
                         }
                         HboxContainerStatus status = applicationContext.getContainerStatus(currentContainerID);
                         if (status != null) {
@@ -814,6 +844,8 @@ public class ApplicationMaster extends CompositeService {
                             } else {
                                 usageStatistics.add("false");
                             }
+                        } else {
+                            usageStatistics.add("-"); // container info schema idx=14
                         }
 
                         if (containersAppStartTime.get(currentContainerID) != null
@@ -841,6 +873,7 @@ public class ApplicationMaster extends CompositeService {
                                 container.getId().toString(),
                                 userName));
                         containerMessage.addAll(usageStatistics);
+                        containerMessage.add(rank); // container info schema idx=15
                         logMessage.put(container.getId().toString(), containerMessage);
                     }
 
