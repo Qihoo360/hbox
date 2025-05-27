@@ -1,4 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright 2017-2025 Qihoo Inc
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
@@ -47,6 +62,9 @@
     <checkModificationExcludeList>${project.basedir}/tests/ver.sh</checkModificationExcludeList>
     <maven.deploy.skip>true</maven.deploy.skip>
     <maven.deploy.file.skip>snapshots</maven.deploy.file.skip>
+
+    <copyright.year>2025</copyright.year>
+    <copyright.owner>Qihoo Inc</copyright.owner>
   </properties>
 
   <dependencyManagement>
@@ -381,6 +399,25 @@
               <include>**/pom.xml</include>
               <include>plugin-version-ruleset-before-jdk11.xml</include>
             </includes>
+            <licenseHeader>
+              <content>&lt;!--
+Copyright ${project.inceptionYear}-${copyright.year} ${copyright.owner}
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+--&gt;</content>
+              <delimiter>&lt;[a-z]</delimiter>
+              <skipLinesMatching>^&lt;?xml .*?&gt;</skipLinesMatching>
+            </licenseHeader>
             <sortPom>
               <predefinedSortOrder>custom_1</predefinedSortOrder>
               <lineSeparator>\n</lineSeparator>
@@ -392,6 +429,21 @@
             <includes>
               <include>**/*.java</include>
             </includes>
+            <licenseHeader>
+              <content>// Copyright ${project.inceptionYear}-${copyright.year} ${copyright.owner}
+                //
+                // Licensed under the Apache License, Version 2.0 (the "License");
+                // you may not use this file except in compliance with the License.
+                // You may obtain a copy of the License at
+                //
+                //     http://www.apache.org/licenses/LICENSE-2.0
+                //
+                // Unless required by applicable law or agreed to in writing, software
+                // distributed under the License is distributed on an "AS IS" BASIS,
+                // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                // See the License for the specific language governing permissions and
+                // limitations under the License.</content>
+            </licenseHeader>
             <palantirJavaFormat>
               <version>1.1.0</version>
             </palantirJavaFormat>
@@ -425,7 +477,7 @@
   </build>
 
   <url>https://github.com/Qihoo360/hbox</url>
-  <inceptionYear>2018</inceptionYear>
+  <inceptionYear>2017</inceptionYear>
   <organization>
     <name>Qihoo 360 Technology Co. Ltd. (Qihoo 360)</name>
     <url>https://360.com/</url>
