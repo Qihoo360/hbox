@@ -143,6 +143,16 @@ limitations under the License.
       <artifactId>junit-jupiter-api</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.ginsberg</groupId>
+      <artifactId>junit5-system-exit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.blindpirate</groupId>
+      <artifactId>junit5-capture-system-output-extension</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
