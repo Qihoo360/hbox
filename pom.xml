@@ -19,7 +19,7 @@ limitations under the License.
 
   <groupId>net.qihoo</groupId>
   <artifactId>hbox-parent</artifactId>
-  <version>1.9.3</version>
+  <version>1.9.4-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>HBox Parent Pom</name>
@@ -41,7 +41,7 @@ limitations under the License.
   <properties>
     <maven.min-version>3.6.3</maven.min-version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.build.outputTimestamp>2025-06-26T02:41:20Z</project.build.outputTimestamp>
+    <project.build.outputTimestamp>2025-06-26T02:41:42Z</project.build.outputTimestamp>
 
     <!-- Supporting Tech Matrix
     ~ Build-time JDK: 8+, select by developer or ci environment, prefer LTS JDKs
@@ -505,7 +505,7 @@ limitations under the License.
     <connection>scm:git:https://github.com/Qihoo360/hbox.git</connection>
     <developerConnection>scm:git:git@github.com:Qihoo360/hbox.git</developerConnection>
     <url>https://github.com/Qihoo360/hbox/tree/master</url>
-    <tag>v1.9.3</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <issueManagement>

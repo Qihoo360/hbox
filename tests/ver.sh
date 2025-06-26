@@ -1,2 +1,2 @@
 # shellcheck shell=bash disable=SC2034
-HBOX_VERSION=1.9.3
+HBOX_VERSION=1.9.4-SNAPSHOT
