@@ -51,14 +51,14 @@ fi
 # shellcheck disable=SC2034
 HBOX_CLASSPATH="$HBOX_CONF_DIR:$HBOX_HOME/lib/*:$(yarn classpath)"
 
-if [[ ${HBOX_CLIENT_OPTS} ]]; then
+if [[ ${HBOX_CLIENT_OPTS-} ]]; then
   # convert to array
   read -ra HBOX_CLIENT_OPTS <<< "$HBOX_CLIENT_OPTS"
 else
   HBOX_CLIENT_OPTS=()
 fi
 
-[[ " ${HBOX_CLIENT_OPTS[*]}" = " -Xmx"* ]] || HBOX_CLIENT_OPTS+=("-Xmx1024m")
+[[ " ${HBOX_CLIENT_OPTS[*]-}" = *" -Xmx"* ]] || HBOX_CLIENT_OPTS+=("-Xmx1024m")
 
 __find_hbox_jar() {
   local jars=() pattern="${1:?usage __find_hbox_jar <find-name-pattern>}" full_hbox_home
