@@ -20,7 +20,7 @@ limitations under the License.
   <parent>
     <groupId>net.qihoo</groupId>
     <artifactId>hbox-parent</artifactId>
-    <version>1.9.3-SNAPSHOT</version>
+    <version>1.9.3</version>
   </parent>
 
   <artifactId>hbox-history-server</artifactId>
@@ -277,6 +277,6 @@ limitations under the License.
 
   <url>https://github.com/Qihoo360/hbox</url>
   <scm>
-    <tag>HEAD</tag>
+    <tag>v1.9.3</tag>
   </scm>
 </project>
