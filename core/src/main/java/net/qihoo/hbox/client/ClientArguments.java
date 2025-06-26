@@ -136,6 +136,10 @@ class ClientArguments {
         outputIndex = -1;
 
         allOptions = new Options();
+
+        // force stop parse at "--"
+        allOptions.addOption(null, "", false, "stop parsing options");
+
         allOptions.addOption("appName", "app-name", true, "set the Application name");
         allOptions.addOption("appType", "app-type", true, "set the Application type, default \"hbox\"");
         allOptions.addOption("cluster", "cluster", true, "set the cluster that application submit to");
@@ -303,34 +307,35 @@ class ClientArguments {
         allOptions.addOption("version", "version", false, "Print version");
 
         OptionBuilder.withArgName("property=value");
-        OptionBuilder.hasArgs(Integer.MAX_VALUE);
+        OptionBuilder.hasArgs(2);
         OptionBuilder.withValueSeparator('=');
         OptionBuilder.withDescription("hbox configure");
         Option conf = OptionBuilder.create("conf");
         allOptions.addOption(conf);
 
         OptionBuilder.withArgName("property#value");
-        OptionBuilder.hasArgs(Integer.MAX_VALUE);
+        OptionBuilder.hasArgs(2);
         OptionBuilder.withValueSeparator('#');
         OptionBuilder.withDescription("dfs location,representing the source data of hbox");
         Option input = OptionBuilder.create("input");
         allOptions.addOption(input);
 
         OptionBuilder.withArgName("property#value");
-        OptionBuilder.hasArgs(Integer.MAX_VALUE);
+        OptionBuilder.hasArgs(2);
         OptionBuilder.withValueSeparator('#');
         OptionBuilder.withDescription("amazon s3 location,representing the source data of hbox");
         Option s3input = OptionBuilder.create("s3input");
         allOptions.addOption(s3input);
 
         OptionBuilder.withArgName("property#value");
-        OptionBuilder.hasArgs(Integer.MAX_VALUE);
+        OptionBuilder.hasArgs(2);
         OptionBuilder.withValueSeparator('#');
         OptionBuilder.withDescription("dfs location,representing the hbox result");
         Option output = OptionBuilder.create("output");
         allOptions.addOption(output);
+
         OptionBuilder.withArgName("property#value");
-        OptionBuilder.hasArgs(Integer.MAX_VALUE);
+        OptionBuilder.hasArgs(2);
         OptionBuilder.withValueSeparator('#');
         OptionBuilder.withDescription("amazon s3 location,representing the hbox result");
         Option s3output = OptionBuilder.create("s3output");
