@@ -1110,7 +1110,7 @@ public class ApplicationMaster extends CompositeService {
                             HboxConfiguration2.DEFAULT_HBOX_INPUTF0RMAT_CLASS,
                             InputFormat.class),
                     jobConf);
-            inputFileSplits = inputFormat.getSplits(jobConf, 1);
+            inputFileSplits = inputFormat.getSplits(jobConf, 1); // TODO remove depends on org.apache.hadoop.mapred.*
         } else {
             throw new RuntimeException("Error input path format " + hboxInputs);
         }

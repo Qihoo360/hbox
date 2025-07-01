@@ -23,7 +23,7 @@ import net.qihoo.hbox.util.HboxVersion;
 import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.util.ClassUtil;
 import org.apache.hadoop.util.StringUtils;
 
 class ClientArguments {
@@ -636,7 +636,7 @@ class ClientArguments {
                 evaluatorWorkerMemory = getNormalizedMem(cliParser.getOptionValue("evaluatorworker-memory"));
             }
         }
-        appMasterJar = JobConf.findContainingJar(ApplicationMaster.class);
+        appMasterJar = ClassUtil.findContainingJar(ApplicationMaster.class);
     }
 
     private void printUsage(Options opts) {
