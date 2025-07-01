@@ -25,7 +25,10 @@ public class HboxConfiguration extends YarnConfiguration {
     static {
         try {
             // load JobConf (mapred-site.xml) before hbox conf
-            Class.forName("org.apache.hadoop.mapred.JobConf", true, Thread.currentThread().getContextClassLoader());
+            Class.forName(
+                    "org.apache.hadoop.mapred.JobConf",
+                    true,
+                    Thread.currentThread().getContextClassLoader());
         } catch (final ClassNotFoundException ignore) {
         }
         YarnConfiguration.addDefaultResource(HBOX_DEFAULT_XML_FILE);
